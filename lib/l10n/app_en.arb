@@ -1,0 +1,84 @@
+{
+  "@@locale": "en",
+  "appName": "VisaRadar",
+
+  "navRadar": "Radar",
+  "navTrips": "Trips",
+  "navCountry": "Country",
+  "navSettings": "Settings",
+
+  "onboardingWelcome": "Welcome to VisaRadar",
+  "onboardingWelcomeSubtitle": "Your intelligent travel companion",
+  "onboardingNationality": "What is your nationality?",
+  "onboardingPassportType": "Passport type",
+  "onboardingResidencePermit": "Do you have a residence permit?",
+  "onboardingTravelMode": "How do you mostly travel?",
+  "onboardingLanguage": "Choose your language",
+  "onboardingPermissions": "Allow permissions",
+  "onboardingPermissionsLocation": "Location – required for border detection",
+  "onboardingPermissionsNotification": "Notifications – for stay limit alerts",
+  "onboardingLegal": "Legal",
+  "onboardingLegalAcknowledge": "I agree to the Terms & Privacy Policy",
+  "buttonNext": "Next",
+  "buttonDone": "Done",
+  "buttonAllow": "Allow",
+  "buttonSkip": "Skip",
+
+  "radarTitle": "Radar",
+  "radarCurrentCountry": "Current Country",
+  "radarCurrentCity": "Current City",
+  "radarUnknownLocation": "Detecting location…",
+  "radarSchengenCard": "Schengen Status",
+  "radarDaysUsed": "{days} days used",
+  "@radarDaysUsed": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "radarDaysRemaining": "{days} days remaining",
+  "@radarDaysRemaining": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "radarSchengenWindowLabel": "90 / 180-day window",
+  "radarRiskSafe": "Safe",
+  "radarRiskWarning": "Warning",
+  "radarRiskCritical": "Critical",
+  "radarAlertsCard": "Alerts",
+  "radarNoAlerts": "No active alerts",
+
+  "countryInfoTitle": "Country Info",
+  "countryInfoWeather": "Weather",
+  "countryInfoFeelsLike": "Feels like",
+  "countryInfoHumidity": "Humidity",
+  "countryInfoWind": "Wind",
+  "countryInfoVisibility": "Visibility",
+  "countryInfoUV": "UV Index",
+  "countryInfoAirQuality": "Air Quality",
+  "countryInfoCurrency": "Currency",
+  "countryInfoConsulate": "Consulate",
+  "countryInfoPolice": "Police",
+  "countryInfoHospital": "Hospital",
+  "placeholderComingSoon": "Coming soon",
+
+  "settingsTitle": "Settings",
+  "settingsProfile": "Profile",
+  "settingsLanguage": "Language",
+  "settingsNotifications": "Notifications",
+  "settingsSubscription": "Subscription",
+  "settingsLegal": "Legal",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsTerms": "Terms of Service",
+  "settingsAbout": "About VisaRadar",
+
+  "subscriptionTitle": "VisaRadar Premium",
+  "subscriptionTrialInfo": "7-day free trial",
+  "subscriptionPriceEur": "€4.99 / month",
+  "subscriptionPriceTry": "₺200 / month",
+  "subscriptionStartTrial": "Start Free Trial",
+
+  "errorGeneric": "Something went wrong. Please try again.",
+  "errorLocationUnavailable": "Location unavailable",
+  "errorNetworkUnavailable": "No internet connection"
+}

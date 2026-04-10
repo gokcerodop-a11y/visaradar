@@ -1,0 +1,84 @@
+{
+  "@@locale": "tr",
+  "appName": "VisaRadar",
+
+  "navRadar": "Radar",
+  "navTrips": "Seyahatler",
+  "navCountry": "Ülke",
+  "navSettings": "Ayarlar",
+
+  "onboardingWelcome": "VisaRadar'a Hoş Geldiniz",
+  "onboardingWelcomeSubtitle": "Akıllı seyahat yoldaşınız",
+  "onboardingNationality": "Uyruğunuz nedir?",
+  "onboardingPassportType": "Pasaport türü",
+  "onboardingResidencePermit": "Oturma izniniz var mı?",
+  "onboardingTravelMode": "Genellikle nasıl seyahat edersiniz?",
+  "onboardingLanguage": "Dilinizi seçin",
+  "onboardingPermissions": "İzinleri ver",
+  "onboardingPermissionsLocation": "Konum – sınır tespiti için gereklidir",
+  "onboardingPermissionsNotification": "Bildirimler – kalış süresi uyarıları için",
+  "onboardingLegal": "Yasal",
+  "onboardingLegalAcknowledge": "Kullanım Koşulları ve Gizlilik Politikasını kabul ediyorum",
+  "buttonNext": "İleri",
+  "buttonDone": "Tamam",
+  "buttonAllow": "İzin Ver",
+  "buttonSkip": "Geç",
+
+  "radarTitle": "Radar",
+  "radarCurrentCountry": "Bulunduğunuz Ülke",
+  "radarCurrentCity": "Bulunduğunuz Şehir",
+  "radarUnknownLocation": "Konum algılanıyor…",
+  "radarSchengenCard": "Schengen Durumu",
+  "radarDaysUsed": "{days} gün kullanıldı",
+  "@radarDaysUsed": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "radarDaysRemaining": "{days} gün kaldı",
+  "@radarDaysRemaining": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "radarSchengenWindowLabel": "90 / 180 günlük pencere",
+  "radarRiskSafe": "Güvenli",
+  "radarRiskWarning": "Uyarı",
+  "radarRiskCritical": "Kritik",
+  "radarAlertsCard": "Uyarılar",
+  "radarNoAlerts": "Aktif uyarı yok",
+
+  "countryInfoTitle": "Ülke Bilgisi",
+  "countryInfoWeather": "Hava Durumu",
+  "countryInfoFeelsLike": "Hissedilen",
+  "countryInfoHumidity": "Nem",
+  "countryInfoWind": "Rüzgar",
+  "countryInfoVisibility": "Görüş Mesafesi",
+  "countryInfoUV": "UV İndeksi",
+  "countryInfoAirQuality": "Hava Kalitesi",
+  "countryInfoCurrency": "Para Birimi",
+  "countryInfoConsulate": "Konsolosluk",
+  "countryInfoPolice": "Polis",
+  "countryInfoHospital": "Hastane",
+  "placeholderComingSoon": "Yakında",
+
+  "settingsTitle": "Ayarlar",
+  "settingsProfile": "Profil",
+  "settingsLanguage": "Dil",
+  "settingsNotifications": "Bildirimler",
+  "settingsSubscription": "Abonelik",
+  "settingsLegal": "Yasal",
+  "settingsPrivacyPolicy": "Gizlilik Politikası",
+  "settingsTerms": "Kullanım Koşulları",
+  "settingsAbout": "VisaRadar Hakkında",
+
+  "subscriptionTitle": "VisaRadar Premium",
+  "subscriptionTrialInfo": "7 günlük ücretsiz deneme",
+  "subscriptionPriceEur": "€4,99 / ay",
+  "subscriptionPriceTry": "₺200 / ay",
+  "subscriptionStartTrial": "Ücretsiz Denemeyi Başlat",
+
+  "errorGeneric": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+  "errorLocationUnavailable": "Konum kullanılamıyor",
+  "errorNetworkUnavailable": "İnternet bağlantısı yok"
+}

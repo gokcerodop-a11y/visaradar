@@ -1,0 +1,87 @@
+name: visaradar
+description: "VisaRadar – premium global visa and stay tracking app."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Local persistence
+  # isar and isar_flutter_libs deferred: isar_generator conflicts with analyzer >=6.
+  # Re-add in Phase 2 once isar v4+ resolves the version constraint.
+
+  # Location
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.0
+
+  # Networking
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.1
+
+  # Storage
+  shared_preferences: ^2.3.3
+  flutter_secure_storage: ^9.2.4
+
+  # Models / code-gen
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+
+  # Utils
+  intl: ^0.20.2
+  cupertino_icons: ^1.0.8
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Icon generation
+  flutter_launcher_icons: ^0.14.1
+
+  # Code generation
+  build_runner: ^2.4.13
+  freezed: ^3.0.0
+  json_serializable: ^6.8.0
+  # isar_generator: pinned to old analyzer, add back in Phase 2 when models are scaffolded
+  # riverpod_generator: conflicts with isar_generator analyzer range, add back in Phase 2
+  # custom_lint and riverpod_lint excluded: incompatible with isar_generator analyzer version
+  # Re-add when isar_generator supports analyzer >=7.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true                 # enables flutter gen-l10n
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+flutter_launcher_icons:
+  ios: true
+  android: true
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+flutter_gen:
+  output: lib/core/gen/

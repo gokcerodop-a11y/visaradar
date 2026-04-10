@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/bahiko/Projects/apps/**)",
+      "Bash(flutter create:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(find /Users/bahiko/Projects/apps/visaradar -type d -not -path */.* -not -path */build -not -path */.dart_tool)",
+      "Bash(flutter build:*)",
+      "Bash(grep -E \"\\\\.\\(swift|plist\\)$\")",
+      "Bash(dart doc:*)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(python3:*)"
+    ]
+  }
+}
