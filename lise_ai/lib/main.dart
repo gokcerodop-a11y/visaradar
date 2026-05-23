@@ -12,6 +12,7 @@ import 'models/lesson_mode.dart';
 import 'models/student_profile.dart';
 import 'services/anthropic_service.dart';
 import 'services/pdf_service.dart';
+import 'services/learning_graph_engine.dart';
 import 'services/profile_service.dart';
 import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
@@ -128,6 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _storage = StorageService();
   late final ProfileService _profileSvc;
   final _teacherEngine = TeacherEngine();
+  final _graphEngine = LearningGraphEngine();
   AnthropicService? _anthropic;
 
   // ── Controllers ───────────────────────────────────────────────────────────
@@ -215,6 +217,7 @@ class _ChatScreenState extends State<ChatScreen> {
     await _storage.init();
     _profileSvc = ProfileService(_storage);
     await _profileSvc.init();
+    await _graphEngine.init(_storage);
 
     // Restore saved mode and level
     final savedMode = _storage.loadSetting('mode');
@@ -460,7 +463,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final accumulated = StringBuffer();
       await for (final token in _anthropic!.streamMessage(
         _history,
-        systemPrompt: _currentSystemPrompt,
+        systemPrompt: _buildSystemPrompt(topic: detectedTopic),
         maxTokens: _mode.maxTokens,
       )) {
         if (!mounted) return;
@@ -493,6 +496,15 @@ class _ChatScreenState extends State<ChatScreen> {
             signal.shouldTriggerBoard,
         successEstimate: signal.successEstimate,
       ));
+
+      // Update learning graph mastery
+      if (topic != 'Genel') {
+        _graphEngine.recordStudy(
+          topic: topic,
+          successEstimate: signal.successEstimate,
+          usedHints: _mode == LessonMode.sadaceIpucu || signal.hasConfusion,
+        );
+      }
 
       if (!mounted) return;
       final alwaysBoard = _mode.alwaysShowBoard;
@@ -572,10 +584,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _storage.saveSetting('level', level.name);
   }
 
-  String get _currentSystemPrompt =>
+  String _buildSystemPrompt({String? topic}) =>
       AnthropicService.buildSystemPrompt(_mode, _level) +
       _profileSvc.buildMemorySummary() +
-      _teacherEngine.buildOrchestrationPrompt();
+      _teacherEngine.buildOrchestrationPrompt() +
+      _graphEngine.buildContextPrompt(
+          currentTopic: topic, mode: _mode, level: _level);
+
+  String get _currentSystemPrompt => _buildSystemPrompt();
 
   // ── Live lesson ────────────────────────────────────────────────────────────
 
@@ -829,7 +845,7 @@ class _ChatScreenState extends State<ChatScreen> {
         IconButton(
           tooltip: 'İlerleme',
           icon: const Icon(Icons.bar_chart_rounded, color: Color(0xFF9CA3AF), size: 20),
-          onPressed: () => showAnalyticsPanel(context, _profileSvc),
+          onPressed: () => showAnalyticsPanel(context, _profileSvc, _graphEngine, _level),
         ),
         IconButton(
           tooltip: 'Yeni Sohbet',
