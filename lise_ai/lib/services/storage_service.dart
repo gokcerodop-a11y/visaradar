@@ -162,4 +162,12 @@ class StorageService {
   }
 
   String generateId() => DateTime.now().millisecondsSinceEpoch.toString();
+
+  // ── App settings (mode, level) ────────────────────────────────────────────
+
+  Future<void> saveSetting(String key, String value) =>
+      _box.put('setting_$key', value);
+
+  String? loadSetting(String key) =>
+      _box.get('setting_$key') as String?;
 }

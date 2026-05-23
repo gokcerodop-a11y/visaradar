@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import 'models/lesson_mode.dart';
 import 'services/anthropic_service.dart';
 import 'services/pdf_service.dart';
 import 'services/speech_service.dart';
@@ -151,6 +152,10 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Uint8List> _pendingPdfPages = [];
   String? _pendingPdfName;
 
+  // ── Lesson mode & level ────────────────────────────────────────────────────
+  LessonMode _mode = LessonMode.ogretmenGibi;
+  StudentLevel _level = StudentLevel.sinif9;
+
   // ── Speech-to-text ────────────────────────────────────────────────────────
   SpeechService? _speechSvc;
   bool _isListening = false;
@@ -198,6 +203,23 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     await _storage.init();
+
+    // Restore saved mode and level
+    final savedMode = _storage.loadSetting('mode');
+    final savedLevel = _storage.loadSetting('level');
+    if (savedMode != null) {
+      _mode = LessonMode.values.firstWhere(
+        (m) => m.name == savedMode,
+        orElse: () => LessonMode.ogretmenGibi,
+      );
+    }
+    if (savedLevel != null) {
+      _level = StudentLevel.values.firstWhere(
+        (l) => l.name == savedLevel,
+        orElse: () => StudentLevel.sinif9,
+      );
+    }
+
     final list = await _storage.listConversations();
 
     if (list.isNotEmpty) {
@@ -407,7 +429,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final accumulated = StringBuffer();
-      await for (final token in _anthropic!.streamMessage(_history)) {
+      await for (final token in _anthropic!.streamMessage(
+        _history,
+        systemPrompt: _currentSystemPrompt,
+        maxTokens: _mode.maxTokens,
+      )) {
         if (!mounted) return;
         accumulated.write(token);
         setState(() {
@@ -421,7 +447,13 @@ class _ChatScreenState extends State<ChatScreen> {
       _history.add({'role': 'assistant', 'content': fullReply});
 
       if (!mounted) return;
-      final isMathy = (_isMathPhysics(trimmed) || (pdfPages != null && pdfPages.isNotEmpty) || _isMathPhysics(fullReply.substring(0, fullReply.length.clamp(0, 300)))) && imageBytes == null;
+      final alwaysBoard = _mode.alwaysShowBoard;
+      final isMathy = alwaysBoard ||
+          ((_isMathPhysics(trimmed) ||
+                  (pdfPages != null && pdfPages.isNotEmpty) ||
+                  _isMathPhysics(
+                      fullReply.substring(0, fullReply.length.clamp(0, 300)))) &&
+              imageBytes == null);
       setState(() {
         _streamingText = null;
         _messages.add(ChatMessage(
@@ -479,6 +511,21 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // ── Check student drawing ─────────────────────────────────────────────────
 
+  // ── Mode & level ──────────────────────────────────────────────────────────
+
+  void _setMode(LessonMode mode) {
+    setState(() => _mode = mode);
+    _storage.saveSetting('mode', mode.name);
+  }
+
+  void _setLevel(StudentLevel level) {
+    setState(() => _level = level);
+    _storage.saveSetting('level', level.name);
+  }
+
+  String get _currentSystemPrompt =>
+      AnthropicService.buildSystemPrompt(_mode, _level);
+
   // ── Mic / STT ─────────────────────────────────────────────────────────────
 
   Future<void> _toggleMic() async {
@@ -531,7 +578,11 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      final stream = _anthropic!.streamMessage(_history);
+      final stream = _anthropic!.streamMessage(
+        _history,
+        systemPrompt: _currentSystemPrompt,
+        maxTokens: _mode.maxTokens,
+      );
       final accumulated = StringBuffer();
 
       await for (final token in stream) {
@@ -653,6 +704,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         if (_isTyping) _buildTypingIndicator(),
                         if (_pendingImage != null) _buildImagePreview(),
                         if (_pendingPdfPages.isNotEmpty) _buildPdfPreview(),
+                        _buildSelectorBar(),
                         _buildInputBar(),
                       ],
                     ),
@@ -884,11 +936,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       strokeWidth: 1.5, color: Color(0xFF9B8BFB)),
                 )
               else
-                const Icon(Icons.auto_graph_rounded,
-                    size: 13, color: Color(0xFF9B8BFB)),
+                Icon(
+                _mode == LessonMode.sesliDers
+                    ? Icons.record_voice_over_rounded
+                    : Icons.auto_graph_rounded,
+                size: 13,
+                color: const Color(0xFF9B8BFB),
+              ),
               const SizedBox(width: 5),
               Text(
-                _loadingLesson ? 'Ders hazırlanıyor…' : 'Tahtada Anlat',
+                _loadingLesson
+                    ? 'Ders hazırlanıyor…'
+                    : _mode == LessonMode.sesliDers
+                        ? 'Sesli Dersi Başlat'
+                        : 'Tahtada Anlat',
                 style: const TextStyle(
                   color: Color(0xFF9B8BFB),
                   fontSize: 12,
@@ -1052,6 +1113,122 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: Color(0xFF9CA3AF), fontSize: 11),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Mode / level selector bar ─────────────────────────────────────────────
+
+  Widget _buildSelectorBar() {
+    return Container(
+      color: const Color(0xFF080808),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Level chips
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              itemCount: StudentLevel.values.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 4),
+              itemBuilder: (_, i) {
+                final l = StudentLevel.values[i];
+                final sel = _level == l;
+                return GestureDetector(
+                  onTap: () => _setLevel(l),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: sel
+                          ? const Color(0xFF1E2A1E)
+                          : const Color(0xFF111111),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: sel
+                            ? const Color(0xFF4ADE80)
+                            : const Color(0xFF1F2937),
+                      ),
+                    ),
+                    child: Text(
+                      l.label,
+                      style: TextStyle(
+                        color: sel
+                            ? const Color(0xFF4ADE80)
+                            : const Color(0xFF6B7280),
+                        fontSize: 11,
+                        fontWeight: sel
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Mode chips
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              itemCount: LessonMode.values.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 4),
+              itemBuilder: (_, i) {
+                final m = LessonMode.values[i];
+                final sel = _mode == m;
+                return GestureDetector(
+                  onTap: () => _setMode(m),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: sel
+                          ? const Color(0xFF1A1435)
+                          : const Color(0xFF111111),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: sel
+                            ? const Color(0xFF7C6BF8)
+                            : const Color(0xFF1F2937),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          m.icon,
+                          size: 12,
+                          color: sel
+                              ? const Color(0xFF9B8BFB)
+                              : const Color(0xFF4B5563),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          m.shortLabel,
+                          style: TextStyle(
+                            color: sel
+                                ? const Color(0xFF9B8BFB)
+                                : const Color(0xFF6B7280),
+                            fontSize: 11,
+                            fontWeight: sel
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
