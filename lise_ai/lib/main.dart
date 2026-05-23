@@ -9,10 +9,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'models/lesson_mode.dart';
+import 'models/student_profile.dart';
 import 'services/anthropic_service.dart';
 import 'services/pdf_service.dart';
+import 'services/profile_service.dart';
 import 'services/speech_service.dart';
 import 'services/storage_service.dart';
+import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
 import 'widgets/pdf_page_picker.dart';
@@ -121,6 +124,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   // ── Services ──────────────────────────────────────────────────────────────
   final _storage = StorageService();
+  late final ProfileService _profileSvc;
   AnthropicService? _anthropic;
 
   // ── Controllers ───────────────────────────────────────────────────────────
@@ -160,6 +164,9 @@ class _ChatScreenState extends State<ChatScreen> {
   SpeechService? _speechSvc;
   bool _isListening = false;
   String _interimText = '';
+
+  // ── Daily greeting banner ─────────────────────────────────────────────────
+  String? _greetingBanner;
 
   bool get _isBusy => _isTyping || _streamingText != null;
 
@@ -203,6 +210,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     await _storage.init();
+    _profileSvc = ProfileService(_storage);
+    await _profileSvc.init();
 
     // Restore saved mode and level
     final savedMode = _storage.loadSetting('mode');
@@ -228,6 +237,12 @@ class _ChatScreenState extends State<ChatScreen> {
     } else {
       _startNewConversation(save: false);
       setState(() { _convList = []; _loading = false; });
+    }
+
+    // Show daily greeting if applicable
+    final greeting = _profileSvc.getDailyGreeting();
+    if (greeting != null && mounted) {
+      setState(() => _greetingBanner = greeting);
     }
 
     if (_anthropic == null) {
@@ -446,6 +461,19 @@ class _ChatScreenState extends State<ChatScreen> {
       final fullReply = accumulated.toString();
       _history.add({'role': 'assistant', 'content': fullReply});
 
+      // Record interaction for student memory
+      final topic = TopicDetector.detect(trimmed) ??
+          TopicDetector.detect(fullReply.substring(0, fullReply.length.clamp(0, 400))) ??
+          'Genel';
+      _profileSvc.recordInteraction(InteractionRecord(
+        timestamp: DateTime.now(),
+        topic: topic,
+        mode: _mode.name,
+        usedHints: _mode == LessonMode.sadaceIpucu,
+        usedBoard: _mode == LessonMode.tahtadaCoz || _mode == LessonMode.sesliDers,
+        successEstimate: 0.65,
+      ));
+
       if (!mounted) return;
       final alwaysBoard = _mode.alwaysShowBoard;
       final isMathy = alwaysBoard ||
@@ -524,7 +552,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String get _currentSystemPrompt =>
-      AnthropicService.buildSystemPrompt(_mode, _level);
+      AnthropicService.buildSystemPrompt(_mode, _level) +
+      _profileSvc.buildMemorySummary();
 
   // ── Mic / STT ─────────────────────────────────────────────────────────────
 
@@ -700,6 +729,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: [
                     Column(
                       children: [
+                        if (_greetingBanner != null) _buildGreetingBanner(),
                         Expanded(child: _buildMessageList()),
                         if (_isTyping) _buildTypingIndicator(),
                         if (_pendingImage != null) _buildImagePreview(),
@@ -750,6 +780,11 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: 'İlerleme',
+          icon: const Icon(Icons.bar_chart_rounded, color: Color(0xFF9CA3AF), size: 20),
+          onPressed: () => showAnalyticsPanel(context, _profileSvc),
+        ),
         IconButton(
           tooltip: 'Yeni Sohbet',
           icon: const Icon(Icons.edit_outlined, color: Color(0xFF9CA3AF), size: 20),
@@ -958,6 +993,43 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Greeting banner ───────────────────────────────────────────────────────
+
+  Widget _buildGreetingBanner() {
+    return GestureDetector(
+      onTap: () => setState(() => _greetingBanner = null),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1A1435), Color(0xFF0D1020)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          border: Border(bottom: BorderSide(color: Color(0xFF2A2040), width: 0.5)),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 2),
+            Expanded(
+              child: Text(
+                _greetingBanner!,
+                style: const TextStyle(
+                  color: Color(0xFFD1D5DB),
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.close_rounded, color: Color(0xFF4B5563), size: 16),
+          ],
         ),
       ),
     );
