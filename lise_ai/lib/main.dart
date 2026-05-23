@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'services/anthropic_service.dart';
 import 'services/storage_service.dart';
@@ -40,16 +41,43 @@ class LiseAIApp extends StatelessWidget {
           primary: Color(0xFF7C6BF8),
           surface: Color(0xFF1A1A1A),
         ),
-        drawerTheme: const DrawerThemeData(
-          backgroundColor: Color(0xFF111111),
-        ),
+        drawerTheme: const DrawerThemeData(backgroundColor: Color(0xFF111111)),
       ),
       home: const ChatScreen(),
     );
   }
 }
 
-// ── UI data model ─────────────────────────────────────────────────────────────
+// ── Markdown style (shared) ───────────────────────────────────────────────────
+
+MarkdownStyleSheet _mdStyle(BuildContext context) => MarkdownStyleSheet(
+      p: const TextStyle(color: Color(0xFFE5E7EB), fontSize: 15, height: 1.5),
+      h1: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, height: 1.4),
+      h2: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, height: 1.4),
+      h3: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, height: 1.4),
+      strong: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      em: const TextStyle(color: Color(0xFFE5E7EB), fontStyle: FontStyle.italic),
+      code: const TextStyle(
+        color: Color(0xFFBB86FC),
+        backgroundColor: Color(0xFF1A1A2E),
+        fontFamily: 'monospace',
+        fontSize: 13,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      blockquoteDecoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0xFF7C6BF8), width: 3)),
+      ),
+      blockquotePadding: const EdgeInsets.only(left: 12),
+      listBullet: const TextStyle(color: Color(0xFFE5E7EB), fontSize: 15),
+      horizontalRuleDecoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFF374151))),
+      ),
+    );
+
+// ── Data model ────────────────────────────────────────────────────────────────
 
 class ChatMessage {
   final String text;
@@ -79,22 +107,30 @@ class _ChatScreenState extends State<ChatScreen> {
   final _storage = StorageService();
   AnthropicService? _anthropic;
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  final TextEditingController _inputController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final FocusNode _focusNode = FocusNode();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  // ── Controllers ───────────────────────────────────────────────────────────
+  final _inputController = TextEditingController();
+  final _scrollController = ScrollController();
+  final _focusNode = FocusNode();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // ── State ─────────────────────────────────────────────────────────────────
   List<ChatMessage> _messages = [];
   List<Map<String, dynamic>> _history = [];
   List<ConversationMeta> _convList = [];
 
   String? _currentConvId;
-  bool _isTyping = false;
   bool _loading = true;
+
+  // Typing dots phase (before first streaming token)
+  bool _isTyping = false;
+  // Streaming phase: null = not streaming, non-null = text received so far
+  String? _streamingText;
+
   Uint8List? _pendingImage;
   String _pendingMime = 'image/jpeg';
   bool _isDragging = false;
+
+  bool get _isBusy => _isTyping || _streamingText != null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -105,28 +141,20 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initApp() async {
-    // Init API key
     final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
     if (apiKey.isNotEmpty && apiKey != 'your_api_key_here') {
       _anthropic = AnthropicService(apiKey);
     }
 
-    // Init storage
     await _storage.init();
-
     final list = await _storage.listConversations();
+
     if (list.isNotEmpty) {
       await _loadConversation(list.first.id, updateList: false);
-      setState(() {
-        _convList = list;
-        _loading = false;
-      });
+      setState(() { _convList = list; _loading = false; });
     } else {
       _startNewConversation(save: false);
-      setState(() {
-        _convList = [];
-        _loading = false;
-      });
+      setState(() { _convList = []; _loading = false; });
     }
 
     if (_anthropic == null) {
@@ -136,6 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _anthropic?.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -146,22 +175,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _startNewConversation({bool save = true}) {
     final id = _storage.generateId();
-    final welcome = const ChatMessage(
+    const welcome = ChatMessage(
       text: 'Bugün ne öğrenmek istiyorsun? ✨\nFotoğraf veya ekran görüntüsü de gönderebilirsin.',
       isUser: false,
     );
-
     setState(() {
       _currentConvId = id;
       _messages = [welcome];
       _history = [];
       _pendingImage = null;
+      _streamingText = null;
+      _isTyping = false;
     });
-
-    if (save) {
-      _persistCurrent();
-      _refreshList();
-    }
+    if (save) { _persistCurrent(); _refreshList(); }
   }
 
   Future<void> _loadConversation(String id, {bool updateList = true}) async {
@@ -169,32 +195,16 @@ class _ChatScreenState extends State<ChatScreen> {
     if (conv == null) return;
 
     final messages = conv.messages.map((m) => ChatMessage(
-          text: m.text,
-          isUser: m.isUser,
-          isError: m.isError,
-          imageBytes: m.imageBytes,
-        )).toList();
+          text: m.text, isUser: m.isUser, isError: m.isError, imageBytes: m.imageBytes)).toList();
 
-    // Rebuild API history from stored messages (skip error/welcome messages).
     final history = <Map<String, dynamic>>[];
     for (final m in conv.messages) {
       if (m.isError) continue;
       if (!m.isUser && m.text.contains('Bugün ne öğrenmek')) continue;
-
       if (m.isUser && m.imageBytes != null) {
-        history.add({
-          'role': 'user',
-          'content': AnthropicService.buildImageContent(
-            m.imageBytes!,
-            'image/jpeg',
-            text: m.text,
-          ),
-        });
+        history.add({'role': 'user', 'content': AnthropicService.buildImageContent(m.imageBytes!, 'image/jpeg', text: m.text)});
       } else {
-        history.add({
-          'role': m.isUser ? 'user' : 'assistant',
-          'content': m.text,
-        });
+        history.add({'role': m.isUser ? 'user' : 'assistant', 'content': m.text});
       }
     }
 
@@ -203,6 +213,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages = messages;
       _history = history;
       _pendingImage = null;
+      _streamingText = null;
+      _isTyping = false;
     });
 
     if (updateList) await _refreshList();
@@ -215,19 +227,13 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
         title: const Text('Sohbeti Sil', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Bu sohbet kalıcı olarak silinecek. Emin misin?',
-          style: TextStyle(color: Color(0xFF9CA3AF)),
-        ),
+        content: const Text('Bu sohbet kalıcı olarak silinecek. Emin misin?',
+            style: TextStyle(color: Color(0xFF9CA3AF))),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal', style: TextStyle(color: Color(0xFF9CA3AF))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sil', style: TextStyle(color: Color(0xFFF87171))),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('İptal', style: TextStyle(color: Color(0xFF9CA3AF)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sil', style: TextStyle(color: Color(0xFFF87171)))),
         ],
       ),
     );
@@ -235,7 +241,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     await _storage.deleteConversation(_currentConvId!);
     final list = await _storage.listConversations();
-
     if (list.isNotEmpty) {
       await _loadConversation(list.first.id, updateList: false);
       setState(() => _convList = list);
@@ -252,24 +257,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _persistCurrent() async {
     if (_currentConvId == null) return;
-    final title = _messages
-        .firstWhere((m) => m.isUser, orElse: () => const ChatMessage(text: 'Yeni Sohbet', isUser: true))
-        .text;
+    final title = _messages.firstWhere((m) => m.isUser,
+        orElse: () => const ChatMessage(text: 'Yeni Sohbet', isUser: true)).text;
     final truncated = title.length > 40 ? '${title.substring(0, 40)}…' : title;
 
-    final conv = StoredConversation(
+    await _storage.saveConversation(StoredConversation(
       id: _currentConvId!,
       title: truncated,
       createdAt: DateTime.fromMillisecondsSinceEpoch(int.parse(_currentConvId!)),
       messages: _messages.map((m) => StoredMessage(
-            text: m.text,
-            isUser: m.isUser,
-            isError: m.isError,
-            imageBytes: m.imageBytes,
-            timestamp: DateTime.now(),
-          )).toList(),
-    );
-    await _storage.saveConversation(conv);
+            text: m.text, isUser: m.isUser, isError: m.isError,
+            imageBytes: m.imageBytes, timestamp: DateTime.now())).toList(),
+    ));
     await _refreshList();
   }
 
@@ -279,8 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add(const ChatMessage(
         text: '⚠️ API anahtarı bulunamadı. Lütfen .env dosyasına geçerli bir ANTHROPIC_API_KEY ekle ve uygulamayı yeniden başlat.',
-        isUser: false,
-        isError: true,
+        isUser: false, isError: true,
       ));
     });
   }
@@ -288,7 +286,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
     final hasImage = _pendingImage != null;
-    if ((trimmed.isEmpty && !hasImage) || _isTyping) return;
+    if ((trimmed.isEmpty && !hasImage) || _isBusy) return;
 
     final imageBytes = _pendingImage;
     final mime = _pendingMime;
@@ -296,6 +294,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.add(ChatMessage(text: trimmed, isUser: true, imageBytes: imageBytes));
       _isTyping = true;
+      _streamingText = null;
       _pendingImage = null;
     });
     _inputController.clear();
@@ -307,27 +306,42 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (imageBytes != null) {
-      _history.add({
-        'role': 'user',
-        'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed),
-      });
+      _history.add({'role': 'user', 'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed)});
     } else {
       _history.add({'role': 'user', 'content': trimmed});
     }
 
     try {
-      final reply = await _anthropic!.sendMessage(_history);
-      _history.add({'role': 'assistant', 'content': reply});
+      final stream = _anthropic!.streamMessage(_history);
+      final accumulated = StringBuffer();
+
+      await for (final token in stream) {
+        if (!mounted) return;
+        accumulated.write(token);
+        setState(() {
+          _isTyping = false;       // hide dots, show streaming bubble
+          _streamingText = accumulated.toString();
+        });
+        _scrollToBottomStreaming();
+      }
+
+      final fullReply = accumulated.toString();
+      _history.add({'role': 'assistant', 'content': fullReply});
+
       if (!mounted) return;
       setState(() {
-        _isTyping = false;
-        _messages.add(ChatMessage(text: reply, isUser: false));
+        _streamingText = null;
+        _messages.add(ChatMessage(text: fullReply, isUser: false));
       });
+
+      await _persistCurrent();
+
     } on AnthropicException catch (e) {
       if (!mounted) return;
       _history.removeLast();
       setState(() {
         _isTyping = false;
+        _streamingText = null;
         _messages.add(ChatMessage(text: '⚠️ ${e.message}', isUser: false, isError: true));
       });
     } catch (_) {
@@ -335,26 +349,35 @@ class _ChatScreenState extends State<ChatScreen> {
       _history.removeLast();
       setState(() {
         _isTyping = false;
+        _streamingText = null;
         _messages.add(const ChatMessage(
           text: '⚠️ Bağlantı hatası. İnternetini kontrol edip tekrar dene.',
-          isUser: false,
-          isError: true,
+          isUser: false, isError: true,
         ));
       });
     }
 
-    await _persistCurrent();
     _scrollToBottom();
   }
+
+  // ── Scroll ────────────────────────────────────────────────────────────────
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 350),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
+      }
+    });
+  }
+
+  void _scrollToBottomStreaming() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
@@ -375,13 +398,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _handleDrop(DropDoneDetails details) async {
     for (final file in details.files) {
-      final path = file.path.toLowerCase();
-      if (path.endsWith('.jpg') || path.endsWith('.jpeg') ||
-          path.endsWith('.png') || path.endsWith('.webp')) {
+      final p = file.path.toLowerCase();
+      if (p.endsWith('.jpg') || p.endsWith('.jpeg') || p.endsWith('.png') || p.endsWith('.webp')) {
         final bytes = await file.readAsBytes();
         setState(() {
           _pendingImage = Uint8List.fromList(bytes);
-          _pendingMime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+          _pendingMime = p.endsWith('.png') ? 'image/png' : 'image/jpeg';
           _isDragging = false;
         });
         return;
@@ -404,25 +426,27 @@ class _ChatScreenState extends State<ChatScreen> {
         drawer: _buildDrawer(),
         appBar: _buildAppBar(),
         body: SafeArea(
-          child: _loading ? _buildLoadingState() : Stack(
-            children: [
-              Column(
-                children: [
-                  Expanded(child: _buildMessageList()),
-                  if (_isTyping) _buildTypingIndicator(),
-                  if (_pendingImage != null) _buildImagePreview(),
-                  _buildInputBar(),
-                ],
-              ),
-              if (_isDragging) _buildDropOverlay(),
-            ],
-          ),
+          child: _loading
+              ? _buildLoadingState()
+              : Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Expanded(child: _buildMessageList()),
+                        if (_isTyping) _buildTypingIndicator(),
+                        if (_pendingImage != null) _buildImagePreview(),
+                        _buildInputBar(),
+                      ],
+                    ),
+                    if (_isDragging) _buildDropOverlay(),
+                  ],
+                ),
         ),
       ),
     );
   }
 
-  // ── App bar ───────────────────────────────────────────────────────────────
+  // ── AppBar ────────────────────────────────────────────────────────────────
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
@@ -435,10 +459,8 @@ class _ChatScreenState extends State<ChatScreen> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Lise AI',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3),
-          ),
+          const Text('Lise AI',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.3)),
           Row(children: [
             Container(
               width: 6, height: 6,
@@ -449,24 +471,24 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 4),
             Text(
-              _anthropic != null ? 'Çevrimiçi' : 'API anahtarı eksik',
+              _anthropic != null
+                  ? (_streamingText != null ? 'Yanıtlanıyor…' : 'Çevrimiçi')
+                  : 'API anahtarı eksik',
               style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
             ),
           ]),
         ],
       ),
       actions: [
-        // Yeni Sohbet
         IconButton(
           tooltip: 'Yeni Sohbet',
           icon: const Icon(Icons.edit_outlined, color: Color(0xFF9CA3AF), size: 20),
-          onPressed: () => _startNewConversation(),
+          onPressed: _isBusy ? null : () => _startNewConversation(),
         ),
-        // Sohbeti Sil
         IconButton(
           tooltip: 'Sohbeti Sil',
           icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFF9CA3AF), size: 20),
-          onPressed: _deleteCurrentConversation,
+          onPressed: _isBusy ? null : _deleteCurrentConversation,
         ),
       ],
     );
@@ -479,52 +501,42 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: const Color(0xFF111111),
       child: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C6BF8), Color(0xFFBB86FC)],
-                    ),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+            child: Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF7C6BF8), Color(0xFFBB86FC)]),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                const SizedBox(width: 10),
-                const Text('Sohbetler',
+                child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 10),
+              const Text('Sohbetler',
                   style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-              ],
-            ),
+            ]),
           ),
-
           const Divider(color: Color(0xFF1F1F1F), height: 1),
-
-          // Conversation list
           Expanded(
             child: _convList.isEmpty
-                ? const Center(
-                    child: Text('Henüz sohbet yok',
-                        style: TextStyle(color: Color(0xFF4B5563), fontSize: 13)),
-                  )
+                ? const Center(child: Text('Henüz sohbet yok',
+                    style: TextStyle(color: Color(0xFF4B5563), fontSize: 13)))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _convList.length,
-                    itemBuilder: (context, i) {
+                    itemBuilder: (ctx, i) {
                       final meta = _convList[i];
                       final isActive = meta.id == _currentConvId;
                       return _DrawerConvItem(
                         meta: meta,
                         isActive: isActive,
                         onTap: () {
-                          Navigator.pop(context);
+                          Navigator.pop(ctx);
                           if (!isActive) _loadConversation(meta.id);
                         },
                         onDelete: () async {
-                          Navigator.pop(context);
+                          Navigator.pop(ctx);
                           if (isActive) {
                             await _deleteCurrentConversation();
                           } else {
@@ -536,24 +548,16 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
-
           const Divider(color: Color(0xFF1F1F1F), height: 1),
-
-          // New chat button
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  _startNewConversation();
-                },
+                onTap: () { Navigator.pop(context); _startNewConversation(); },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
-                    ),
+                    gradient: const LinearGradient(colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)]),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Row(
@@ -574,35 +578,26 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ── Loading state ─────────────────────────────────────────────────────────
-
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 28, height: 28,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C6BF8)),
-          ),
-          SizedBox(height: 14),
-          Text('Sohbet yükleniyor…',
-              style: TextStyle(color: Color(0xFF4B5563), fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
   // ── Message list ──────────────────────────────────────────────────────────
 
   Widget _buildMessageList() {
+    final hasStreaming = _streamingText != null;
+    final itemCount = _messages.length + (hasStreaming ? 1 : 0);
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: _messages.length,
-      itemBuilder: (context, i) => _MessageBubble(message: _messages[i]),
+      itemCount: itemCount,
+      itemBuilder: (ctx, i) {
+        if (hasStreaming && i == _messages.length) {
+          return _StreamingBubble(text: _streamingText!);
+        }
+        return _MessageBubble(message: _messages[i]);
+      },
     );
   }
+
+  // ── Typing indicator ──────────────────────────────────────────────────────
 
   Widget _buildTypingIndicator() {
     return Padding(
@@ -614,8 +609,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(20),
+              color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(20),
             ),
             child: const _TypingDots(),
           ),
@@ -624,41 +618,53 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ── Image preview strip ───────────────────────────────────────────────────
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(width: 28, height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C6BF8))),
+          SizedBox(height: 14),
+          Text('Sohbet yükleniyor…', style: TextStyle(color: Color(0xFF4B5563), fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  // ── Image preview ─────────────────────────────────────────────────────────
 
   Widget _buildImagePreview() {
     return Container(
       color: const Color(0xFF0D0D0D),
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.memory(_pendingImage!, width: 64, height: 64, fit: BoxFit.cover),
-              ),
-              Positioned(
-                top: -6, right: -6,
-                child: GestureDetector(
-                  onTap: () => setState(() => _pendingImage = null),
-                  child: Container(
-                    width: 20, height: 20,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF374151), shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, size: 12, color: Colors.white),
-                  ),
+      child: Row(children: [
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(_pendingImage!, width: 64, height: 64, fit: BoxFit.cover),
+            ),
+            Positioned(
+              top: -6, right: -6,
+              child: GestureDetector(
+                onTap: () => setState(() => _pendingImage = null),
+                child: Container(
+                  width: 20, height: 20,
+                  decoration: const BoxDecoration(color: Color(0xFF374151), shape: BoxShape.circle),
+                  child: const Icon(Icons.close, size: 12, color: Colors.white),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(width: 10),
-          const Text('Fotoğraf hazır — mesajını yaz veya gönder.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 10),
+        const Text('Fotoğraf hazır — mesajını yaz veya gönder.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+      ]),
     );
   }
 
@@ -677,14 +683,14 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _InputIconButton(icon: Icons.image_outlined, onTap: _pickImage),
+            _InputIconButton(icon: Icons.image_outlined, onTap: _isBusy ? () {} : _pickImage),
             Expanded(
               child: TextField(
                 controller: _inputController,
                 focusNode: _focusNode,
                 maxLines: 5,
                 minLines: 1,
-                enabled: !_isTyping,
+                enabled: !_isBusy,
                 style: const TextStyle(fontSize: 15, color: Colors.white, height: 1.4),
                 textInputAction: TextInputAction.send,
                 onSubmitted: _sendMessage,
@@ -699,7 +705,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             _SendOrMicButton(
               controller: _inputController,
-              isLoading: _isTyping,
+              isLoading: _isBusy,
               hasPendingImage: _pendingImage != null,
               onSend: _sendMessage,
             ),
@@ -734,6 +740,98 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+// ── Streaming bubble (live typewriter) ────────────────────────────────────────
+
+class _StreamingBubble extends StatelessWidget {
+  final String text;
+
+  const _StreamingBubble({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _AvatarIcon(),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (text.isNotEmpty)
+                    MarkdownBody(
+                      data: text,
+                      styleSheet: _mdStyle(context),
+                      softLineBreak: true,
+                    ),
+                  const SizedBox(height: 4),
+                  const _BlinkingCursor(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Blinking cursor ────────────────────────────────────────────────────────────
+
+class _BlinkingCursor extends StatefulWidget {
+  const _BlinkingCursor();
+
+  @override
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
+}
+
+class _BlinkingCursorState extends State<_BlinkingCursor>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 530))
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _ctrl,
+      child: Container(
+        width: 2,
+        height: 16,
+        decoration: BoxDecoration(
+          color: const Color(0xFF7C6BF8),
+          borderRadius: BorderRadius.circular(1),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Drawer conversation item ───────────────────────────────────────────────────
 
 class _DrawerConvItem extends StatelessWidget {
@@ -743,23 +841,17 @@ class _DrawerConvItem extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _DrawerConvItem({
-    required this.meta,
-    required this.isActive,
-    required this.onTap,
-    required this.onDelete,
+    required this.meta, required this.isActive,
+    required this.onTap, required this.onDelete,
   });
 
-  String _formatDate(DateTime dt) {
+  String _fmt(DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
       return 'Bugün ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    return '${dt.day} ${_month(dt.month)}';
-  }
-
-  String _month(int m) {
-    const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-    return months[m - 1];
+    const m = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+    return '${dt.day} ${m[dt.month - 1]}';
   }
 
   @override
@@ -773,47 +865,34 @@ class _DrawerConvItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive ? const Color(0xFF1E1A3A) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: isActive
-              ? Border.all(color: const Color(0xFF7C6BF8).withOpacity(0.3), width: 1)
-              : null,
+          border: isActive ? Border.all(color: const Color(0xFF7C6BF8).withOpacity(0.3)) : null,
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    meta.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        child: Row(children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(meta.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isActive ? Colors.white : const Color(0xFFD1D5DB),
                       fontSize: 13,
                       fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatDate(meta.createdAt),
-                    style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11),
-                  ),
-                ],
-              ),
+                    )),
+                const SizedBox(height: 2),
+                Text(_fmt(meta.createdAt),
+                    style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
+              ],
             ),
-            GestureDetector(
-              onTap: onDelete,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.delete_outline_rounded,
-                  size: 16,
-                  color: isActive ? const Color(0xFF7C6BF8) : const Color(0xFF4B5563),
-                ),
-              ),
+          ),
+          GestureDetector(
+            onTap: onDelete,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Icon(Icons.delete_outline_rounded, size: 16,
+                  color: isActive ? const Color(0xFF7C6BF8) : const Color(0xFF4B5563)),
             ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }
@@ -846,24 +925,18 @@ class _MessageBubble extends StatelessWidget {
                 gradient: isUser && !hasImage
                     ? const LinearGradient(
                         colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
+                        begin: Alignment.topLeft, end: Alignment.bottomRight)
                     : null,
                 color: isUser
                     ? (hasImage ? const Color(0xFF1E1E2E) : null)
-                    : isError
-                        ? const Color(0xFF2A1A1A)
-                        : const Color(0xFF1E1E1E),
+                    : isError ? const Color(0xFF2A1A1A) : const Color(0xFF1E1E1E),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
                   bottomLeft: Radius.circular(isUser ? 20 : 4),
                   bottomRight: Radius.circular(isUser ? 4 : 20),
                 ),
-                border: isError
-                    ? Border.all(color: const Color(0xFF7F1D1D), width: 0.5)
-                    : null,
+                border: isError ? Border.all(color: const Color(0xFF7F1D1D), width: 0.5) : null,
               ),
               clipBehavior: Clip.hardEdge,
               child: Column(
@@ -874,18 +947,18 @@ class _MessageBubble extends StatelessWidget {
                   if (hasText)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Text(
-                        message.text,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: isUser
-                              ? Colors.white
-                              : isError
-                                  ? const Color(0xFFFCA5A5)
-                                  : const Color(0xFFE5E7EB),
-                          height: 1.45,
-                        ),
-                      ),
+                      child: isUser || isError
+                          ? Text(message.text,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: isUser ? Colors.white : const Color(0xFFFCA5A5),
+                                height: 1.45,
+                              ))
+                          : MarkdownBody(
+                              data: message.text,
+                              styleSheet: _mdStyle(context),
+                              softLineBreak: true,
+                            ),
                     )
                   else if (hasImage)
                     const SizedBox(height: 4),
@@ -900,7 +973,7 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ── Avatar icon ────────────────────────────────────────────────────────────────
+// ── Avatar ─────────────────────────────────────────────────────────────────────
 
 class _AvatarIcon extends StatelessWidget {
   @override
@@ -910,8 +983,7 @@ class _AvatarIcon extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF7C6BF8), Color(0xFFBB86FC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(9),
       ),
@@ -920,7 +992,7 @@ class _AvatarIcon extends StatelessWidget {
   }
 }
 
-// ── Typing dots animation ──────────────────────────────────────────────────────
+// ── Typing dots ────────────────────────────────────────────────────────────────
 
 class _TypingDots extends StatefulWidget {
   const _TypingDots();
@@ -931,22 +1003,18 @@ class _TypingDots extends StatefulWidget {
 
 class _TypingDotsState extends State<_TypingDots> with TickerProviderStateMixin {
   late final List<AnimationController> _controllers;
-  late final List<Animation<double>> _animations;
+  late final List<Animation<double>> _anims;
 
   @override
   void initState() {
     super.initState();
     _controllers = List.generate(3, (i) {
       final c = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-      Future.delayed(Duration(milliseconds: i * 160), () {
-        if (mounted) c.repeat(reverse: true);
-      });
+      Future.delayed(Duration(milliseconds: i * 160), () { if (mounted) c.repeat(reverse: true); });
       return c;
     });
-    _animations = _controllers
-        .map((c) => Tween<double>(begin: 0, end: -6)
-            .animate(CurvedAnimation(parent: c, curve: Curves.easeInOut)))
-        .toList();
+    _anims = _controllers.map((c) =>
+        Tween<double>(begin: 0, end: -6).animate(CurvedAnimation(parent: c, curve: Curves.easeInOut))).toList();
   }
 
   @override
@@ -959,22 +1027,17 @@ class _TypingDotsState extends State<_TypingDots> with TickerProviderStateMixin 
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
-        return AnimatedBuilder(
-          animation: _animations[i],
-          builder: (_, __) => Transform.translate(
-            offset: Offset(0, _animations[i].value),
-            child: Container(
-              width: 7, height: 7,
-              margin: const EdgeInsets.symmetric(horizontal: 2.5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF7C6BF8),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+      children: List.generate(3, (i) => AnimatedBuilder(
+        animation: _anims[i],
+        builder: (_, __) => Transform.translate(
+          offset: Offset(0, _anims[i].value),
+          child: Container(
+            width: 7, height: 7,
+            margin: const EdgeInsets.symmetric(horizontal: 2.5),
+            decoration: BoxDecoration(color: const Color(0xFF7C6BF8), borderRadius: BorderRadius.circular(4)),
           ),
-        );
-      }),
+        ),
+      )),
     );
   }
 }
@@ -1008,10 +1071,8 @@ class _SendOrMicButton extends StatefulWidget {
   final ValueChanged<String> onSend;
 
   const _SendOrMicButton({
-    required this.controller,
-    required this.isLoading,
-    required this.hasPendingImage,
-    required this.onSend,
+    required this.controller, required this.isLoading,
+    required this.hasPendingImage, required this.onSend,
   });
 
   @override
@@ -1024,18 +1085,18 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_onTextChanged);
+    widget.controller.addListener(_onChanged);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onTextChanged);
+    widget.controller.removeListener(_onChanged);
     super.dispose();
   }
 
-  void _onTextChanged() {
-    final hasText = widget.controller.text.trim().isNotEmpty;
-    if (hasText != _hasText) setState(() => _hasText = hasText);
+  void _onChanged() {
+    final v = widget.controller.text.trim().isNotEmpty;
+    if (v != _hasText) setState(() => _hasText = v);
   }
 
   bool get _showSend => _hasText || widget.hasPendingImage;
@@ -1052,10 +1113,7 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
                 key: const ValueKey('loading'),
                 width: 38, height: 38,
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A2A2A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(12)),
                 child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C6BF8)),
               )
             : _showSend
@@ -1065,11 +1123,8 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
                     child: Container(
                       width: 38, height: 38,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: const LinearGradient(colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
@@ -1080,10 +1135,7 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
                     onTap: () {},
                     child: Container(
                       width: 38, height: 38,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A2A2A),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(12)),
                       child: const Icon(Icons.mic_rounded, color: Color(0xFF9B8BFB), size: 20),
                     ),
                   ),

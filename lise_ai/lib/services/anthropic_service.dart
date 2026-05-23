@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
 
 class AnthropicService {
@@ -18,61 +21,95 @@ Görevlerin:
 - Eğlenceli ama olgun bir dil kullanmak — ne çok resmi ne de çocukça
 - Emoji kullanabilirsin ama abartma; bir tane yeterliyse iki kullanma
 - Fotoğraf gönderildiğinde: soruyu veya içeriği tanı, adım adım çöz
+- Yanıtlarında markdown kullanabilirsin: **kalın**, *italik*, listeler, kod blokları
 
 Yanıtlarını kısa ve odaklı tut. Öğrenci daha fazla detay isterse genişlet.
 Türkçe yanıt ver.
 ''';
 
   final String _apiKey;
+  final http.Client _client;
 
-  AnthropicService(this._apiKey);
+  AnthropicService(this._apiKey) : _client = http.Client();
 
-  /// Sends the conversation history to Claude and returns the assistant reply.
-  ///
-  /// Each entry in [history] is a map with:
-  ///   - "role": "user" or "assistant"
-  ///   - "content": either a plain String (text-only) or a List of content
-  ///     blocks (for vision messages).
-  Future<String> sendMessage(List<Map<String, dynamic>> history) async {
-    // Build the messages list — Anthropic accepts both string and list content.
-    final messages = history.map((entry) {
-      return {
-        'role': entry['role'],
-        'content': entry['content'],
-      };
-    }).toList();
+  void dispose() => _client.close();
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {
-        'x-api-key': _apiKey,
-        'anthropic-version': _apiVersion,
-        'content-type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': _model,
-        'max_tokens': 1024,
-        'system': _systemPrompt,
-        'messages': messages,
-      }),
-    );
+  // ── Streaming ──────────────────────────────────────────────────────────────
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final content = data['content'] as List<dynamic>;
-      return (content.first as Map<String, dynamic>)['text'] as String;
-    }
+  /// Streams text tokens from Claude as they arrive (Server-Sent Events).
+  /// Yields each text delta string. Throws [AnthropicException] on API errors.
+  Stream<String> streamMessage(List<Map<String, dynamic>> history) async* {
+    final request = http.Request('POST', Uri.parse(_baseUrl));
+    request.headers.addAll({
+      'x-api-key': _apiKey,
+      'anthropic-version': _apiVersion,
+      'content-type': 'application/json',
+      'accept': 'text/event-stream',
+    });
+    request.body = jsonEncode({
+      'model': _model,
+      'max_tokens': 1024,
+      'stream': true,
+      'system': _systemPrompt,
+      'messages': history
+          .map((e) => {'role': e['role'], 'content': e['content']})
+          .toList(),
+    });
 
-    if (response.statusCode == 401) {
+    final streamed = await _client.send(request);
+
+    if (streamed.statusCode == 401) {
       throw AnthropicException('API anahtarı geçersiz. Lütfen .env dosyasını kontrol et.');
     }
+    if (streamed.statusCode != 200) {
+      throw AnthropicException('Bir sorun oluştu (${streamed.statusCode}). Lütfen tekrar dene.');
+    }
 
-    throw AnthropicException(
-      'Bir sorun oluştu (${response.statusCode}). Lütfen tekrar dene.',
-    );
+    // SSE line buffer — chunks may split across line boundaries.
+    final lineBuffer = StringBuffer();
+
+    await for (final chunk in streamed.stream.transform(utf8.decoder)) {
+      lineBuffer.write(chunk);
+
+      // Drain complete lines from the buffer.
+      while (true) {
+        final raw = lineBuffer.toString();
+        final nl = raw.indexOf('\n');
+        if (nl == -1) break;
+
+        final line = raw.substring(0, nl).trimRight(); // strip \r too
+        lineBuffer.clear();
+        lineBuffer.write(raw.substring(nl + 1));
+
+        if (!line.startsWith('data: ')) continue;
+        final payload = line.substring(6);
+        if (payload.isEmpty) continue;
+
+        Map<String, dynamic> event;
+        try {
+          event = jsonDecode(payload) as Map<String, dynamic>;
+        } catch (_) {
+          continue;
+        }
+
+        if (event['type'] == 'content_block_delta') {
+          final delta = event['delta'] as Map<String, dynamic>?;
+          if (delta?['type'] == 'text_delta') {
+            final text = delta!['text'] as String?;
+            if (text != null && text.isNotEmpty) yield text;
+          }
+        } else if (event['type'] == 'message_stop') {
+          return;
+        } else if (event['type'] == 'error') {
+          final err = event['error'] as Map<String, dynamic>?;
+          throw AnthropicException(err?['message']?.toString() ?? 'Bilinmeyen hata.');
+        }
+      }
+    }
   }
 
-  /// Builds a vision content block list from [imageBytes] + optional [text].
+  // ── Vision helpers ─────────────────────────────────────────────────────────
+
   static List<Map<String, dynamic>> buildImageContent(
     List<int> imageBytes,
     String mimeType, {
