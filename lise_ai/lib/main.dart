@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -7,12 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
-import 'models/lesson_timeline.dart';
-import 'models/whiteboard_element.dart';
 import 'services/anthropic_service.dart';
+import 'services/speech_service.dart';
 import 'services/storage_service.dart';
 import 'widgets/math_markdown.dart';
-import 'widgets/whiteboard_panel.dart';
+import 'widgets/lesson_board_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,12 +88,16 @@ class ChatMessage {
   final bool isUser;
   final bool isError;
   final Uint8List? imageBytes;
+  final bool hasBoardLesson;
+  final String? lessonQuestion;
 
   const ChatMessage({
     required this.text,
     required this.isUser,
     this.isError = false,
     this.imageBytes,
+    this.hasBoardLesson = false,
+    this.lessonQuestion,
   });
 }
 
@@ -134,15 +138,14 @@ class _ChatScreenState extends State<ChatScreen> {
   String _pendingMime = 'image/jpeg';
   bool _isDragging = false;
 
-  // ── Whiteboard ────────────────────────────────────────────────────────────
-  WhiteboardState _wbState = WhiteboardState.closed;
-  WhiteboardData? _wbData;
-  LessonTimeline? _lessonTimeline;
-  int _replayKey = 0;
-  String _lastUserQuery = '';
+  bool _loadingLesson = false;
+
+  // ── Speech-to-text ────────────────────────────────────────────────────────
+  SpeechService? _speechSvc;
+  bool _isListening = false;
+  String _interimText = '';
 
   bool get _isBusy => _isTyping || _streamingText != null;
-  bool get _wbVisible => _wbState != WhiteboardState.closed;
 
   static bool _isMathPhysics(String text) {
     const keywords = [
@@ -197,6 +200,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_anthropic == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showApiKeyError());
     }
+
+    // Init speech recognition (non-blocking)
+    SpeechService.create().then((svc) {
+      if (mounted && svc.isAvailable) {
+        setState(() => _speechSvc = svc);
+      }
+    });
   }
 
   @override
@@ -327,14 +337,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final imageBytes = _pendingImage;
     final mime = _pendingMime;
+    _inputController.clear();
 
+    await _normalSend(trimmed, imageBytes: imageBytes, mime: mime);
+  }
+
+  /// Normal streaming flow for all messages.
+  Future<void> _normalSend(String trimmed,
+      {Uint8List? imageBytes, String mime = 'image/jpeg'}) async {
     setState(() {
       _messages.add(ChatMessage(text: trimmed, isUser: true, imageBytes: imageBytes));
       _isTyping = true;
       _streamingText = null;
       _pendingImage = null;
     });
-    _inputController.clear();
     _scrollToBottom();
 
     if (_anthropic == null) {
@@ -343,20 +359,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     if (imageBytes != null) {
-      _history.add({'role': 'user', 'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed)});
+      _history.add({
+        'role': 'user',
+        'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed),
+      });
     } else {
       _history.add({'role': 'user', 'content': trimmed});
     }
 
     try {
-      final stream = _anthropic!.streamMessage(_history);
       final accumulated = StringBuffer();
-
-      await for (final token in stream) {
+      await for (final token in _anthropic!.streamMessage(_history)) {
         if (!mounted) return;
         accumulated.write(token);
         setState(() {
-          _isTyping = false;       // hide dots, show streaming bubble
+          _isTyping = false;
           _streamingText = accumulated.toString();
         });
         _scrollToBottomStreaming();
@@ -366,19 +383,17 @@ class _ChatScreenState extends State<ChatScreen> {
       _history.add({'role': 'assistant', 'content': fullReply});
 
       if (!mounted) return;
+      final isMathy = _isMathPhysics(trimmed) && imageBytes == null;
       setState(() {
         _streamingText = null;
-        _messages.add(ChatMessage(text: fullReply, isUser: false));
+        _messages.add(ChatMessage(
+          text: fullReply,
+          isUser: false,
+          hasBoardLesson: isMathy,
+          lessonQuestion: isMathy ? trimmed : null,
+        ));
       });
-
-      _lastUserQuery = trimmed;
       await _persistCurrent();
-
-      // Auto-trigger whiteboard for math/physics/visual questions
-      if (_isMathPhysics(trimmed) && mounted) {
-        await _triggerWhiteboard(trimmed, fullReply);
-      }
-
     } on AnthropicException catch (e) {
       if (!mounted) return;
       _history.removeLast();
@@ -399,7 +414,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ));
       });
     }
-
     _scrollToBottom();
   }
 
@@ -426,6 +440,37 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // ── Check student drawing ─────────────────────────────────────────────────
+
+  // ── Mic / STT ─────────────────────────────────────────────────────────────
+
+  Future<void> _toggleMic() async {
+    final svc = _speechSvc;
+    if (svc == null) return;
+
+    if (_isListening) {
+      await svc.stopListening();
+      if (mounted) setState(() { _isListening = false; _interimText = ''; });
+      return;
+    }
+
+    final started = await svc.startListening(
+      locale: 'tr_TR',
+      onResult: (text, isFinal) {
+        if (!mounted) return;
+        // Place recognized text into input field (user can edit after)
+        _inputController.text = text;
+        _inputController.selection =
+            TextSelection.fromPosition(TextPosition(offset: text.length));
+        setState(() => _interimText = isFinal ? '' : text);
+        if (isFinal) setState(() => _isListening = false);
+      },
+      onDone: () {
+        if (mounted) setState(() { _isListening = false; _interimText = ''; });
+      },
+    );
+
+    if (started && mounted) setState(() => _isListening = true);
+  }
 
   Future<void> _onCheckDrawing(Uint8List pngBytes) async {
     if (_anthropic == null || _isBusy) return;
@@ -494,80 +539,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // ── Whiteboard ────────────────────────────────────────────────────────────
-
-  Future<void> _triggerWhiteboard(String userQ, String aiReply) async {
-    if (!mounted) return;
-    debugPrint('[WB] Starting lesson generation for: "$userQ"');
-    setState(() => _wbState = WhiteboardState.loading);
-
-    if (_anthropic == null) {
-      setState(() {
-        _wbData = WhiteboardData.defaultAnimation();
-        _lessonTimeline = null;
-        _wbState = WhiteboardState.ready;
-        _replayKey++;
-      });
-      return;
-    }
-
-    try {
-      // Try lesson mode first
-      final lesson = await _anthropic!.generateLesson(userQ, aiReply);
-      if (lesson != null && mounted) {
-        debugPrint('[WB] Lesson mode: ${lesson.steps.length} steps');
-        setState(() {
-          _wbData = lesson.whiteboardData;
-          _lessonTimeline = lesson;
-          _wbState = WhiteboardState.ready;
-          _replayKey++;
-        });
-        return;
-      }
-    } catch (e) {
-      debugPrint('[WB] Lesson generation error: $e');
-    }
-
-    // Fallback to regular whiteboard
-    try {
-      final wb = await _anthropic!.generateWhiteboard(userQ, aiReply);
-      if (!mounted) return;
-      setState(() {
-        _wbData = wb ?? WhiteboardData.defaultAnimation();
-        _lessonTimeline = null;
-        _wbState = WhiteboardState.ready;
-        _replayKey++;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _wbData = WhiteboardData.defaultAnimation();
-        _lessonTimeline = null;
-        _wbState = WhiteboardState.ready;
-        _replayKey++;
-      });
-    }
-  }
-
-  void _onWhiteboardToggle() {
-    if (_wbVisible) {
-      setState(() => _wbState = WhiteboardState.closed);
-      return;
-    }
-    // Open board — show existing data or empty board (never auto-load default)
-    debugPrint('[WB] Manual open — data=${_wbData != null ? "exists" : "empty"}');
-    setState(() => _wbState = WhiteboardState.ready);
-  }
-
-  void _onClearBoard() {
-    debugPrint('[WB] Tahtayı Sil tapped');
-    setState(() {
-      _wbData = null;
-      _lessonTimeline = null;
-      _replayKey++;
-    });
-  }
-
   // ── Image ─────────────────────────────────────────────────────────────────
 
   Future<void> _pickImage() async {
@@ -614,42 +585,17 @@ class _ChatScreenState extends State<ChatScreen> {
         body: SafeArea(
           child: _loading
               ? _buildLoadingState()
-              : Row(
+              : Stack(
                   children: [
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          Column(
-                            children: [
-                              Expanded(child: _buildMessageList()),
-                              if (_isTyping) _buildTypingIndicator(),
-                              if (_pendingImage != null) _buildImagePreview(),
-                              _buildInputBar(),
-                            ],
-                          ),
-                          if (_isDragging) _buildDropOverlay(),
-                        ],
-                      ),
+                    Column(
+                      children: [
+                        Expanded(child: _buildMessageList()),
+                        if (_isTyping) _buildTypingIndicator(),
+                        if (_pendingImage != null) _buildImagePreview(),
+                        _buildInputBar(),
+                      ],
                     ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeInOut,
-                      width: _wbVisible ? 440 : 0,
-                      child: _wbVisible
-                          ? ClipRect(
-                              child: WhiteboardPanel(
-                                key: ValueKey(_replayKey),
-                                state: _wbState,
-                                data: _wbData,
-                                lesson: _lessonTimeline,
-                                onClose: () => setState(() => _wbState = WhiteboardState.closed),
-                                onReplay: () => setState(() => _replayKey++),
-                                onClearBoard: _onClearBoard,
-                                onCheckDrawing: _onCheckDrawing,
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
+                    if (_isDragging) _buildDropOverlay(),
                   ],
                 ),
         ),
@@ -691,57 +637,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       actions: [
-        // Always-visible Tahta button
-        _wbState == WhiteboardState.loading
-            ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Color(0xFF7C6BF8)),
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: GestureDetector(
-                  onTap: _onWhiteboardToggle,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _wbVisible
-                          ? const Color(0xFF7C6BF8)
-                          : const Color(0xFF7C6BF8).withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF7C6BF8).withValues(alpha: 0.6),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _wbVisible
-                              ? Icons.splitscreen_rounded
-                              : Icons.auto_graph_rounded,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Tahta',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
         IconButton(
           tooltip: 'Yeni Sohbet',
           icon: const Icon(Icons.edit_outlined, color: Color(0xFF9CA3AF), size: 20),
@@ -855,54 +750,84 @@ class _ChatScreenState extends State<ChatScreen> {
           return _StreamingBubble(text: _streamingText!);
         }
         final msg = _messages[i];
-        // Show "Tahtada anlat" chip below the last AI message when applicable
-        final isLastAi = !msg.isUser &&
-            !msg.isError &&
-            i == _messages.length - 1 &&
-            !hasStreaming &&
-            _isMathPhysics(_lastUserQuery);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             _MessageBubble(message: msg),
-            if (isLastAi) _buildWhiteboardChip(),
+            if (!msg.isUser && msg.hasBoardLesson && _anthropic != null)
+              _buildBoardButton(msg),
           ],
         );
       },
     );
   }
 
-  Widget _buildWhiteboardChip() {
+  Widget _buildBoardButton(ChatMessage msg) {
     return Padding(
-      padding: const EdgeInsets.only(left: 46, top: 2, bottom: 6),
+      padding: const EdgeInsets.only(left: 46, top: 4, bottom: 6),
       child: GestureDetector(
-        onTap: _wbVisible
-            ? () => setState(() => _wbState = WhiteboardState.closed)
-            : _onWhiteboardToggle,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        onTap: _loadingLesson
+            ? null
+            : () async {
+                setState(() => _loadingLesson = true);
+                try {
+                  final lesson = await _anthropic!
+                      .generateLesson(msg.lessonQuestion!, msg.text);
+                  if (!mounted) return;
+                  if (lesson != null &&
+                      lesson.steps.isNotEmpty &&
+                      lesson.elements.isNotEmpty) {
+                    await pushLessonBoard(context, lesson,
+                        onCheckDrawing: _onCheckDrawing);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ders hazırlanamadı. Tekrar dene.'),
+                          backgroundColor: Color(0xFF2A1A1A),
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Hata: $e'),
+                        backgroundColor: const Color(0xFF2A1A1A),
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _loadingLesson = false);
+                }
+              },
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
-            color: _wbVisible
-                ? const Color(0xFF1E1A40)
-                : const Color(0xFF130C2E),
+            color: const Color(0xFF130C2E),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFF7C6BF8).withValues(alpha: _wbVisible ? 0.7 : 0.45),
+              color: const Color(0xFF7C6BF8).withValues(alpha: 0.55),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                _wbVisible ? Icons.close_rounded : Icons.auto_graph_rounded,
-                size: 13,
-                color: const Color(0xFF9B8BFB),
-              ),
+              if (_loadingLesson)
+                const SizedBox(
+                  width: 11,
+                  height: 11,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 1.5, color: Color(0xFF9B8BFB)),
+                )
+              else
+                const Icon(Icons.auto_graph_rounded,
+                    size: 13, color: Color(0xFF9B8BFB)),
               const SizedBox(width: 5),
               Text(
-                _wbVisible ? 'Tahtayı kapat' : 'Tahtada anlat',
+                _loadingLesson ? 'Ders hazırlanıyor…' : 'Tahtada Anlat',
                 style: const TextStyle(
                   color: Color(0xFF9B8BFB),
                   fontSize: 12,
@@ -993,43 +918,69 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       color: const Color(0xFF0D0D0D),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1C1C1C),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _InputIconButton(icon: Icons.image_outlined, onTap: _isBusy ? () {} : _pickImage),
-            Expanded(
-              child: TextField(
-                controller: _inputController,
-                focusNode: _focusNode,
-                maxLines: 5,
-                minLines: 1,
-                enabled: !_isBusy,
-                style: const TextStyle(fontSize: 15, color: Colors.white, height: 1.4),
-                textInputAction: TextInputAction.send,
-                onSubmitted: _sendMessage,
-                decoration: const InputDecoration(
-                  hintText: 'Bir şey sor veya fotoğraf gönder…',
-                  hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 15),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
-                  isDense: true,
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Listening indicator strip
+          if (_isListening)
+            _ListeningBar(interim: _interimText),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1C),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: _isListening
+                    ? const Color(0xFFEF4444).withValues(alpha: 0.5)
+                    : const Color(0xFF2A2A2A),
               ),
             ),
-            _SendOrMicButton(
-              controller: _inputController,
-              isLoading: _isBusy,
-              hasPendingImage: _pendingImage != null,
-              onSend: _sendMessage,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _InputIconButton(
+                    icon: Icons.image_outlined,
+                    onTap: _isBusy ? () {} : _pickImage),
+                Expanded(
+                  child: TextField(
+                    controller: _inputController,
+                    focusNode: _focusNode,
+                    maxLines: 5,
+                    minLines: 1,
+                    enabled: !_isBusy,
+                    style: const TextStyle(
+                        fontSize: 15, color: Colors.white, height: 1.4),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: _sendMessage,
+                    decoration: InputDecoration(
+                      hintText: _isListening
+                          ? 'Sizi dinliyorum…'
+                          : 'Bir şey sor veya fotoğraf gönder…',
+                      hintStyle: TextStyle(
+                        color: _isListening
+                            ? const Color(0xFFEF4444).withValues(alpha: 0.5)
+                            : const Color(0xFF4B5563),
+                        fontSize: 15,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                _SendOrMicButton(
+                  controller: _inputController,
+                  isLoading: _isBusy,
+                  hasPendingImage: _pendingImage != null,
+                  onSend: _sendMessage,
+                  isListening: _isListening,
+                  onMicTap: _speechSvc != null ? _toggleMic : null,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1387,28 +1338,44 @@ class _SendOrMicButton extends StatefulWidget {
   final bool isLoading;
   final bool hasPendingImage;
   final ValueChanged<String> onSend;
+  final bool isListening;
+  final VoidCallback? onMicTap;
 
   const _SendOrMicButton({
-    required this.controller, required this.isLoading,
-    required this.hasPendingImage, required this.onSend,
+    required this.controller,
+    required this.isLoading,
+    required this.hasPendingImage,
+    required this.onSend,
+    this.isListening = false,
+    this.onMicTap,
   });
 
   @override
   State<_SendOrMicButton> createState() => _SendOrMicButtonState();
 }
 
-class _SendOrMicButtonState extends State<_SendOrMicButton> {
+class _SendOrMicButtonState extends State<_SendOrMicButton>
+    with SingleTickerProviderStateMixin {
   bool _hasText = false;
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onChanged);
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _pulseAnim =
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onChanged);
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
@@ -1417,7 +1384,8 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
     if (v != _hasText) setState(() => _hasText = v);
   }
 
-  bool get _showSend => _hasText || widget.hasPendingImage;
+  bool get _showSend =>
+      (_hasText || widget.hasPendingImage) && !widget.isListening;
 
   @override
   Widget build(BuildContext context) {
@@ -1425,38 +1393,162 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
       padding: const EdgeInsets.all(6),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
-        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+        transitionBuilder: (child, anim) =>
+            ScaleTransition(scale: anim, child: child),
         child: widget.isLoading
             ? Container(
                 key: const ValueKey('loading'),
-                width: 38, height: 38,
+                width: 38,
+                height: 38,
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(12)),
-                child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF7C6BF8)),
+                decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A2A),
+                    borderRadius: BorderRadius.circular(12)),
+                child: const CircularProgressIndicator(
+                    strokeWidth: 2, color: Color(0xFF7C6BF8)),
               )
             : _showSend
                 ? GestureDetector(
                     key: const ValueKey('send'),
                     onTap: () => widget.onSend(widget.controller.text),
                     child: Container(
-                      width: 38, height: 38,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
-                            begin: Alignment.topLeft, end: Alignment.bottomRight),
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                      child: const Icon(Icons.arrow_upward_rounded,
+                          color: Colors.white, size: 20),
                     ),
                   )
                 : GestureDetector(
                     key: const ValueKey('mic'),
-                    onTap: () {},
-                    child: Container(
-                      width: 38, height: 38,
-                      decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.mic_rounded, color: Color(0xFF9B8BFB), size: 20),
-                    ),
+                    onTap: widget.onMicTap,
+                    child: widget.isListening
+                        ? AnimatedBuilder(
+                            animation: _pulseAnim,
+                            builder: (_, __) => Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: Color.lerp(const Color(0xFF2A1010),
+                                    const Color(0xFF4A1515), _pulseAnim.value),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Color.lerp(
+                                      const Color(0xFFEF4444),
+                                      const Color(0xFFFF6B6B),
+                                      _pulseAnim.value)!,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(Icons.stop_rounded,
+                                  color: Color(0xFFEF4444), size: 18),
+                            ),
+                          )
+                        : Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                                color: widget.onMicTap != null
+                                    ? const Color(0xFF2A2A2A)
+                                    : const Color(0xFF1A1A1A),
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Icon(Icons.mic_rounded,
+                                color: widget.onMicTap != null
+                                    ? const Color(0xFF9B8BFB)
+                                    : const Color(0xFF3A3A3A),
+                                size: 20),
+                          ),
                   ),
+      ),
+    );
+  }
+}
+
+// ── Listening bar (shown above input while mic is active) ─────────────────────
+
+class _ListeningBar extends StatefulWidget {
+  final String interim;
+  const _ListeningBar({this.interim = ''});
+
+  @override
+  State<_ListeningBar> createState() => _ListeningBarState();
+}
+
+class _ListeningBarState extends State<_ListeningBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
+      child: Row(
+        children: [
+          // Animated wave bars
+          AnimatedBuilder(
+            animation: _ctrl,
+            builder: (_, __) {
+              return Row(
+                children: List.generate(4, (i) {
+                  final phase = ((_ctrl.value + i * 0.25) % 1.0);
+                  final h = 4.0 + 10.0 * math.sin(phase * 2 * math.pi).abs();
+                  return Container(
+                    width: 3,
+                    height: h,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Dinleniyor…',
+            style: TextStyle(
+              color: Color(0xFFEF4444),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (widget.interim.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                widget.interim,
+                style: const TextStyle(
+                  color: Color(0xFF9CA3AF),
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

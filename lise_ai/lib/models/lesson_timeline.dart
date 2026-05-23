@@ -1,21 +1,33 @@
 import 'whiteboard_element.dart';
 
-/// One teaching step: text to display + which whiteboard elements appear.
+/// One teaching step: short title + spoken text + whiteboard elements.
 class LessonStep {
-  final String text;
-  final List<int> elementIndices; // 0-based indices into LessonTimeline.elements
+  final String stepTitle;       // Short 1–3 word label, e.g. "Tanım"
+  final String text;            // Full teacher explanation (shown in chat)
+  final List<int> elementIndices;
+  final double pauseAfter;
 
-  const LessonStep({required this.text, required this.elementIndices});
+  const LessonStep({
+    required this.stepTitle,
+    required this.text,
+    required this.elementIndices,
+    this.pauseAfter = 1.5,
+  });
+
+  int get wordCount =>
+      text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
 
   factory LessonStep.fromJson(Map<String, dynamic> j) => LessonStep(
+        stepTitle: j['step_title'] as String? ?? 'Adım',
         text: j['text'] as String? ?? '',
         elementIndices: ((j['elements'] as List?) ?? [])
             .map((e) => (e as num).toInt())
             .toList(),
+        pauseAfter: (j['pause_after'] as num?)?.toDouble() ?? 1.5,
       );
 }
 
-/// Full lesson: ordered steps + all whiteboard elements.
+/// Full lesson: ordered steps + whiteboard elements.
 class LessonTimeline {
   final String title;
   final List<LessonStep> steps;
@@ -39,11 +51,10 @@ class LessonTimeline {
             .toList(),
       );
 
-  /// WhiteboardData view for the existing painter.
   WhiteboardData get whiteboardData =>
       WhiteboardData(title: title, elements: elements);
 
-  /// Animation start time for step [i] = minimum delay of its elements.
+  /// Animation start time for step [i] = min delay of its elements.
   double stepStartTime(int i) {
     if (i >= steps.length) return double.infinity;
     final idxs = steps[i]
@@ -51,6 +62,8 @@ class LessonTimeline {
         .where((idx) => idx < elements.length)
         .toList();
     if (idxs.isEmpty) return 0;
-    return idxs.map((idx) => elements[idx].delay).reduce((a, b) => a < b ? a : b);
+    return idxs
+        .map((idx) => elements[idx].delay)
+        .reduce((a, b) => a < b ? a : b);
   }
 }

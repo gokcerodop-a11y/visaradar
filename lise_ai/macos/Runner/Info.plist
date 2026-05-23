@@ -26,6 +26,10 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sesli soru sormak için mikrofon erişimi gerekiyor.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Konuşmayı metne çevirmek için konuşma tanıma erişimi gerekiyor.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
