@@ -425,6 +425,75 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // ── Check student drawing ─────────────────────────────────────────────────
+
+  Future<void> _onCheckDrawing(Uint8List pngBytes) async {
+    if (_anthropic == null || _isBusy) return;
+    const prompt =
+        'Öğrencinin tahtadaki çözümünü kontrol et, hataları Türkçe açıkla.';
+
+    setState(() {
+      _messages.add(ChatMessage(
+          text: prompt, isUser: true, imageBytes: pngBytes));
+      _isTyping = true;
+      _streamingText = null;
+    });
+    _scrollToBottom();
+
+    _history.add({
+      'role': 'user',
+      'content': AnthropicService.buildImageContent(
+          pngBytes, 'image/png',
+          text: prompt),
+    });
+
+    try {
+      final stream = _anthropic!.streamMessage(_history);
+      final accumulated = StringBuffer();
+
+      await for (final token in stream) {
+        if (!mounted) return;
+        accumulated.write(token);
+        setState(() {
+          _isTyping = false;
+          _streamingText = accumulated.toString();
+        });
+        _scrollToBottomStreaming();
+      }
+
+      final fullReply = accumulated.toString();
+      _history.add({'role': 'assistant', 'content': fullReply});
+
+      if (!mounted) return;
+      setState(() {
+        _streamingText = null;
+        _messages.add(ChatMessage(text: fullReply, isUser: false));
+      });
+      await _persistCurrent();
+    } on AnthropicException catch (e) {
+      if (!mounted) return;
+      _history.removeLast();
+      setState(() {
+        _isTyping = false;
+        _streamingText = null;
+        _messages.add(ChatMessage(
+            text: '⚠️ ${e.message}', isUser: false, isError: true));
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _history.removeLast();
+      setState(() {
+        _isTyping = false;
+        _streamingText = null;
+        _messages.add(const ChatMessage(
+          text: '⚠️ Bağlantı hatası. İnternetini kontrol edip tekrar dene.',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+  }
+
   // ── Whiteboard ────────────────────────────────────────────────────────────
 
   Future<void> _triggerWhiteboard(String userQ, String aiReply) async {
@@ -567,6 +636,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 data: _wbData,
                                 onClose: () => setState(() => _wbState = WhiteboardState.closed),
                                 onReplay: () => setState(() => _replayKey++),
+                                onCheckDrawing: _onCheckDrawing,
                               ),
                             )
                           : const SizedBox.shrink(),

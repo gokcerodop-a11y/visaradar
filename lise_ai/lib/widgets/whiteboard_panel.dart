@@ -1,6 +1,9 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../models/whiteboard_element.dart';
 
@@ -13,6 +16,7 @@ class WhiteboardPanel extends StatelessWidget {
   final WhiteboardData? data;
   final VoidCallback onClose;
   final VoidCallback onReplay;
+  final Future<void> Function(Uint8List pngBytes)? onCheckDrawing;
 
   const WhiteboardPanel({
     super.key,
@@ -20,6 +24,7 @@ class WhiteboardPanel extends StatelessWidget {
     required this.data,
     required this.onClose,
     required this.onReplay,
+    this.onCheckDrawing,
   });
 
   @override
@@ -40,7 +45,10 @@ class WhiteboardPanel extends StatelessWidget {
           Expanded(
             child: switch (state) {
               WhiteboardState.loading => const _LoadingView(),
-              WhiteboardState.ready  => _WhiteboardCanvas(data: data!),
+              WhiteboardState.ready  => _WhiteboardCanvas(
+                  data: data!,
+                  onCheckDrawing: onCheckDrawing,
+                ),
               WhiteboardState.closed => const SizedBox(),
             },
           ),
@@ -241,7 +249,8 @@ class _SpinnerPainter extends CustomPainter {
 
 class _WhiteboardCanvas extends StatefulWidget {
   final WhiteboardData data;
-  const _WhiteboardCanvas({required this.data});
+  final Future<void> Function(Uint8List)? onCheckDrawing;
+  const _WhiteboardCanvas({required this.data, this.onCheckDrawing});
 
   @override
   State<_WhiteboardCanvas> createState() => _WhiteboardCanvasState();
@@ -251,6 +260,13 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _time;
+
+  // ── Student drawing state ─────────────────────────────────────────────────
+  bool _penMode = false;
+  final List<List<Offset>> _strokes = [];
+  List<Offset>? _currentStroke;
+  bool _checking = false;
+  final _repaintKey = GlobalKey();
 
   @override
   void initState() {
@@ -284,15 +300,123 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     super.dispose();
   }
 
+  // ── Drawing gestures ──────────────────────────────────────────────────────
+
+  void _onPanStart(DragStartDetails d) {
+    setState(() => _currentStroke = [d.localPosition]);
+  }
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    if (_currentStroke == null) return;
+    setState(() => _currentStroke!.add(d.localPosition));
+  }
+
+  void _onPanEnd(DragEndDetails _) {
+    if (_currentStroke == null) return;
+    setState(() {
+      if (_currentStroke!.isNotEmpty) _strokes.add(List.from(_currentStroke!));
+      _currentStroke = null;
+    });
+  }
+
+  Future<void> _captureAndCheck() async {
+    final ctx = _repaintKey.currentContext;
+    if (ctx == null) return;
+    final boundary = ctx.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+
+    setState(() => _checking = true);
+    try {
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null || !mounted) return;
+      await widget.onCheckDrawing?.call(byteData.buffer.asUint8List());
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _time,
-      builder: (_, __) => CustomPaint(
-        painter: _WhiteboardPainter(
-            elements: widget.data.elements, time: _time.value),
-        child: const SizedBox.expand(),
-      ),
+    final hasStrokes = _strokes.isNotEmpty || _currentStroke != null;
+    return Column(
+      children: [
+        Expanded(
+          child: RepaintBoundary(
+            key: _repaintKey,
+            child: Stack(
+              children: [
+                // AI animation layer
+                AnimatedBuilder(
+                  animation: _time,
+                  builder: (_, __) => CustomPaint(
+                    painter: _WhiteboardPainter(
+                        elements: widget.data.elements, time: _time.value),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                // Student drawing layer
+                CustomPaint(
+                  painter: _StudentPainter(
+                    strokes: _strokes,
+                    currentStroke: _currentStroke,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+                // Input capture layer (pen mode only)
+                if (_penMode)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanStart: _onPanStart,
+                    onPanUpdate: _onPanUpdate,
+                    onPanEnd: _onPanEnd,
+                    child: const SizedBox.expand(),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        // Drawing toolbar
+        Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          clipBehavior: Clip.hardEdge,
+          decoration: const BoxDecoration(
+            color: Color(0xFF0A0A1C),
+            border: Border(top: BorderSide(color: Color(0xFF1A1A3A))),
+          ),
+          child: Row(
+            children: [
+              _ToolBtn(
+                icon: Icons.edit_rounded,
+                label: 'Kalem',
+                active: _penMode,
+                color: const Color(0xFF4ADE80),
+                onTap: () => setState(() => _penMode = !_penMode),
+              ),
+              if (hasStrokes) ...[
+                const SizedBox(width: 7),
+                _ToolBtn(
+                  icon: Icons.delete_outline_rounded,
+                  label: 'Temizle',
+                  active: false,
+                  color: const Color(0xFFF87171),
+                  onTap: () => setState(() {
+                    _strokes.clear();
+                    _currentStroke = null;
+                  }),
+                ),
+              ],
+              const Spacer(),
+              if (hasStrokes && widget.onCheckDrawing != null)
+                _CheckBtn(
+                  checking: _checking,
+                  onTap: _checking ? null : _captureAndCheck,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -961,5 +1085,174 @@ class _WhiteboardPainter extends CustomPainter {
         t.paint(canvas, v[i] + offs[i]);
       }
     }
+  }
+}
+
+// ── Student drawing painter ────────────────────────────────────────────────────
+
+class _StudentPainter extends CustomPainter {
+  final List<List<Offset>> strokes;
+  final List<Offset>? currentStroke;
+
+  static const _inkColor = Color(0xFFFBBF24); // amber-yellow
+
+  const _StudentPainter({required this.strokes, this.currentStroke});
+
+  @override
+  bool shouldRepaint(_StudentPainter old) =>
+      old.strokes != strokes || old.currentStroke != currentStroke;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = _inkColor
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final glowPaint = Paint()
+      ..color = _inkColor.withValues(alpha: 0.18)
+      ..strokeWidth = 7.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    for (final stroke in strokes) {
+      final path = _buildPath(stroke);
+      if (path != null) {
+        canvas.drawPath(path, glowPaint);
+        canvas.drawPath(path, paint);
+      }
+    }
+    if (currentStroke != null) {
+      final path = _buildPath(currentStroke!);
+      if (path != null) {
+        canvas.drawPath(path, glowPaint);
+        canvas.drawPath(path, paint);
+      }
+    }
+  }
+
+  Path? _buildPath(List<Offset> pts) {
+    if (pts.isEmpty) return null;
+    if (pts.length == 1) {
+      return Path()..addOval(Rect.fromCircle(center: pts[0], radius: 1.5));
+    }
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (int i = 1; i < pts.length; i++) {
+      if (i < pts.length - 1) {
+        final mid = Offset(
+          (pts[i].dx + pts[i + 1].dx) / 2,
+          (pts[i].dy + pts[i + 1].dy) / 2,
+        );
+        path.quadraticBezierTo(pts[i].dx, pts[i].dy, mid.dx, mid.dy);
+      } else {
+        path.lineTo(pts[i].dx, pts[i].dy);
+      }
+    }
+    return path;
+  }
+}
+
+// ── Toolbar buttons ────────────────────────────────────────────────────────────
+
+class _ToolBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ToolBtn({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = active ? color : const Color(0xFF9B8BFB);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: active
+              ? color.withValues(alpha: 0.15)
+              : const Color(0xFF1A1A3A),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: active
+                ? color.withValues(alpha: 0.6)
+                : const Color(0xFF2A2A5A),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: c, size: 13),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    color: c, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckBtn extends StatelessWidget {
+  final bool checking;
+  final VoidCallback? onTap;
+
+  const _CheckBtn({required this.checking, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: checking
+              ? null
+              : const LinearGradient(
+                  colors: [Color(0xFF3D2E8A), Color(0xFF7C6BF8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          color: checking ? const Color(0xFF1A1A3A) : null,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (checking)
+              const SizedBox(
+                width: 11,
+                height: 11,
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.5, color: Color(0xFF9B8BFB)),
+              )
+            else
+              const Icon(Icons.auto_awesome_rounded,
+                  color: Colors.white, size: 13),
+            const SizedBox(width: 5),
+            Text(
+              checking ? 'Kontrol ediliyor…' : 'Çizimimi Kontrol Et',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
