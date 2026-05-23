@@ -136,21 +136,32 @@ class _ChatScreenState extends State<ChatScreen> {
   WhiteboardState _wbState = WhiteboardState.closed;
   WhiteboardData? _wbData;
   int _replayKey = 0;
+  String _lastUserQuery = '';
+  String _lastAiReply = '';
 
   bool get _isBusy => _isTyping || _streamingText != null;
   bool get _wbVisible => _wbState != WhiteboardState.closed;
 
   static bool _isMathPhysics(String text) {
     const keywords = [
+      // Turkish math/physics
       'türev', 'integral', 'denklem', 'fonksiyon', 'limit', 'geometri',
       'trigonometri', 'karekök', 'matris', 'vektör', 'ispat', 'teorem',
       'kuvvet', 'hız', 'ivme', 'enerji', 'momentum', 'elektrik',
       'manyetik', 'dalga', 'frekans', 'periyot', 'basınç', 'yoğunluk',
-      'derivative', 'integral', 'equation', 'function', 'graph', 'formula',
-      'force', 'velocity', 'acceleration', 'energy', 'momentum',
-      'matematik', 'fizik', 'hesapla', 'çöz', 'grafik', 'koordinat',
+      'matematik', 'fizik', 'hesapla', 'çöz', 'koordinat',
       'üçgen', 'açı', 'alan', 'hacim', 'sin', 'cos', 'tan', 'log',
       'çarpım', 'bölüm', 'toplam', 'fark', 'oran', 'orantı',
+      'parabol', 'sinüs', 'kosinüs', 'hipotenüs', 'çap', 'yarıçap',
+      'newton', 'joule', 'watt', 'ohm', 'volt', 'amper',
+      // Visual/whiteboard trigger words
+      'çiz', 'çizim', 'grafik', 'tahta', 'şekil', 'diyagram',
+      'adım adım', 'görsel', 'göster', 'anlat', 'nasıl çalışır',
+      // English
+      'derivative', 'integral', 'equation', 'function', 'graph', 'formula',
+      'force', 'velocity', 'acceleration', 'energy', 'parabola', 'sine',
+      'triangle', 'circle', 'vector', 'matrix', 'coordinate', 'geometry',
+      'draw', 'diagram', 'plot', 'calculate', 'solve',
     ];
     final lower = text.toLowerCase();
     return keywords.any((k) => lower.contains(k));
@@ -358,19 +369,13 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.add(ChatMessage(text: fullReply, isUser: false));
       });
 
+      _lastUserQuery = trimmed;
+      _lastAiReply = fullReply;
       await _persistCurrent();
 
-      // Auto-trigger whiteboard for math/physics questions
-      if (_isMathPhysics(trimmed) && _anthropic != null && mounted) {
-        setState(() => _wbState = WhiteboardState.loading);
-        final wb = await _anthropic!.generateWhiteboard(trimmed, fullReply);
-        if (mounted) {
-          final data = wb ?? WhiteboardData.defaultAnimation();
-          setState(() {
-            _wbData = data;
-            _wbState = WhiteboardState.ready;
-          });
-        }
+      // Auto-trigger whiteboard for math/physics/visual questions
+      if (_isMathPhysics(trimmed) && mounted) {
+        await _triggerWhiteboard(trimmed, fullReply);
       }
 
     } on AnthropicException catch (e) {
@@ -417,6 +422,73 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
+  }
+
+  // ── Whiteboard ────────────────────────────────────────────────────────────
+
+  Future<void> _triggerWhiteboard(String userQ, String aiReply) async {
+    if (!mounted) return;
+    debugPrint('[WB] Starting generation for: "$userQ"');
+    setState(() => _wbState = WhiteboardState.loading);
+
+    if (_anthropic == null) {
+      debugPrint('[WB] No API key — using fallback animation');
+      setState(() {
+        _wbData = WhiteboardData.defaultAnimation();
+        _wbState = WhiteboardState.ready;
+        _replayKey++;
+      });
+      return;
+    }
+
+    try {
+      final wb = await _anthropic!.generateWhiteboard(userQ, aiReply);
+      if (!mounted) return;
+      if (wb != null) {
+        debugPrint('[WB] Success: ${wb.elements.length} elements, title="${wb.title}"');
+        setState(() {
+          _wbData = wb;
+          _wbState = WhiteboardState.ready;
+          _replayKey++;
+        });
+      } else {
+        debugPrint('[WB] Generation returned null — using fallback animation');
+        setState(() {
+          _wbData = WhiteboardData.defaultAnimation();
+          _wbState = WhiteboardState.ready;
+          _replayKey++;
+        });
+      }
+    } catch (e) {
+      debugPrint('[WB] Error during generation: $e — using fallback animation');
+      if (!mounted) return;
+      setState(() {
+        _wbData = WhiteboardData.defaultAnimation();
+        _wbState = WhiteboardState.ready;
+        _replayKey++;
+      });
+    }
+  }
+
+  void _onWhiteboardToggle() {
+    if (_wbVisible) {
+      setState(() => _wbState = WhiteboardState.closed);
+      return;
+    }
+    if (_wbData != null) {
+      setState(() => _wbState = WhiteboardState.ready);
+      return;
+    }
+    // No data yet — show default and optionally generate for last query
+    debugPrint('[WB] Manual open — no data, showing fallback');
+    setState(() {
+      _wbData = WhiteboardData.defaultAnimation();
+      _wbState = WhiteboardState.ready;
+      _replayKey++;
+    });
+    if (_lastUserQuery.isNotEmpty && _anthropic != null) {
+      _triggerWhiteboard(_lastUserQuery, _lastAiReply);
+    }
   }
 
   // ── Image ─────────────────────────────────────────────────────────────────
@@ -539,22 +611,57 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       actions: [
-        if (_wbData != null)
-          IconButton(
-            tooltip: _wbVisible ? 'Tahtayı Kapat' : 'Tahtayı Göster',
-            icon: Icon(
-              _wbVisible ? Icons.splitscreen_rounded : Icons.auto_graph_rounded,
-              color: _wbVisible ? const Color(0xFF7C6BF8) : const Color(0xFF9CA3AF),
-              size: 20,
-            ),
-            onPressed: () => setState(() {
-              if (_wbVisible) {
-                _wbState = WhiteboardState.closed;
-              } else {
-                _wbState = WhiteboardState.ready;
-              }
-            }),
-          ),
+        // Always-visible Tahta button
+        _wbState == WhiteboardState.loading
+            ? const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFF7C6BF8)),
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: GestureDetector(
+                  onTap: _onWhiteboardToggle,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _wbVisible
+                          ? const Color(0xFF7C6BF8)
+                          : const Color(0xFF7C6BF8).withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFF7C6BF8).withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _wbVisible
+                              ? Icons.splitscreen_rounded
+                              : Icons.auto_graph_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Tahta',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
         IconButton(
           tooltip: 'Yeni Sohbet',
           icon: const Icon(Icons.edit_outlined, color: Color(0xFF9CA3AF), size: 20),
@@ -667,8 +774,65 @@ class _ChatScreenState extends State<ChatScreen> {
         if (hasStreaming && i == _messages.length) {
           return _StreamingBubble(text: _streamingText!);
         }
-        return _MessageBubble(message: _messages[i]);
+        final msg = _messages[i];
+        // Show "Tahtada anlat" chip below the last AI message when applicable
+        final isLastAi = !msg.isUser &&
+            !msg.isError &&
+            i == _messages.length - 1 &&
+            !hasStreaming &&
+            _isMathPhysics(_lastUserQuery);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MessageBubble(message: msg),
+            if (isLastAi) _buildWhiteboardChip(),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildWhiteboardChip() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 46, top: 2, bottom: 6),
+      child: GestureDetector(
+        onTap: _wbVisible
+            ? () => setState(() => _wbState = WhiteboardState.closed)
+            : _onWhiteboardToggle,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: _wbVisible
+                ? const Color(0xFF1E1A40)
+                : const Color(0xFF130C2E),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF7C6BF8).withValues(alpha: _wbVisible ? 0.7 : 0.45),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _wbVisible ? Icons.close_rounded : Icons.auto_graph_rounded,
+                size: 13,
+                color: const Color(0xFF9B8BFB),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                _wbVisible ? 'Tahtayı kapat' : 'Tahtada anlat',
+                style: const TextStyle(
+                  color: Color(0xFF9B8BFB),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
