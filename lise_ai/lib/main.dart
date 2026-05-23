@@ -17,6 +17,7 @@ import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
 import 'services/storage_service.dart';
 import 'widgets/analytics_panel.dart';
+import 'widgets/live_lesson_page.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
 import 'widgets/pdf_page_picker.dart';
@@ -576,6 +577,24 @@ class _ChatScreenState extends State<ChatScreen> {
       _profileSvc.buildMemorySummary() +
       _teacherEngine.buildOrchestrationPrompt();
 
+  // ── Live lesson ────────────────────────────────────────────────────────────
+
+  Future<void> _startLiveLesson() async {
+    if (_anthropic == null || _isBusy) return;
+    final sessionHistory = await pushLiveLesson(
+      context,
+      anthropic: _anthropic!,
+      history: List.from(_history),
+      mode: _mode,
+      level: _level,
+      profileSvc: _profileSvc,
+    );
+    // Merge session turns back into main history
+    if (sessionHistory != null && sessionHistory.isNotEmpty && mounted) {
+      setState(() => _history = sessionHistory);
+    }
+  }
+
   // ── Mic / STT ─────────────────────────────────────────────────────────────
 
   Future<void> _toggleMic() async {
@@ -801,6 +820,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: 'Canlı Ders Başlat',
+          icon: const Icon(Icons.record_voice_over_rounded,
+              color: Color(0xFF4ADE80), size: 20),
+          onPressed: (_isBusy || _anthropic == null) ? null : _startLiveLesson,
+        ),
         IconButton(
           tooltip: 'İlerleme',
           icon: const Icon(Icons.bar_chart_rounded, color: Color(0xFF9CA3AF), size: 20),
