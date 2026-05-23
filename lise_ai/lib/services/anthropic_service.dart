@@ -17,6 +17,7 @@ Görevlerin:
 - Hataları nazikçe düzeltmek ve doğru yolu göstermek
 - Eğlenceli ama olgun bir dil kullanmak — ne çok resmi ne de çocukça
 - Emoji kullanabilirsin ama abartma; bir tane yeterliyse iki kullanma
+- Fotoğraf gönderildiğinde: soruyu veya içeriği tanı, adım adım çöz
 
 Yanıtlarını kısa ve odaklı tut. Öğrenci daha fazla detay isterse genişlet.
 Türkçe yanıt ver.
@@ -27,8 +28,20 @@ Türkçe yanıt ver.
   AnthropicService(this._apiKey);
 
   /// Sends the conversation history to Claude and returns the assistant reply.
-  /// [history] is a list of {"role": "user"/"assistant", "content": "..."} maps.
-  Future<String> sendMessage(List<Map<String, String>> history) async {
+  ///
+  /// Each entry in [history] is a map with:
+  ///   - "role": "user" or "assistant"
+  ///   - "content": either a plain String (text-only) or a List of content
+  ///     blocks (for vision messages).
+  Future<String> sendMessage(List<Map<String, dynamic>> history) async {
+    // Build the messages list — Anthropic accepts both string and list content.
+    final messages = history.map((entry) {
+      return {
+        'role': entry['role'],
+        'content': entry['content'],
+      };
+    }).toList();
+
     final response = await http.post(
       Uri.parse(_baseUrl),
       headers: {
@@ -40,7 +53,7 @@ Türkçe yanıt ver.
         'model': _model,
         'max_tokens': 1024,
         'system': _systemPrompt,
-        'messages': history,
+        'messages': messages,
       }),
     );
 
@@ -57,6 +70,30 @@ Türkçe yanıt ver.
     throw AnthropicException(
       'Bir sorun oluştu (${response.statusCode}). Lütfen tekrar dene.',
     );
+  }
+
+  /// Builds a vision content block list from [imageBytes] + optional [text].
+  static List<Map<String, dynamic>> buildImageContent(
+    List<int> imageBytes,
+    String mimeType, {
+    String text = '',
+  }) {
+    return [
+      {
+        'type': 'image',
+        'source': {
+          'type': 'base64',
+          'media_type': mimeType,
+          'data': base64Encode(imageBytes),
+        },
+      },
+      {
+        'type': 'text',
+        'text': text.isEmpty
+            ? 'Bu görseli analiz et ve Türkçe açıkla. Matematik sorusuysa adım adım çöz.'
+            : text,
+      },
+    ];
   }
 }
 

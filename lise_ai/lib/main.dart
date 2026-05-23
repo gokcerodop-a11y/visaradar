@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -49,11 +53,13 @@ class ChatMessage {
   final String text;
   final bool isUser;
   final bool isError;
+  final Uint8List? imageBytes;
 
   const ChatMessage({
     required this.text,
     required this.isUser,
     this.isError = false,
+    this.imageBytes,
   });
 }
 
@@ -71,24 +77,28 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  late final AnthropicService? _anthropic;
-  final List<Map<String, String>> _history = [];
+  AnthropicService? _anthropic;
+
+  // History uses dynamic content to support both plain text and vision blocks.
+  final List<Map<String, dynamic>> _history = [];
 
   final List<ChatMessage> _messages = [
     const ChatMessage(
-      text: 'Bugün ne öğrenmek istiyorsun? ✨',
+      text: 'Bugün ne öğrenmek istiyorsun? ✨\nFotoğraf veya ekran görüntüsü de gönderebilirsin.',
       isUser: false,
     ),
   ];
 
   bool _isTyping = false;
+  Uint8List? _pendingImage;
+  String _pendingMime = 'image/jpeg';
+  bool _isDragging = false;
 
   @override
   void initState() {
     super.initState();
     final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
     if (apiKey.isEmpty || apiKey == 'your_api_key_here') {
-      _anthropic = null;
       WidgetsBinding.instance.addPostFrameCallback((_) => _showApiKeyError());
     } else {
       _anthropic = AnthropicService(apiKey);
@@ -113,13 +123,61 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  // ── Image picking ───────────────────────────────────────────────────────────
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result != null && result.files.single.bytes != null) {
+      final file = result.files.single;
+      final ext = (file.extension ?? 'jpg').toLowerCase();
+      setState(() {
+        _pendingImage = file.bytes;
+        _pendingMime = ext == 'png' ? 'image/png' : 'image/jpeg';
+      });
+    }
+  }
+
+  void _handleDrop(DropDoneDetails details) async {
+    for (final file in details.files) {
+      final path = file.path.toLowerCase();
+      if (path.endsWith('.jpg') || path.endsWith('.jpeg') ||
+          path.endsWith('.png') || path.endsWith('.webp') ||
+          path.endsWith('.gif')) {
+        final bytes = await file.readAsBytes();
+        setState(() {
+          _pendingImage = Uint8List.fromList(bytes);
+          _pendingMime = path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+          _isDragging = false;
+        });
+        return;
+      }
+    }
+    setState(() => _isDragging = false);
+  }
+
+  void _clearPendingImage() => setState(() => _pendingImage = null);
+
+  // ── Send message ────────────────────────────────────────────────────────────
+
   Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isTyping) return;
+    final hasImage = _pendingImage != null;
+    if ((trimmed.isEmpty && !hasImage) || _isTyping) return;
+
+    final imageBytes = _pendingImage;
+    final mime = _pendingMime;
 
     setState(() {
-      _messages.add(ChatMessage(text: trimmed, isUser: true));
+      _messages.add(ChatMessage(
+        text: trimmed,
+        isUser: true,
+        imageBytes: imageBytes,
+      ));
       _isTyping = true;
+      _pendingImage = null;
     });
     _inputController.clear();
     _scrollToBottom();
@@ -129,7 +187,14 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    _history.add({'role': 'user', 'content': trimmed});
+    if (imageBytes != null) {
+      _history.add({
+        'role': 'user',
+        'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed),
+      });
+    } else {
+      _history.add({'role': 'user', 'content': trimmed});
+    }
 
     try {
       final reply = await _anthropic!.sendMessage(_history);
@@ -141,7 +206,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } on AnthropicException catch (e) {
       if (!mounted) return;
-      _history.removeLast(); // remove the failed user message from history
+      _history.removeLast();
       setState(() {
         _isTyping = false;
         _messages.add(ChatMessage(text: '⚠️ ${e.message}', isUser: false, isError: true));
@@ -174,18 +239,31 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // ── Build ───────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
-      appBar: _buildAppBar(),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: _buildMessageList()),
-            if (_isTyping) _buildTypingIndicator(),
-            _buildInputBar(),
-          ],
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _isDragging = true),
+      onDragExited: (_) => setState(() => _isDragging = false),
+      onDragDone: _handleDrop,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0D0D0D),
+        appBar: _buildAppBar(),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(child: _buildMessageList()),
+                  if (_isTyping) _buildTypingIndicator(),
+                  if (_pendingImage != null) _buildImagePreview(),
+                  _buildInputBar(),
+                ],
+              ),
+              if (_isDragging) _buildDropOverlay(),
+            ],
+          ),
         ),
       ),
     );
@@ -285,6 +363,53 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // Thumbnail strip shown above input when an image is staged.
+  Widget _buildImagePreview() {
+    return Container(
+      color: const Color(0xFF0D0D0D),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Row(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.memory(
+                  _pendingImage!,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: -6,
+                right: -6,
+                child: GestureDetector(
+                  onTap: _clearPendingImage,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF374151),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'Fotoğraf hazır — mesajını yaz veya gönder.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputBar() {
     return Container(
       color: const Color(0xFF0D0D0D),
@@ -298,8 +423,10 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _InputIconButton(icon: Icons.image_outlined, onTap: () {}),
-            _InputIconButton(icon: Icons.attach_file_rounded, onTap: () {}),
+            _InputIconButton(
+              icon: Icons.image_outlined,
+              onTap: _pickImage,
+            ),
             Expanded(
               child: TextField(
                 controller: _inputController,
@@ -311,7 +438,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: _sendMessage,
                 decoration: const InputDecoration(
-                  hintText: 'Bir şey sor...',
+                  hintText: 'Bir şey sor veya fotoğraf gönder...',
                   hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 15),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -322,7 +449,36 @@ class _ChatScreenState extends State<ChatScreen> {
             _SendOrMicButton(
               controller: _inputController,
               isLoading: _isTyping,
+              hasPendingImage: _pendingImage != null,
               onSend: _sendMessage,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Semi-transparent overlay shown while a file is being dragged over the app.
+  Widget _buildDropOverlay() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF7C6BF8).withOpacity(0.15),
+          border: Border.all(color: const Color(0xFF7C6BF8), width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_outlined, color: Color(0xFF7C6BF8), size: 48),
+            SizedBox(height: 12),
+            Text(
+              'Fotoğrafı buraya bırak',
+              style: TextStyle(
+                color: Color(0xFF7C6BF8),
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -342,6 +498,8 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.isUser;
     final isError = message.isError;
+    final hasImage = message.imageBytes != null;
+    final hasText = message.text.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -355,9 +513,8 @@ class _MessageBubble extends StatelessWidget {
           ],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                gradient: isUser
+                gradient: isUser && !hasImage
                     ? const LinearGradient(
                         colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
                         begin: Alignment.topLeft,
@@ -365,7 +522,7 @@ class _MessageBubble extends StatelessWidget {
                       )
                     : null,
                 color: isUser
-                    ? null
+                    ? (hasImage ? const Color(0xFF1E1E2E) : null)
                     : isError
                         ? const Color(0xFF2A1A1A)
                         : const Color(0xFF1E1E1E),
@@ -379,17 +536,35 @@ class _MessageBubble extends StatelessWidget {
                     ? Border.all(color: const Color(0xFF7F1D1D), width: 0.5)
                     : null,
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: isUser
-                      ? Colors.white
-                      : isError
-                          ? const Color(0xFFFCA5A5)
-                          : const Color(0xFFE5E7EB),
-                  height: 1.45,
-                ),
+              clipBehavior: Clip.hardEdge,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasImage)
+                    Image.memory(
+                      message.imageBytes!,
+                      width: 220,
+                      fit: BoxFit.cover,
+                    ),
+                  if (hasText)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Text(
+                        message.text,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isUser
+                              ? Colors.white
+                              : isError
+                                  ? const Color(0xFFFCA5A5)
+                                  : const Color(0xFFE5E7EB),
+                          height: 1.45,
+                        ),
+                      ),
+                    )
+                  else if (hasImage)
+                    const SizedBox(height: 4),
+                ],
               ),
             ),
           ),
@@ -508,11 +683,13 @@ class _InputIconButton extends StatelessWidget {
 class _SendOrMicButton extends StatefulWidget {
   final TextEditingController controller;
   final bool isLoading;
+  final bool hasPendingImage;
   final ValueChanged<String> onSend;
 
   const _SendOrMicButton({
     required this.controller,
     required this.isLoading,
+    required this.hasPendingImage,
     required this.onSend,
   });
 
@@ -540,6 +717,8 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
     if (hasText != _hasText) setState(() => _hasText = hasText);
   }
 
+  bool get _showSend => _hasText || widget.hasPendingImage;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -562,7 +741,7 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
                   color: Color(0xFF7C6BF8),
                 ),
               )
-            : _hasText
+            : _showSend
                 ? GestureDetector(
                     key: const ValueKey('send'),
                     onTap: () => widget.onSend(widget.controller.text),
