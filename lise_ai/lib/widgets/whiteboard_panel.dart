@@ -5,7 +5,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../models/lesson_timeline.dart';
 import '../models/whiteboard_element.dart';
+import '../services/chalk_sound.dart';
 
 // ── Public panel widget ───────────────────────────────────────────────────────
 
@@ -14,6 +16,7 @@ enum WhiteboardState { closed, loading, ready }
 class WhiteboardPanel extends StatelessWidget {
   final WhiteboardState state;
   final WhiteboardData? data;
+  final LessonTimeline? lesson;
   final VoidCallback onClose;
   final VoidCallback onReplay;
   final VoidCallback? onClearBoard;
@@ -23,6 +26,7 @@ class WhiteboardPanel extends StatelessWidget {
     super.key,
     required this.state,
     required this.data,
+    this.lesson,
     required this.onClose,
     required this.onReplay,
     this.onClearBoard,
@@ -45,12 +49,14 @@ class WhiteboardPanel extends StatelessWidget {
             title: data?.title.isNotEmpty == true ? data!.title : 'Tahta',
             onClose: onClose,
             state: state,
+            lesson: lesson,
           ),
           Expanded(
             child: switch (state) {
               WhiteboardState.loading => const _LoadingView(),
               WhiteboardState.ready  => _WhiteboardCanvas(
                   data: data ?? _empty,
+                  lesson: lesson,
                   onReplay: onReplay,
                   onClearBoard: onClearBoard,
                   onCheckDrawing: onCheckDrawing,
@@ -70,11 +76,13 @@ class _Header extends StatelessWidget {
   final String title;
   final VoidCallback onClose;
   final WhiteboardState state;
+  final LessonTimeline? lesson;
 
   const _Header({
     required this.title,
     required this.onClose,
     required this.state,
+    this.lesson,
   });
 
   @override
@@ -114,6 +122,36 @@ class _Header extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (lesson != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0D2A1A),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: const Color(0xFF4ADE80).withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 5, height: 5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4ADE80), shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Canlı Ders',
+                    style: TextStyle(
+                      color: Color(0xFF4ADE80),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           GestureDetector(
             onTap: onClose,
             child: Container(
@@ -307,12 +345,14 @@ class _DrawingNotifier extends ChangeNotifier {
 
 class _WhiteboardCanvas extends StatefulWidget {
   final WhiteboardData data;
+  final LessonTimeline? lesson;
   final VoidCallback? onReplay;
   final VoidCallback? onClearBoard;
   final Future<void> Function(Uint8List)? onCheckDrawing;
 
   const _WhiteboardCanvas({
     required this.data,
+    this.lesson,
     this.onReplay,
     this.onClearBoard,
     this.onCheckDrawing,
@@ -333,15 +373,23 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
   bool _checking = false;
   final _repaintKey = GlobalKey();
 
+  final _chalkSound = ChalkSoundService();
+  Set<int> _soundedElements = {};
+  final _stepIndexNotifier = ValueNotifier<int>(0);
+  bool _muted = false;
+
   bool get _penActive => _drawMode != _DrawMode.none;
 
   @override
   void initState() {
     super.initState();
+    _chalkSound.init();
     _startAnimation();
   }
 
   void _startAnimation() {
+    _soundedElements = {};
+    _stepIndexNotifier.value = 0;
     final dur = widget.data.totalDuration;
     _ctrl = AnimationController(
       vsync: this,
@@ -364,8 +412,35 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
   @override
   void dispose() {
     _ctrl.dispose();
+    _stepIndexNotifier.dispose();
     _drawNotifier.dispose();
     super.dispose();
+  }
+
+  void _checkLessonProgress() {
+    final t = _time.value;
+
+    // Sound: fire one chalk sound per element when it first starts drawing
+    for (int i = 0; i < widget.data.elements.length; i++) {
+      if (t >= widget.data.elements[i].delay && !_soundedElements.contains(i)) {
+        _soundedElements.add(i);
+        _chalkSound.playStroke();
+      }
+    }
+
+    // Lesson step advancement
+    if (widget.lesson != null) {
+      int newStep = 0;
+      for (int i = widget.lesson!.steps.length - 1; i >= 0; i--) {
+        if (t >= widget.lesson!.stepStartTime(i)) {
+          newStep = i;
+          break;
+        }
+      }
+      if (newStep != _stepIndexNotifier.value) {
+        _stepIndexNotifier.value = newStep;
+      }
+    }
   }
 
   // ── Raw pointer events (no setState on move — notifier repaints only) ─────
@@ -443,6 +518,15 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
 
     return Column(
       children: [
+        // ── Lesson step text (only in lesson mode) ──────────────────────────
+        if (widget.lesson != null && widget.lesson!.steps.isNotEmpty)
+          ValueListenableBuilder<int>(
+            valueListenable: _stepIndexNotifier,
+            builder: (_, idx, __) {
+              final step = widget.lesson!.steps[idx.clamp(0, widget.lesson!.steps.length - 1)];
+              return _StepTextPanel(text: step.text, stepIndex: idx);
+            },
+          ),
         // ── Canvas area ─────────────────────────────────────────────────────
         Expanded(
           child: RepaintBoundary(
@@ -454,12 +538,15 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
                   // ① AI animation layer
                   AnimatedBuilder(
                     animation: _time,
-                    builder: (_, __) => CustomPaint(
-                      painter: _WhiteboardPainter(
-                          elements: widget.data.elements,
-                          time: _time.value),
-                      child: const SizedBox.expand(),
-                    ),
+                    builder: (_, __) {
+                      _checkLessonProgress();
+                      return CustomPaint(
+                        painter: _WhiteboardPainter(
+                            elements: widget.data.elements,
+                            time: _time.value),
+                        child: const SizedBox.expand(),
+                      );
+                    },
                   ),
                   // ② Student drawing layer — repaints via notifier only
                   CustomPaint(
@@ -530,6 +617,20 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
                           ? _DrawMode.none
                           : _DrawMode.eraser),
                 ),
+                const SizedBox(width: 6),
+                _TBtn(
+                  icon: _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                  label: _muted ? 'Ses Kapalı' : 'Ses Açık',
+                  active: !_muted,
+                  activeColor: const Color(0xFF60A5FA),
+                  onTap: () {
+                    setState(() {
+                      _muted = !_muted;
+                      _chalkSound.muted = _muted;
+                    });
+                    debugPrint('[Sound] Muted: $_muted');
+                  },
+                ),
                 const Spacer(),
                 _TBtn(
                   icon: Icons.replay_rounded,
@@ -586,6 +687,50 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Step text panel ────────────────────────────────────────────────────────────
+
+class _StepTextPanel extends StatelessWidget {
+  final String text;
+  final int stepIndex;
+  const _StepTextPanel({required this.text, required this.stepIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      child: Container(
+        key: ValueKey(stepIndex),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0D0D28),
+          border: Border(bottom: BorderSide(color: Color(0xFF1E1E44))),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 3, right: 8),
+              width: 6, height: 6,
+              decoration: const BoxDecoration(
+                color: Color(0xFF4ADE80), shape: BoxShape.circle),
+            ),
+            Expanded(
+              child: Text(text,
+                style: const TextStyle(
+                  color: Color(0xFFD4E0FF),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

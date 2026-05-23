@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/lesson_timeline.dart';
 import '../models/whiteboard_element.dart';
 
 class AnthropicService {
@@ -204,6 +206,95 @@ KURALLAR:
       final json = jsonDecode(raw.trim()) as Map<String, dynamic>;
       return WhiteboardData.fromJson(json);
     } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Lesson generation ───────────────────────────────────────────────────────
+
+  static const _lessonSystemPrompt = r'''
+Sen bir eğitim dersi animasyonu oluşturan matematik/fizik öğretmenisin.
+SADECE geçerli JSON döndür — açıklama veya markdown kullanma.
+
+Format:
+{
+  "title": "Konu Başlığı (Türkçe, kısa)",
+  "steps": [
+    {
+      "text": "Öğrenciye hitap eden Türkçe açıklama (1-2 cümle)",
+      "elements": [0, 1]
+    }
+  ],
+  "elements": [ ...element nesneleri... ]
+}
+
+ELEMENT FORMATI (whiteboard ile aynı):
+step    → {"type":"step","content":"1","label":"Açıklama","x":0.04,"y":0.04,"delay":0}
+text    → {"type":"text","content":"Metin","x":0.05,"y":0.10,"size":14,"delay":0.3}
+formula → {"type":"formula","content":"f(x)=x²","x":0.05,"y":0.18,"size":18,"delay":0.6}
+axes    → {"type":"axes","x":0.08,"y":0.75,"w":0.84,"h":0.55,"label":"x,y","color":"gray","delay":0.0}
+line    → {"type":"line","x1":0.1,"y1":0.5,"x2":0.9,"y2":0.5,"color":"white","delay":1.0}
+arrow   → {"type":"arrow","x1":0.3,"y1":0.6,"x2":0.6,"y2":0.4,"color":"orange","label":"F","delay":1.2}
+vector  → {"type":"vector","x1":0.4,"y1":0.7,"x2":0.7,"y2":0.4,"color":"cyan","label":"|v|=5","delay":1.4}
+circle  → {"type":"circle","cx":0.5,"cy":0.55,"r":0.12,"color":"green","label":"r=5","delay":1.0}
+rect    → {"type":"rect","x":0.2,"y":0.3,"w":0.35,"h":0.2,"color":"blue","delay":1.5}
+triangle→ {"type":"triangle","points":[[0.2,0.8],[0.5,0.3],[0.8,0.8]],"color":"orange","label":"A,B,C","delay":1.0}
+curve   → {"type":"curve","points":[[0.08,0.6],[0.3,0.45],[0.55,0.5],[0.8,0.35]],"color":"purple","label":"f(x)","delay":1.5}
+parabola→ {"type":"parabola","cx":0.5,"cy":0.75,"a":1.5,"x1":0.08,"x2":0.92,"color":"purple","label":"y=ax²","delay":1.2}
+sine    → {"type":"sine","x1":0.08,"x2":0.92,"y":0.6,"amplitude":0.18,"frequency":2,"color":"cyan","label":"sin(x)","delay":1.0}
+point   → {"type":"point","x":0.5,"y":0.55,"label":"(1,2)","color":"yellow","delay":2.0}
+
+STEP KURALLARI:
+- Maksimum 5 step, maksimum 12 element
+- steps[i].elements: o adımda çizilen elementlerin 0-based indeksleri
+- Element delay'ları sıralı olmalı: adım 0 → 0.0-2.5s, adım 1 → 2.5-5.0s, adım 2 → 5.0-7.5s, vb.
+- text: "Şimdi X'i yapıyoruz…" gibi öğrenciye hitap eden açıklama
+- SADECE JSON döndür
+''';
+
+  /// Generates a synchronized lesson timeline with steps and whiteboard elements.
+  Future<LessonTimeline?> generateLesson(
+      String userQuestion, String assistantReply) async {
+    final prompt =
+        'Kullanıcının sorusu: "$userQuestion"\n\n'
+        'Claude\'un cevabı: "$assistantReply"\n\n'
+        'Bu konuyu anlatan adım adım Canlı Ders JSON\'u oluştur.';
+
+    final response = await _client.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'x-api-key': _apiKey,
+        'anthropic-version': _apiVersion,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': _model,
+        'max_tokens': 2000,
+        'system': _lessonSystemPrompt,
+        'messages': [
+          {'role': 'user', 'content': prompt},
+        ],
+      }),
+    );
+
+    if (response.statusCode != 200) return null;
+
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final content =
+          (body['content'] as List).first as Map<String, dynamic>;
+      var raw = (content['text'] as String).trim();
+      if (raw.startsWith('```')) {
+        raw = raw.replaceFirst(RegExp(r'^```[a-z]*\n?'), '');
+        raw = raw.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+      final json = jsonDecode(raw.trim()) as Map<String, dynamic>;
+      final lesson = LessonTimeline.fromJson(json);
+      debugPrint(
+          '[Lesson] Generated: ${lesson.steps.length} steps, ${lesson.elements.length} elements');
+      return lesson;
+    } catch (e) {
+      debugPrint('[Lesson] Parse error: $e');
       return null;
     }
   }

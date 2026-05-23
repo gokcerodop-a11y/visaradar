@@ -1,4 +1,7 @@
 PODS:
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - desktop_drop (0.0.1):
     - FlutterMacOS
   - file_picker (0.0.1):
@@ -6,11 +9,14 @@ PODS:
   - FlutterMacOS (1.0.0)
 
 DEPENDENCIES:
+  - audioplayers_darwin (from `Flutter/ephemeral/.symlinks/plugins/audioplayers_darwin/darwin`)
   - desktop_drop (from `Flutter/ephemeral/.symlinks/plugins/desktop_drop/macos`)
   - file_picker (from `Flutter/ephemeral/.symlinks/plugins/file_picker/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
 
 EXTERNAL SOURCES:
+  audioplayers_darwin:
+    :path: Flutter/ephemeral/.symlinks/plugins/audioplayers_darwin/darwin
   desktop_drop:
     :path: Flutter/ephemeral/.symlinks/plugins/desktop_drop/macos
   file_picker:
@@ -19,6 +25,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral
 
 SPEC CHECKSUMS:
+  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
   desktop_drop: e0b672a7d84c0a6cbc378595e82cdb15f2970a43
   file_picker: 7584aae6fa07a041af2b36a2655122d42f578c1a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import 'models/lesson_timeline.dart';
 import 'models/whiteboard_element.dart';
 import 'services/anthropic_service.dart';
 import 'services/storage_service.dart';
@@ -136,6 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // ── Whiteboard ────────────────────────────────────────────────────────────
   WhiteboardState _wbState = WhiteboardState.closed;
   WhiteboardData? _wbData;
+  LessonTimeline? _lessonTimeline;
   int _replayKey = 0;
   String _lastUserQuery = '';
 
@@ -496,13 +498,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _triggerWhiteboard(String userQ, String aiReply) async {
     if (!mounted) return;
-    debugPrint('[WB] Starting generation for: "$userQ"');
+    debugPrint('[WB] Starting lesson generation for: "$userQ"');
     setState(() => _wbState = WhiteboardState.loading);
 
     if (_anthropic == null) {
-      debugPrint('[WB] No API key — using fallback animation');
       setState(() {
         _wbData = WhiteboardData.defaultAnimation();
+        _lessonTimeline = null;
         _wbState = WhiteboardState.ready;
         _replayKey++;
       });
@@ -510,28 +512,37 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
-      final wb = await _anthropic!.generateWhiteboard(userQ, aiReply);
-      if (!mounted) return;
-      if (wb != null) {
-        debugPrint('[WB] Success: ${wb.elements.length} elements, title="${wb.title}"');
+      // Try lesson mode first
+      final lesson = await _anthropic!.generateLesson(userQ, aiReply);
+      if (lesson != null && mounted) {
+        debugPrint('[WB] Lesson mode: ${lesson.steps.length} steps');
         setState(() {
-          _wbData = wb;
+          _wbData = lesson.whiteboardData;
+          _lessonTimeline = lesson;
           _wbState = WhiteboardState.ready;
           _replayKey++;
         });
-      } else {
-        debugPrint('[WB] Generation returned null — using fallback animation');
-        setState(() {
-          _wbData = WhiteboardData.defaultAnimation();
-          _wbState = WhiteboardState.ready;
-          _replayKey++;
-        });
+        return;
       }
     } catch (e) {
-      debugPrint('[WB] Error during generation: $e — using fallback animation');
+      debugPrint('[WB] Lesson generation error: $e');
+    }
+
+    // Fallback to regular whiteboard
+    try {
+      final wb = await _anthropic!.generateWhiteboard(userQ, aiReply);
+      if (!mounted) return;
+      setState(() {
+        _wbData = wb ?? WhiteboardData.defaultAnimation();
+        _lessonTimeline = null;
+        _wbState = WhiteboardState.ready;
+        _replayKey++;
+      });
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _wbData = WhiteboardData.defaultAnimation();
+        _lessonTimeline = null;
         _wbState = WhiteboardState.ready;
         _replayKey++;
       });
@@ -552,6 +563,7 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint('[WB] Tahtayı Sil tapped');
     setState(() {
       _wbData = null;
+      _lessonTimeline = null;
       _replayKey++;
     });
   }
@@ -629,6 +641,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 key: ValueKey(_replayKey),
                                 state: _wbState,
                                 data: _wbData,
+                                lesson: _lessonTimeline,
                                 onClose: () => setState(() => _wbState = WhiteboardState.closed),
                                 onReplay: () => setState(() => _replayKey++),
                                 onClearBoard: _onClearBoard,
