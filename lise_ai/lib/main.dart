@@ -10,6 +10,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'models/whiteboard_element.dart';
 import 'services/anthropic_service.dart';
 import 'services/storage_service.dart';
+import 'widgets/math_markdown.dart';
 import 'widgets/whiteboard_panel.dart';
 
 Future<void> main() async {
@@ -1012,10 +1013,10 @@ class _StreamingBubble extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (text.isNotEmpty)
-                    MarkdownBody(
+                    MathMarkdown(
                       data: text,
+                      isStreaming: true,
                       styleSheet: _mdStyle(context),
-                      softLineBreak: true,
                     ),
                   const SizedBox(height: 4),
                   const _BlinkingCursor(),
@@ -1193,10 +1194,9 @@ class _MessageBubble extends StatelessWidget {
                                 color: isUser ? Colors.white : const Color(0xFFFCA5A5),
                                 height: 1.45,
                               ))
-                          : MarkdownBody(
+                          : MathMarkdown(
                               data: message.text,
                               styleSheet: _mdStyle(context),
-                              softLineBreak: true,
                             ),
                     )
                   else if (hasImage)

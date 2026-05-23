@@ -460,47 +460,50 @@ class _WhiteboardPainter extends CustomPainter {
       {required bool formula}) {
     if (el.content == null || el.x == null || el.y == null) return;
 
-    final color = formula ? const Color(0xFFE9D5FF) : Colors.white;
-    final fontSize = formula ? el.fontSize * 1.1 : el.fontSize;
+    final color = formula ? const Color(0xFFEDE0FF) : Colors.white;
+    final fontSize = formula ? (el.fontSize * 1.15).clamp(16.0, 28.0) : el.fontSize;
 
     final tp = _makeTP(
       el.content!,
       color.withValues(alpha: p),
       fontSize,
       bold: formula,
-      maxWidth: size.width * 0.85,
+      maxWidth: size.width * 0.88,
     );
 
     final pos = Offset(el.x! * size.width, el.y! * size.height);
 
     if (formula) {
-      // Pill background fades in
+      final padH = 12.0, padV = 7.0;
+      final boxRect = Rect.fromLTWH(
+          pos.dx - padH, pos.dy - padV, tp.width + padH * 2, tp.height + padV * 2);
+
+      // Purple glow behind box
       canvas.drawRRect(
-        RRect.fromRectXY(
-          Rect.fromLTWH(pos.dx - 10, pos.dy - 5, tp.width + 20, tp.height + 10),
-          8,
-          8,
-        ),
-        Paint()..color = const Color(0xFF130C2E).withValues(alpha: p * 0.9),
-      );
-      // Subtle border
-      canvas.drawRRect(
-        RRect.fromRectXY(
-          Rect.fromLTWH(pos.dx - 10, pos.dy - 5, tp.width + 20, tp.height + 10),
-          8,
-          8,
-        ),
+        RRect.fromRectXY(boxRect.inflate(4), 12, 12),
         Paint()
-          ..color = _purple.withValues(alpha: p * 0.35)
+          ..color = _purple.withValues(alpha: p * 0.12)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      );
+      // Dark background pill
+      canvas.drawRRect(
+        RRect.fromRectXY(boxRect, 9, 9),
+        Paint()..color = const Color(0xFF0E0825).withValues(alpha: p),
+      );
+      // Purple border
+      canvas.drawRRect(
+        RRect.fromRectXY(boxRect, 9, 9),
+        Paint()
+          ..color = _purple.withValues(alpha: p * 0.55)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
+          ..strokeWidth = 1.2,
       );
     }
 
     // Chalk left-to-right reveal: clip to growing rect
     canvas.save();
     canvas.clipRect(
-        Rect.fromLTWH(0, 0, pos.dx + tp.width * p + 3, size.height));
+        Rect.fromLTWH(0, 0, pos.dx + tp.width * p + 4, size.height));
     tp.paint(canvas, pos);
     canvas.restore();
   }
