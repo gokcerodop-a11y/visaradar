@@ -40,8 +40,7 @@ class WhiteboardPanel extends StatelessWidget {
           Expanded(
             child: switch (state) {
               WhiteboardState.loading => const _LoadingView(),
-              WhiteboardState.ready =>
-                _WhiteboardCanvas(data: data!),
+              WhiteboardState.ready  => _WhiteboardCanvas(data: data!),
               WhiteboardState.closed => const SizedBox(),
             },
           ),
@@ -51,7 +50,7 @@ class WhiteboardPanel extends StatelessWidget {
   }
 }
 
-// ── Header bar ────────────────────────────────────────────────────────────────
+// ── Header ─────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final String title;
@@ -70,6 +69,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         color: Color(0xFF0B0B1E),
         border: Border(bottom: BorderSide(color: Color(0xFF1A1A3A))),
@@ -144,7 +144,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Loading view ──────────────────────────────────────────────────────────────
+// ── Loading view ───────────────────────────────────────────────────────────────
 
 class _LoadingView extends StatefulWidget {
   const _LoadingView();
@@ -185,18 +185,14 @@ class _LoadingViewState extends State<_LoadingView>
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Tahta hazırlanıyor…',
-            style: TextStyle(
-                color: Color(0xFF9B8BFB),
-                fontSize: 13,
-                fontWeight: FontWeight.w500),
-          ),
+          const Text('Tahta hazırlanıyor…',
+              style: TextStyle(
+                  color: Color(0xFF9B8BFB),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(height: 6),
-          const Text(
-            'Claude adımları çiziyor',
-            style: TextStyle(color: Color(0xFF374151), fontSize: 11),
-          ),
+          const Text('Claude adımları çiziyor',
+              style: TextStyle(color: Color(0xFF374151), fontSize: 11)),
         ],
       ),
     );
@@ -209,19 +205,15 @@ class _SpinnerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
+    final c = Offset(size.width / 2, size.height / 2);
     const r = 28.0;
-
-    canvas.drawCircle(
-        center,
-        r,
+    canvas.drawCircle(c, r,
         Paint()
           ..color = const Color(0xFF1A1A3A)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3);
-
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: r),
+      Rect.fromCircle(center: c, radius: r),
       t * 2 * math.pi - math.pi / 2,
       math.pi * 1.3,
       false,
@@ -231,26 +223,24 @@ class _SpinnerPainter extends CustomPainter {
         ..strokeWidth = 3
         ..strokeCap = StrokeCap.round,
     );
-
-    // Center spark
-    canvas.drawCircle(center, 9, Paint()..color = const Color(0xFF0B0B1E));
+    canvas.drawCircle(c, 9, Paint()..color = const Color(0xFF0B0B1E));
     final icon = TextPainter(
       text: const TextSpan(
-          text: '✦', style: TextStyle(color: Color(0xFF7C6BF8), fontSize: 13)),
+          text: '✦',
+          style: TextStyle(color: Color(0xFF7C6BF8), fontSize: 13)),
       textDirection: TextDirection.ltr,
     )..layout();
-    icon.paint(canvas, center - Offset(icon.width / 2, icon.height / 2));
+    icon.paint(canvas, c - Offset(icon.width / 2, icon.height / 2));
   }
 
   @override
   bool shouldRepaint(_SpinnerPainter old) => old.t != t;
 }
 
-// ── Whiteboard canvas ─────────────────────────────────────────────────────────
+// ── Whiteboard canvas ──────────────────────────────────────────────────────────
 
 class _WhiteboardCanvas extends StatefulWidget {
   final WhiteboardData data;
-
   const _WhiteboardCanvas({required this.data});
 
   @override
@@ -272,8 +262,8 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     final dur = widget.data.totalDuration;
     _ctrl = AnimationController(
       vsync: this,
-      duration:
-          Duration(milliseconds: (dur * 1000).round().clamp(2000, 40000)),
+      duration: Duration(
+          milliseconds: (dur * 1000).round().clamp(3000, 60000)),
     )..forward();
     _time = Tween<double>(begin: 0, end: dur)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.linear));
@@ -300,308 +290,280 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
       animation: _time,
       builder: (_, __) => CustomPaint(
         painter: _WhiteboardPainter(
-          elements: widget.data.elements,
-          time: _time.value,
-        ),
+            elements: widget.data.elements, time: _time.value),
         child: const SizedBox.expand(),
       ),
     );
   }
 }
 
-// ── Whiteboard painter ────────────────────────────────────────────────────────
+// ── Painter ────────────────────────────────────────────────────────────────────
 
 class _WhiteboardPainter extends CustomPainter {
   final List<WhiteboardElement> elements;
   final double time;
 
   static const _purple = Color(0xFF9B8BFB);
-  static const _bg = Color(0xFF060612);
+  static const _bg     = Color(0xFF060612);
 
   const _WhiteboardPainter({required this.elements, required this.time});
 
   @override
   bool shouldRepaint(_WhiteboardPainter old) => old.time != time;
 
-  // ── Draw duration per element type ─────────────────────────────────────────
+  // ── Per-element draw duration (seconds) ────────────────────────────────────
 
-  static double _drawDur(WBType t) {
-    switch (t) {
-      case WBType.point:
-        return 0.25;
-      case WBType.step:
-        return 0.35;
-      case WBType.text:
-        return 0.55;
-      case WBType.formula:
-        return 0.70;
-      case WBType.line:
-      case WBType.arrow:
-      case WBType.vector:
-        return 0.65;
-      case WBType.circle:
-      case WBType.rect:
-      case WBType.triangle:
-        return 0.90;
-      case WBType.axes:
-        return 1.10;
-      case WBType.curve:
-        return 0.85;
-      case WBType.parabola:
-      case WBType.sine:
-        return 1.30;
-    }
-  }
+  static double _dur(WBType t) => switch (t) {
+    WBType.point    => 0.30,
+    WBType.step     => 0.40,
+    WBType.text     => 0.65,
+    WBType.formula  => 0.90,
+    WBType.line     => 0.85,
+    WBType.arrow    => 1.10,
+    WBType.vector   => 1.10,
+    WBType.circle   => 1.30,
+    WBType.rect     => 1.30,
+    WBType.triangle => 1.60,
+    WBType.axes     => 2.00,
+    WBType.curve    => 1.40,
+    WBType.parabola => 2.20,
+    WBType.sine     => 2.50,
+  };
+
+  // ── Top-level paint ────────────────────────────────────────────────────────
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Background
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = _bg,
-    );
+    canvas.drawRect(Offset.zero & size, Paint()..color = _bg);
+    _paintDotGrid(canvas, size);
+    _paintMathGrid(canvas, size);
 
-    _paintGrid(canvas, size);
-
-    for (final el in elements) {
+    for (int i = 0; i < elements.length; i++) {
+      final el = elements[i];
       if (time < el.delay) continue;
-      final progress = ((time - el.delay) / _drawDur(el.type)).clamp(0.0, 1.0);
-      _drawElement(canvas, size, el, progress);
+      final rawP = ((time - el.delay) / _dur(el.type)).clamp(0.0, 1.0);
+      // Ease-in-out: starts slow, speeds up, ends slow — like a real hand.
+      final p = Curves.easeInOut.transform(rawP);
+      _dispatch(canvas, size, el, p, seed: i * 7919);
     }
   }
 
-  // ── Dot / line grid ────────────────────────────────────────────────────────
+  // ── Background layers ──────────────────────────────────────────────────────
 
-  void _paintGrid(Canvas canvas, Size size) {
-    final paint = Paint()
+  void _paintDotGrid(Canvas canvas, Size size) {
+    final line = Paint()
       ..color = const Color(0xFF0D0D24)
       ..strokeWidth = 1.0;
-    const spacing = 32.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    const sp = 32.0;
+    for (double x = 0; x < size.width; x += sp) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
     }
-    for (double y = 0; y < size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    for (double y = 0; y < size.height; y += sp) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
     }
-    // Dot overlay
-    final dot = Paint()..color = const Color(0xFF14143A);
-    for (double x = spacing; x < size.width; x += spacing) {
-      for (double y = spacing; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.2, dot);
+    final dot = Paint()..color = const Color(0xFF12123A);
+    for (double x = sp; x < size.width; x += sp) {
+      for (double y = sp; y < size.height; y += sp) {
+        canvas.drawCircle(Offset(x, y), 1.3, dot);
       }
+    }
+  }
+
+  /// Draws a math-style grid inside the first axes element that has appeared.
+  void _paintMathGrid(Canvas canvas, Size size) {
+    WhiteboardElement? ax;
+    double axP = 0;
+    for (final el in elements) {
+      if (el.type == WBType.axes && time >= el.delay) {
+        axP = ((time - el.delay) / _dur(WBType.axes)).clamp(0.0, 1.0);
+        ax = el;
+        break;
+      }
+    }
+    if (ax == null || ax.x == null || ax.w == null) return;
+    final alpha = ((axP - 0.1) / 0.5).clamp(0.0, 1.0);
+    if (alpha <= 0) return;
+
+    final ox = ax.x! * size.width;
+    final oy = ax.y! * size.height;
+    final w  = ax.w! * size.width;
+    final h  = ax.h! * size.height;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFF1E1E52).withValues(alpha: alpha)
+      ..strokeWidth = 0.6;
+    const dX = 8, dY = 6;
+    for (int i = 1; i < dX; i++) {
+      canvas.drawLine(Offset(ox + w * i / dX, oy - h),
+                      Offset(ox + w * i / dX, oy), gridPaint);
+    }
+    for (int j = 1; j < dY; j++) {
+      canvas.drawLine(Offset(ox, oy - h * j / dY),
+                      Offset(ox + w, oy - h * j / dY), gridPaint);
     }
   }
 
   // ── Dispatch ───────────────────────────────────────────────────────────────
 
-  void _drawElement(Canvas canvas, Size size, WhiteboardElement el, double p) {
+  void _dispatch(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
     switch (el.type) {
-      case WBType.text:
-        _drawText(canvas, size, el, p, formula: false);
-      case WBType.formula:
-        _drawText(canvas, size, el, p, formula: true);
-      case WBType.step:
-        _drawStep(canvas, size, el, p);
-      case WBType.line:
-        _drawLine(canvas, size, el, p);
-      case WBType.arrow:
-        _drawArrow(canvas, size, el, p, thick: false);
-      case WBType.vector:
-        _drawArrow(canvas, size, el, p, thick: true);
-      case WBType.circle:
-        _drawCircle(canvas, size, el, p);
-      case WBType.rect:
-        _drawRect(canvas, size, el, p);
-      case WBType.axes:
-        _drawAxes(canvas, size, el, p);
-      case WBType.curve:
-        _drawCurve(canvas, size, el, p);
-      case WBType.point:
-        _drawPoint(canvas, size, el, p);
-      case WBType.parabola:
-        _drawParabola(canvas, size, el, p);
-      case WBType.sine:
-        _drawSine(canvas, size, el, p);
-      case WBType.triangle:
-        _drawTriangle(canvas, size, el, p);
+      case WBType.text:     _drawText(canvas, size, el, p);
+      case WBType.formula:  _drawFormula(canvas, size, el, p);
+      case WBType.step:     _drawStep(canvas, size, el, p);
+      case WBType.point:    _drawPoint(canvas, size, el, p);
+      case WBType.line:     _drawLine(canvas, size, el, p, seed: seed);
+      case WBType.arrow:    _drawArrow(canvas, size, el, p, seed: seed, thick: false);
+      case WBType.vector:   _drawArrow(canvas, size, el, p, seed: seed, thick: true);
+      case WBType.circle:   _drawCircle(canvas, size, el, p);
+      case WBType.rect:     _drawRect(canvas, size, el, p, seed: seed);
+      case WBType.axes:     _drawAxes(canvas, size, el, p);
+      case WBType.curve:    _drawCurve(canvas, size, el, p, seed: seed);
+      case WBType.parabola: _drawParabola(canvas, size, el, p, seed: seed);
+      case WBType.sine:     _drawSine(canvas, size, el, p, seed: seed);
+      case WBType.triangle: _drawTriangle(canvas, size, el, p, seed: seed);
     }
   }
 
-  // ── Chalk paint helpers ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+  //  Core path utilities
+  // ══════════════════════════════════════════════════════════════════════════
 
-  Paint _chalk(Color color, double width, {double opacity = 1.0}) => Paint()
-    ..color = color.withValues(alpha: opacity)
-    ..strokeWidth = width
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round
-    ..style = PaintingStyle.stroke;
+  /// Resample [ideal] into a jittered polyline using a seeded RNG.
+  /// Intensity = max px deviation per sample point.
+  /// Endpoints are kept clean (jitter fades to near-zero at start/end).
+  Path _jitter(Path ideal, int seed, double intensity) {
+    if (intensity <= 0) return ideal;
+    final rng = math.Random(seed);
+    final out = Path();
+    bool first = true;
 
-  /// Draws a path with a soft chalk glow underneath, then the crisp stroke on top.
-  void _chalkPath(Canvas canvas, Path path, Color color, double width,
-      {double opacity = 1.0}) {
-    // Soft glow
-    canvas.drawPath(
-      path,
+    for (final m in ideal.computeMetrics()) {
+      if (m.length < 1) continue;
+      // Sample every ~7 px along the path
+      final n = (m.length / 7).ceil().clamp(2, 600);
+      for (int i = 0; i <= n; i++) {
+        final t   = (i / n * m.length).clamp(0.0, m.length);
+        final tan = m.getTangentForOffset(t);
+        if (tan == null) continue;
+
+        // Edge fade: no jitter at the very start/end
+        final edgeT   = i / n; // 0→1
+        final edgeFade = math.sin(edgeT * math.pi); // 0→1→0
+
+        final jx = (rng.nextDouble() - 0.5) * intensity * edgeFade;
+        final jy = (rng.nextDouble() - 0.5) * intensity * edgeFade;
+        final pos = tan.position;
+
+        if (first) {
+          out.moveTo(pos.dx + jx, pos.dy + jy);
+          first = false;
+        } else {
+          out.lineTo(pos.dx + jx, pos.dy + jy);
+        }
+      }
+    }
+    return first ? ideal : out;
+  }
+
+  /// Extract and draw only the first [p] fraction of [path] using PathMetrics.
+  void _drawPartial(Canvas canvas, Path path, double p, Paint paint) {
+    if (p <= 0) return;
+    for (final m in path.computeMetrics()) {
+      if (m.length < 1) continue;
+      canvas.drawPath(m.extractPath(0, m.length * p.clamp(0.0, 1.0)), paint);
+    }
+  }
+
+  /// Find the current draw-tip position in [path] at fraction [p].
+  Offset? _tipOffset(Path path, double p) {
+    for (final m in path.computeMetrics()) {
+      if (m.length < 1) continue;
+      return m.getTangentForOffset(m.length * p.clamp(0.0, 1.0))?.position;
+    }
+    return null;
+  }
+
+  /// Draw a glowing chalk/pen tip at the current draw position.
+  void _drawTip(Canvas canvas, Path path, double p, Color color) {
+    if (p >= 1.0 || p <= 0.01) return;
+    final pos = _tipOffset(path, p);
+    if (pos == null) return;
+
+    // Outer soft glow
+    canvas.drawCircle(pos, 11,
+        Paint()
+          ..color = color.withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7));
+    // Medium ring
+    canvas.drawCircle(pos, 5,
+        Paint()
+          ..color = color.withValues(alpha: 0.14)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5);
+    // Bright center dot
+    canvas.drawCircle(pos, 2.8,
+        Paint()..color = color.withValues(alpha: 0.95));
+  }
+
+  /// Full chalk stroke: glow pass → crisp stroke pass → live tip.
+  void _chalkStroke(Canvas canvas, Path path, double p, Color color, double sw) {
+    if (p <= 0) return;
+    // Soft glow behind stroke
+    _drawPartial(
+      canvas, path, p,
       Paint()
-        ..color = color.withValues(alpha: opacity * 0.18)
-        ..strokeWidth = width * 2.8
+        ..color = color.withValues(alpha: 0.14)
+        ..strokeWidth = sw * 2.8
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
     // Crisp stroke
-    canvas.drawPath(path, _chalk(color, width, opacity: opacity));
-  }
-
-  // ── Text / formula ─────────────────────────────────────────────────────────
-
-  void _drawText(Canvas canvas, Size size, WhiteboardElement el, double p,
-      {required bool formula}) {
-    if (el.content == null || el.x == null || el.y == null) return;
-
-    final color = formula ? const Color(0xFFEDE0FF) : Colors.white;
-    final fontSize = formula ? (el.fontSize * 1.15).clamp(16.0, 28.0) : el.fontSize;
-
-    final tp = _makeTP(
-      el.content!,
-      color.withValues(alpha: p),
-      fontSize,
-      bold: formula,
-      maxWidth: size.width * 0.88,
+    _drawPartial(
+      canvas, path, p,
+      Paint()
+        ..color = color.withValues(alpha: 0.92)
+        ..strokeWidth = sw
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..style = PaintingStyle.stroke,
     );
-
-    final pos = Offset(el.x! * size.width, el.y! * size.height);
-
-    if (formula) {
-      final padH = 12.0, padV = 7.0;
-      final boxRect = Rect.fromLTWH(
-          pos.dx - padH, pos.dy - padV, tp.width + padH * 2, tp.height + padV * 2);
-
-      // Purple glow behind box
-      canvas.drawRRect(
-        RRect.fromRectXY(boxRect.inflate(4), 12, 12),
-        Paint()
-          ..color = _purple.withValues(alpha: p * 0.12)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-      );
-      // Dark background pill
-      canvas.drawRRect(
-        RRect.fromRectXY(boxRect, 9, 9),
-        Paint()..color = const Color(0xFF0E0825).withValues(alpha: p),
-      );
-      // Purple border
-      canvas.drawRRect(
-        RRect.fromRectXY(boxRect, 9, 9),
-        Paint()
-          ..color = _purple.withValues(alpha: p * 0.55)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2,
-      );
-    }
-
-    // Chalk left-to-right reveal: clip to growing rect
-    canvas.save();
-    canvas.clipRect(
-        Rect.fromLTWH(0, 0, pos.dx + tp.width * p + 4, size.height));
-    tp.paint(canvas, pos);
-    canvas.restore();
+    // Tip glow
+    _drawTip(canvas, path, p, color);
   }
 
-  // ── Step marker ────────────────────────────────────────────────────────────
+  // ── Build smooth bezier path through a list of Offsets ────────────────────
 
-  void _drawStep(Canvas canvas, Size size, WhiteboardElement el, double p) {
-    if (el.x == null || el.y == null) return;
-    const r = 12.0;
-    final center = Offset(el.x! * size.width + r, el.y! * size.height + r);
-
-    // Glow
-    canvas.drawCircle(
-        center,
-        r * p * 1.6,
-        Paint()
-          ..color = _purple.withValues(alpha: p * 0.2)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
-
-    canvas.drawCircle(center, r * p,
-        Paint()..color = _purple.withValues(alpha: p));
-
-    if (p > 0.5 && el.content != null) {
-      final tp = _makeTP(el.content!, Colors.white.withValues(alpha: (p - 0.5) * 2), 11,
-          bold: true);
-      tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
-    }
-
-    if (p > 0.65 && el.label != null) {
-      final ltp = _makeTP(el.label!,
-          Colors.white.withValues(alpha: ((p - 0.65) / 0.35).clamp(0.0, 1.0)), 13);
-      ltp.paint(canvas, Offset(center.dx + r + 7, center.dy - ltp.height / 2));
-    }
-  }
-
-  // ── Line ───────────────────────────────────────────────────────────────────
-
-  void _drawLine(Canvas canvas, Size size, WhiteboardElement el, double p) {
-    if (el.x1 == null) return;
-    final start = Offset(el.x1! * size.width, el.y1! * size.height);
-    final end = Offset(el.x2! * size.width, el.y2! * size.height);
-    final cur = Offset.lerp(start, end, p)!;
-
-    final path = Path()
-      ..moveTo(start.dx, start.dy)
-      ..lineTo(cur.dx, cur.dy);
-    _chalkPath(canvas, path, el.color, 1.8, opacity: 0.9);
-  }
-
-  // ── Arrow / Vector ─────────────────────────────────────────────────────────
-
-  void _drawArrow(Canvas canvas, Size size, WhiteboardElement el, double p,
-      {required bool thick}) {
-    if (el.x1 == null) return;
-    final start = Offset(el.x1! * size.width, el.y1! * size.height);
-    final end = Offset(el.x2! * size.width, el.y2! * size.height);
-    final cur = Offset.lerp(start, end, p)!;
-
-    final sw = thick ? 3.0 : 2.0;
-    final path = Path()
-      ..moveTo(start.dx, start.dy)
-      ..lineTo(cur.dx, cur.dy);
-    _chalkPath(canvas, path, el.color, sw);
-
-    if (p > 0.65) {
-      final ap = ((p - 0.65) / 0.35).clamp(0.0, 1.0);
-      _paintArrowhead(canvas, start, cur, el.color.withValues(alpha: ap),
-          size: (thick ? 13 : 10) * ap);
-    }
-
-    if (p > 0.75 && el.label != null) {
-      final labelProg = ((p - 0.75) / 0.25).clamp(0.0, 1.0);
-      if (thick) {
-        // Vector: label perpendicular to shaft
-        final mid = Offset.lerp(start, cur, 0.5)!;
-        final angle = (end - start).direction;
-        final perp = Offset(-math.sin(angle) * 16, math.cos(angle) * 16);
-        final tp = _makeTP(el.label!, el.color.withValues(alpha: labelProg), 13, bold: true);
-        tp.paint(canvas, mid + perp - Offset(tp.width / 2, tp.height / 2));
+  static Path _bezierThrough(List<Offset> pts) {
+    assert(pts.length >= 2);
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (int i = 1; i < pts.length; i++) {
+      if (i < pts.length - 1) {
+        // Use the current point as control point, midpoint as anchor.
+        final mid = Offset(
+            (pts[i].dx + pts[i + 1].dx) / 2,
+            (pts[i].dy + pts[i + 1].dy) / 2);
+        path.quadraticBezierTo(pts[i].dx, pts[i].dy, mid.dx, mid.dy);
       } else {
-        final mid = Offset.lerp(start, end, 0.5)!;
-        final tp = _makeTP(el.label!, el.color.withValues(alpha: labelProg), 12, bold: true);
-        tp.paint(canvas, mid + const Offset(4, -18));
+        path.lineTo(pts[i].dx, pts[i].dy);
       }
     }
+    return path;
   }
 
-  void _paintArrowhead(Canvas canvas, Offset from, Offset to, Color color,
-      {double size = 10}) {
+  // ── Arrowhead helper ──────────────────────────────────────────────────────
+
+  void _arrowhead(Canvas canvas, Offset from, Offset to, Color color,
+      {double sz = 10}) {
     if ((to - from).distance < 1) return;
     final angle = (to - from).direction;
-    const spread = 0.45;
-    final p1 = to +
-        Offset(size * math.cos(angle + math.pi - spread),
-            size * math.sin(angle + math.pi - spread));
-    final p2 = to +
-        Offset(size * math.cos(angle + math.pi + spread),
-            size * math.sin(angle + math.pi + spread));
+    const spread = 0.44;
+    final p1 = to + Offset(sz * math.cos(angle + math.pi - spread),
+        sz * math.sin(angle + math.pi - spread));
+    final p2 = to + Offset(sz * math.cos(angle + math.pi + spread),
+        sz * math.sin(angle + math.pi + spread));
     canvas.drawPath(
       Path()
         ..moveTo(to.dx, to.dy)
@@ -614,397 +576,390 @@ class _WhiteboardPainter extends CustomPainter {
     );
   }
 
-  // ── Circle ─────────────────────────────────────────────────────────────────
+  TextPainter _tp(String text, Color color, double fs,
+      {bool bold = false, double maxW = double.infinity}) {
+    return TextPainter(
+      text: TextSpan(
+          text: text,
+          style: TextStyle(
+              color: color,
+              fontSize: fs,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              height: 1.35,
+              letterSpacing: 0.2)),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxW);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  Element draw methods
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── Text ──────────────────────────────────────────────────────────────────
+
+  void _drawText(Canvas canvas, Size size, WhiteboardElement el, double p) {
+    if (el.content == null || el.x == null || el.y == null) return;
+    final painter = _tp(el.content!, Colors.white.withValues(alpha: p),
+        el.fontSize, maxW: size.width * 0.88);
+    final pos = Offset(el.x! * size.width, el.y! * size.height);
+    // Chalk left-to-right reveal
+    canvas.save();
+    canvas.clipRect(
+        Rect.fromLTWH(0, 0, pos.dx + painter.width * p + 5, size.height));
+    painter.paint(canvas, pos);
+    canvas.restore();
+  }
+
+  // ── Formula ───────────────────────────────────────────────────────────────
+
+  void _drawFormula(Canvas canvas, Size size, WhiteboardElement el, double p) {
+    if (el.content == null || el.x == null || el.y == null) return;
+    const fc = Color(0xFFEDE0FF);
+    final fs = (el.fontSize * 1.15).clamp(16.0, 30.0);
+    final painter = _tp(el.content!, fc.withValues(alpha: p), fs,
+        bold: true, maxW: size.width * 0.88);
+    final pos = Offset(el.x! * size.width, el.y! * size.height);
+
+    const pH = 12.0, pV = 7.0;
+    final box = Rect.fromLTWH(
+        pos.dx - pH, pos.dy - pV, painter.width + pH * 2, painter.height + pV * 2);
+
+    // Glow halo
+    canvas.drawRRect(RRect.fromRectXY(box.inflate(5), 13, 13),
+        Paint()
+          ..color = _purple.withValues(alpha: p * 0.13)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9));
+    // Dark pill
+    canvas.drawRRect(RRect.fromRectXY(box, 9, 9),
+        Paint()..color = const Color(0xFF0E0825).withValues(alpha: p));
+    // Purple border
+    canvas.drawRRect(RRect.fromRectXY(box, 9, 9),
+        Paint()
+          ..color = _purple.withValues(alpha: p * 0.55)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2);
+
+    // Left-to-right chalk reveal
+    canvas.save();
+    canvas.clipRect(
+        Rect.fromLTWH(0, 0, pos.dx + painter.width * p + 5, size.height));
+    painter.paint(canvas, pos);
+    canvas.restore();
+  }
+
+  // ── Step marker ───────────────────────────────────────────────────────────
+
+  void _drawStep(Canvas canvas, Size size, WhiteboardElement el, double p) {
+    if (el.x == null || el.y == null) return;
+    const r = 12.0;
+    final c = Offset(el.x! * size.width + r, el.y! * size.height + r);
+
+    canvas.drawCircle(c, r * p * 1.9,
+        Paint()
+          ..color = _purple.withValues(alpha: p * 0.14)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9));
+    canvas.drawCircle(c, r * p, Paint()..color = _purple.withValues(alpha: p));
+
+    if (p > 0.5 && el.content != null) {
+      final op = ((p - 0.5) * 2).clamp(0.0, 1.0);
+      final t = _tp(el.content!, Colors.white.withValues(alpha: op), 11, bold: true);
+      t.paint(canvas, c - Offset(t.width / 2, t.height / 2));
+    }
+    if (p > 0.7 && el.label != null) {
+      final op = ((p - 0.7) / 0.3).clamp(0.0, 1.0);
+      final t = _tp(el.label!, Colors.white.withValues(alpha: op), 13);
+      t.paint(canvas, Offset(c.dx + r + 7, c.dy - t.height / 2));
+    }
+  }
+
+  // ── Point ─────────────────────────────────────────────────────────────────
+
+  void _drawPoint(Canvas canvas, Size size, WhiteboardElement el, double p) {
+    if (el.x == null) return;
+    final c = Offset(el.x! * size.width, el.y! * size.height);
+
+    // Elastic pop: overshoot slightly then settle
+    final scale = p < 0.65
+        ? Curves.elasticOut.transform(p / 0.65) * 1.0
+        : 1.0;
+    final r = (5.0 * scale).clamp(0.0, 8.0);
+
+    // Bloom
+    canvas.drawCircle(c, r * 2.8,
+        Paint()
+          ..color = el.color.withValues(alpha: p * 0.16)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
+    // Fill
+    canvas.drawCircle(c, r, Paint()..color = el.color.withValues(alpha: p));
+    // Ring
+    canvas.drawCircle(c, r,
+        Paint()
+          ..color = el.color.withValues(alpha: p * 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5);
+    // Label
+    if (p > 0.6 && el.label != null) {
+      final op = ((p - 0.6) / 0.4).clamp(0.0, 1.0);
+      final t = _tp(el.label!, el.color.withValues(alpha: op), 11);
+      t.paint(canvas, c + const Offset(8, -14));
+    }
+  }
+
+  // ── Line ──────────────────────────────────────────────────────────────────
+
+  void _drawLine(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
+    if (el.x1 == null) return;
+    final s = Offset(el.x1! * size.width, el.y1! * size.height);
+    final e = Offset(el.x2! * size.width, el.y2! * size.height);
+    final ideal = Path()
+      ..moveTo(s.dx, s.dy)
+      ..lineTo(e.dx, e.dy);
+    _chalkStroke(canvas, _jitter(ideal, seed, 1.2), p, el.color, 1.8);
+  }
+
+  // ── Arrow / Vector ────────────────────────────────────────────────────────
+
+  void _drawArrow(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed, required bool thick}) {
+    if (el.x1 == null) return;
+    final s   = Offset(el.x1! * size.width, el.y1! * size.height);
+    final e   = Offset(el.x2! * size.width, el.y2! * size.height);
+    final sw  = thick ? 3.0 : 2.0;
+
+    // 0→0.88: draw shaft; 0.88→1.0: arrowhead appears
+    final shaftP = (p / 0.88).clamp(0.0, 1.0);
+    final ideal  = Path()..moveTo(s.dx, s.dy)..lineTo(e.dx, e.dy);
+    _chalkStroke(canvas, _jitter(ideal, seed, thick ? 1.5 : 1.0), shaftP, el.color, sw);
+
+    if (p > 0.82) {
+      final ap = ((p - 0.82) / 0.18).clamp(0.0, 1.0);
+      _arrowhead(canvas, s, e, el.color.withValues(alpha: ap),
+          sz: (thick ? 13.0 : 10.0) * ap);
+    }
+
+    if (p > 0.88 && el.label != null) {
+      final op = ((p - 0.88) / 0.12).clamp(0.0, 1.0);
+      if (thick) {
+        final mid   = Offset.lerp(s, e, 0.5)!;
+        final angle = (e - s).direction;
+        final perp  = Offset(-math.sin(angle) * 18, math.cos(angle) * 18);
+        final t = _tp(el.label!, el.color.withValues(alpha: op), 13, bold: true);
+        t.paint(canvas, mid + perp - Offset(t.width / 2, t.height / 2));
+      } else {
+        final mid = Offset.lerp(s, e, 0.5)!;
+        final t   = _tp(el.label!, el.color.withValues(alpha: op), 12, bold: true);
+        t.paint(canvas, mid + const Offset(4, -19));
+      }
+    }
+  }
+
+  // ── Circle ────────────────────────────────────────────────────────────────
 
   void _drawCircle(Canvas canvas, Size size, WhiteboardElement el, double p) {
     if (el.cx == null || el.r == null) return;
-    final center = Offset(el.cx! * size.width, el.cy! * size.height);
-    final radius = el.r! * math.min(size.width, size.height);
+    final c = Offset(el.cx! * size.width, el.cy! * size.height);
+    final r = el.r! * math.min(size.width, size.height);
 
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final arcPath = Path()
+      ..addArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2,
+          2 * math.pi);
 
-    // Glow
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * p,
-      false,
-      Paint()
-        ..color = el.color.withValues(alpha: 0.15)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = radius * 0.4
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-    );
+    _chalkStroke(canvas, arcPath, p, el.color, 2.2);
 
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * p,
-      false,
-      _chalk(el.color, 2.2),
-    );
-
-    if (p > 0.9 && el.label != null) {
-      final labelOp = ((p - 0.9) * 10).clamp(0.0, 1.0);
-      final tp = _makeTP(el.label!, el.color.withValues(alpha: labelOp), 12);
-      tp.paint(canvas, center + Offset(radius + 7, -tp.height / 2));
+    if (p > 0.92 && el.label != null) {
+      final op = ((p - 0.92) / 0.08).clamp(0.0, 1.0);
+      final t  = _tp(el.label!, el.color.withValues(alpha: op), 12);
+      t.paint(canvas, c + Offset(r + 7, -t.height / 2));
     }
   }
 
-  // ── Rect ───────────────────────────────────────────────────────────────────
+  // ── Rect ──────────────────────────────────────────────────────────────────
 
-  void _drawRect(Canvas canvas, Size size, WhiteboardElement el, double p) {
+  void _drawRect(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
     if (el.x == null || el.w == null) return;
-    final rect = Rect.fromLTWH(
-      el.x! * size.width,
-      el.y! * size.height,
-      el.w! * size.width,
-      el.h! * size.height,
-    );
-
-    final perimeter = 2 * (rect.width + rect.height);
-    final drawn = perimeter * p;
-
-    final path = Path()..moveTo(rect.left, rect.top);
-    double rem = drawn;
-    final segments = [
-      [rect.right, rect.top],
-      [rect.right, rect.bottom],
-      [rect.left, rect.bottom],
-      [rect.left, rect.top],
-    ];
-    for (final seg in segments) {
-      if (rem <= 0) break;
-      final to = Offset(seg[0], seg[1]);
-      final last = path.getBounds();
-      final from = Offset(last.right == to.dx ? last.right : last.left,
-          last.bottom == to.dy ? last.bottom : last.top);
-      final segLen = (to - from).distance;
-      if (rem >= segLen) {
-        path.lineTo(to.dx, to.dy);
-        rem -= segLen;
-      } else {
-        final t = rem / segLen;
-        path.lineTo(
-            from.dx + (to.dx - from.dx) * t, from.dy + (to.dy - from.dy) * t);
-        rem = 0;
-      }
-    }
-
-    _chalkPath(canvas, path, el.color, 1.8);
+    final rect = Rect.fromLTWH(el.x! * size.width, el.y! * size.height,
+        el.w! * size.width, el.h! * size.height);
+    final ideal = Path()
+      ..moveTo(rect.left, rect.top)
+      ..lineTo(rect.right, rect.top)
+      ..lineTo(rect.right, rect.bottom)
+      ..lineTo(rect.left, rect.bottom)
+      ..close();
+    _chalkStroke(canvas, _jitter(ideal, seed, 0.9), p, el.color, 1.8);
   }
 
-  // ── Coordinate axes ────────────────────────────────────────────────────────
+  // ── Coordinate axes ───────────────────────────────────────────────────────
 
   void _drawAxes(Canvas canvas, Size size, WhiteboardElement el, double p) {
     if (el.x == null || el.w == null) return;
     final ox = el.x! * size.width;
     final oy = el.y! * size.height;
-    final w = el.w! * size.width;
-    final h = el.h! * size.height;
+    final w  = el.w! * size.width;
+    final h  = el.h! * size.height;
+    final c  = el.color;
 
-    final axisColor = el.color.withValues(alpha: p * 0.85);
+    // Phase 1 (0→0.44): X axis
+    // Phase 2 (0.44→0.88): Y axis
+    // Phase 3 (0.88→1.0): ticks + labels
+    final xP      = (p / 0.44).clamp(0.0, 1.0);
+    final yP      = ((p - 0.44) / 0.44).clamp(0.0, 1.0);
+    final detailP = ((p - 0.88) / 0.12).clamp(0.0, 1.0);
 
-    // Phase 1 (p 0..0.5): draw X axis
-    // Phase 2 (p 0.5..1): draw Y axis
-    final xP = (p / 0.5).clamp(0.0, 1.0);
-    final yP = ((p - 0.5) / 0.5).clamp(0.0, 1.0);
+    final xPath = Path()..moveTo(ox, oy)..lineTo(ox + w, oy);
+    _chalkStroke(canvas, xPath, xP, c, 1.6);
 
-    final xPath = Path()
-      ..moveTo(ox, oy)
-      ..lineTo(ox + w * xP, oy);
-    _chalkPath(canvas, xPath, axisColor, 1.8, opacity: 0.85);
-
-    if (p > 0.5) {
-      final yPath = Path()
-        ..moveTo(ox, oy)
-        ..lineTo(ox, oy - h * yP);
-      _chalkPath(canvas, yPath, el.color, 1.8, opacity: 0.85 * yP);
+    if (p > 0.44) {
+      final yPath = Path()..moveTo(ox, oy)..lineTo(ox, oy - h);
+      _chalkStroke(canvas, yPath, yP, c, 1.6);
     }
 
-    if (p > 0.88) {
-      final ap = ((p - 0.88) / 0.12).clamp(0.0, 1.0);
-      _paintArrowhead(canvas, Offset(ox, oy), Offset(ox + w, oy),
-          el.color.withValues(alpha: ap), size: 7 * ap);
-      _paintArrowhead(canvas, Offset(ox, oy), Offset(ox, oy - h),
-          el.color.withValues(alpha: ap), size: 7 * ap);
+    if (xP >= 1.0) _arrowhead(canvas, Offset(ox, oy), Offset(ox + w, oy), c, sz: 7);
+    if (yP >= 1.0) _arrowhead(canvas, Offset(ox, oy), Offset(ox, oy - h), c, sz: 7);
 
-      // Tick marks
+    if (detailP > 0) {
+      final tickC = c.withValues(alpha: detailP * 0.75);
+      final tp = Paint()..color = tickC..strokeWidth = 1.0;
       const ticks = 4;
-      final tickPaint = Paint()
-        ..color = el.color.withValues(alpha: ap * 0.6)
-        ..strokeWidth = 1.0;
       for (int i = 1; i <= ticks; i++) {
         final tx = ox + (w / ticks) * i;
         final ty = oy - (h / ticks) * i;
-        canvas.drawLine(Offset(tx, oy - 3), Offset(tx, oy + 3), tickPaint);
-        canvas.drawLine(Offset(ox - 3, ty), Offset(ox + 3, ty), tickPaint);
+        canvas.drawLine(Offset(tx, oy - 3), Offset(tx, oy + 3), tp);
+        canvas.drawLine(Offset(ox - 3, ty), Offset(ox + 3, ty), tp);
       }
-
       if (el.label != null) {
         final parts = el.label!.split(',');
-        final labelColor = el.color.withValues(alpha: ap * 0.8);
+        final lc = c.withValues(alpha: detailP * 0.9);
         if (parts.isNotEmpty) {
-          _makeTP(parts[0].trim(), labelColor, 11)
-              .paint(canvas, Offset(ox + w + 4, oy - 6));
+          _tp(parts[0].trim(), lc, 11).paint(canvas, Offset(ox + w + 5, oy - 7));
         }
         if (parts.length >= 2) {
-          _makeTP(parts[1].trim(), labelColor, 11)
-              .paint(canvas, Offset(ox + 6, oy - h - 16));
+          _tp(parts[1].trim(), lc, 11).paint(canvas, Offset(ox + 6, oy - h - 17));
         }
       }
     }
   }
 
-  // ── Generic curve (polyline) ───────────────────────────────────────────────
+  // ── Curve (smooth polyline) ───────────────────────────────────────────────
 
-  void _drawCurve(Canvas canvas, Size size, WhiteboardElement el, double p) {
+  void _drawCurve(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
     if (el.points == null || el.points!.length < 2) return;
-
-    final pts = el.points!
-        .map((pt) => Offset(pt[0] * size.width, pt[1] * size.height))
-        .toList();
-
-    final totalPts = pts.length;
-    final drawn = ((totalPts - 1) * p).clamp(0.0, totalPts - 1.0);
-    final full = drawn.floor();
-    final frac = drawn - full;
-
-    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
-    for (int i = 1; i <= full && i < totalPts; i++) {
-      if (i + 1 < totalPts) {
-        // Smooth cubic: midpoint between segments
-        final mid = Offset(
-            (pts[i].dx + pts[i - 1].dx) / 2,
-            (pts[i].dy + pts[i - 1].dy) / 2);
-        path.quadraticBezierTo(
-            pts[i - 1].dx, pts[i - 1].dy, mid.dx, mid.dy);
-      } else {
-        path.lineTo(pts[i].dx, pts[i].dy);
-      }
-    }
-
-    // Partial last segment
-    if (full < totalPts - 1 && frac > 0) {
-      final from = pts[full];
-      final to = pts[full + 1];
-      path.lineTo(
-          from.dx + (to.dx - from.dx) * frac,
-          from.dy + (to.dy - from.dy) * frac);
-    }
-
-    _chalkPath(canvas, path, el.color, 2.2);
+    final pts =
+        el.points!.map((pt) => Offset(pt[0] * size.width, pt[1] * size.height)).toList();
+    final ideal = _bezierThrough(pts);
+    _chalkStroke(canvas, _jitter(ideal, seed, 1.5), p, el.color, 2.2);
 
     if (p > 0.9 && el.label != null) {
-      final tip = full < totalPts ? pts[full] : pts.last;
-      final tp =
-          _makeTP(el.label!, el.color.withValues(alpha: (p - 0.9) * 10), 12, bold: true);
-      tp.paint(canvas, tip + const Offset(6, -18));
+      final op = ((p - 0.9) * 10).clamp(0.0, 1.0);
+      final t  = _tp(el.label!, el.color.withValues(alpha: op), 12, bold: true);
+      t.paint(canvas, pts.last + const Offset(6, -18));
     }
   }
 
-  // ── Parabola ───────────────────────────────────────────────────────────────
+  // ── Parabola ──────────────────────────────────────────────────────────────
 
-  void _drawParabola(Canvas canvas, Size size, WhiteboardElement el, double p) {
-    // Vertex at (cx, cy), coefficient 'a', x range [x1..x2]
-    final cx = (el.cx ?? 0.5) * size.width;
-    final cy = (el.cy ?? 0.5) * size.height;
-    final xStart = (el.x1 ?? 0.05) * size.width;
-    final xEnd = (el.x2 ?? 0.95) * size.width;
-    final aScaled = (el.a ?? 2.0) * size.height; // curvature in pixels
+  void _drawParabola(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
+    final cx     = (el.cx ?? 0.5) * size.width;
+    final cy     = (el.cy ?? 0.5) * size.height;
+    final x1     = (el.x1 ?? 0.05) * size.width;
+    final x2     = (el.x2 ?? 0.95) * size.width;
+    final aScale = (el.a ?? 2.0) * size.height;
 
-    final xCur = xStart + (xEnd - xStart) * p;
+    // 80 control points → smooth bezier curve
+    const n = 80;
+    final pts = List<Offset>.generate(n + 1, (i) {
+      final x  = x1 + (x2 - x1) * i / n;
+      final dx = (x - cx) / size.width;
+      return Offset(x, cy + aScale * dx * dx);
+    });
 
-    const steps = 80;
-    final path = Path();
-    bool first = true;
-    for (int i = 0; i <= steps; i++) {
-      final x = xStart + (xCur - xStart) * i / steps;
-      if (x > xCur + 1) break;
-      final dx = (x - cx) / size.width; // normalized offset from vertex
-      final y = cy + aScaled * dx * dx;
-      if (first) {
-        path.moveTo(x, y);
-        first = false;
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    _chalkPath(canvas, path, el.color, 2.2);
+    final ideal = _bezierThrough(pts);
+    _chalkStroke(canvas, _jitter(ideal, seed, 1.2), p, el.color, 2.2);
 
     if (p > 0.92 && el.label != null) {
-      final labelX = xCur + 5;
-      final dx = (xCur - cx) / size.width;
-      final labelY = cy + aScaled * dx * dx - 16;
-      final tp =
-          _makeTP(el.label!, el.color.withValues(alpha: (p - 0.92) * 12.5), 12, bold: true);
-      tp.paint(canvas, Offset(labelX, labelY.clamp(4.0, size.height - 20)));
+      final op  = ((p - 0.92) * 12.5).clamp(0.0, 1.0);
+      final tip = pts.last;
+      final t   = _tp(el.label!, el.color.withValues(alpha: op), 12, bold: true);
+      t.paint(canvas, tip + const Offset(6, -12));
     }
   }
 
-  // ── Sine / cosine wave ─────────────────────────────────────────────────────
+  // ── Sine / cosine wave ────────────────────────────────────────────────────
 
-  void _drawSine(Canvas canvas, Size size, WhiteboardElement el, double p) {
-    final x1 = (el.x1 ?? 0.05) * size.width;
-    final x2 = (el.x2 ?? 0.95) * size.width;
-    final cy = (el.y ?? 0.5) * size.height;
-    final amplitude = (el.amplitude ?? 0.15) * size.height;
-    final frequency = el.frequency ?? 2.0;
-    final phase = el.phase ?? 0.0;
+  void _drawSine(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
+    final x1   = (el.x1 ?? 0.05) * size.width;
+    final x2   = (el.x2 ?? 0.95) * size.width;
+    final cy   = (el.y ?? 0.5) * size.height;
+    final amp  = (el.amplitude ?? 0.15) * size.height;
+    final freq = el.frequency ?? 2.0;
+    final ph   = el.phase ?? 0.0;
 
-    final xCur = x1 + (x2 - x1) * p;
-    const steps = 120;
-
-    final path = Path();
-    for (int i = 0; i <= steps; i++) {
-      final x = x1 + (xCur - x1) * i / steps;
-      if (x > xCur + 1) break;
+    // 150 control points — high-fidelity sine
+    const n = 150;
+    final pts = List<Offset>.generate(n + 1, (i) {
+      final x = x1 + (x2 - x1) * i / n;
       final t = (x - x1) / (x2 - x1);
-      final y = cy - amplitude * math.sin(t * frequency * 2 * math.pi + phase);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
+      return Offset(x, cy - amp * math.sin(t * freq * 2 * math.pi + ph));
+    });
 
-    _chalkPath(canvas, path, el.color, 2.2);
+    final ideal = _bezierThrough(pts);
+    _chalkStroke(canvas, _jitter(ideal, seed, 0.9), p, el.color, 2.2);
 
-    if (p > 0.9 && el.label != null) {
-      final endT = (xCur - x1) / (x2 - x1);
-      final endY = cy - amplitude * math.sin(endT * frequency * 2 * math.pi + phase);
-      final tp =
-          _makeTP(el.label!, el.color.withValues(alpha: (p - 0.9) * 10), 12, bold: true);
-      tp.paint(canvas, Offset(xCur + 5, endY - 12));
+    if (p > 0.92 && el.label != null) {
+      final op   = ((p - 0.92) * 12.5).clamp(0.0, 1.0);
+      final endT = p;
+      final endX = x1 + (x2 - x1) * endT;
+      final endY = cy - amp * math.sin(endT * freq * 2 * math.pi + ph);
+      final t    = _tp(el.label!, el.color.withValues(alpha: op), 12, bold: true);
+      t.paint(canvas, Offset(endX + 5, endY - 14));
     }
   }
 
-  // ── Triangle ───────────────────────────────────────────────────────────────
+  // ── Triangle ──────────────────────────────────────────────────────────────
 
-  void _drawTriangle(Canvas canvas, Size size, WhiteboardElement el, double p) {
+  void _drawTriangle(Canvas canvas, Size size, WhiteboardElement el, double p,
+      {required int seed}) {
     if (el.points == null || el.points!.length < 3) return;
-
-    final verts = el.points!
+    final v = el.points!
         .map((pt) => Offset(pt[0] * size.width, pt[1] * size.height))
         .toList();
 
-    final sides = [
-      [verts[0], verts[1]],
-      [verts[1], verts[2]],
-      [verts[2], verts[0]],
-    ];
+    // Perimeter path so we can draw progressively
+    final ideal = Path()
+      ..moveTo(v[0].dx, v[0].dy)
+      ..lineTo(v[1].dx, v[1].dy)
+      ..lineTo(v[2].dx, v[2].dy)
+      ..close();
 
-    final segLens = sides.map((s) => (s[1] - s[0]).distance).toList();
-    final perimeter = segLens.reduce((a, b) => a + b);
-    final drawn = perimeter * p;
+    _chalkStroke(canvas, _jitter(ideal, seed, 1.5), p, el.color, 2.0);
 
-    final path = Path()..moveTo(verts[0].dx, verts[0].dy);
-    double rem = drawn;
-    for (int i = 0; i < 3; i++) {
-      if (rem <= 0) break;
-      final from = sides[i][0];
-      final to = sides[i][1];
-      final len = segLens[i];
-      if (rem >= len) {
-        path.lineTo(to.dx, to.dy);
-        rem -= len;
-      } else {
-        final t = rem / len;
-        path.lineTo(
-            from.dx + (to.dx - from.dx) * t,
-            from.dy + (to.dy - from.dy) * t);
-        rem = 0;
-      }
-    }
-
-    _chalkPath(canvas, path, el.color, 2.0, opacity: 0.9);
-
-    // Fill with very transparent color
+    // Transparent fill once fully drawn
     if (p > 0.95) {
-      final fillProg = ((p - 0.95) / 0.05).clamp(0.0, 1.0);
+      final fillP = ((p - 0.95) / 0.05).clamp(0.0, 1.0);
       final fillPath = Path()
-        ..moveTo(verts[0].dx, verts[0].dy)
-        ..lineTo(verts[1].dx, verts[1].dy)
-        ..lineTo(verts[2].dx, verts[2].dy)
+        ..moveTo(v[0].dx, v[0].dy)
+        ..lineTo(v[1].dx, v[1].dy)
+        ..lineTo(v[2].dx, v[2].dy)
         ..close();
-      canvas.drawPath(
-        fillPath,
-        Paint()
-          ..color = el.color.withValues(alpha: fillProg * 0.08)
-          ..style = PaintingStyle.fill,
-      );
+      canvas.drawPath(fillPath,
+          Paint()
+            ..color = el.color.withValues(alpha: fillP * 0.07)
+            ..style = PaintingStyle.fill);
     }
 
+    // Vertex labels
     if (p > 0.88 && el.label != null) {
       final labels = el.label!.split(',');
-      const labelOffsets = [
-        Offset(-10, -20),
-        Offset(10, 4),
-        Offset(-12, 4),
-      ];
+      const offs   = [Offset(-10, -22), Offset(10, 4), Offset(-12, 4)];
       for (int i = 0; i < math.min(labels.length, 3); i++) {
-        final lp = ((p - 0.88) / 0.12).clamp(0.0, 1.0);
-        final tp =
-            _makeTP(labels[i].trim(), el.color.withValues(alpha: lp), 12, bold: true);
-        tp.paint(canvas, verts[i] + labelOffsets[i]);
+        final op = ((p - 0.88) / 0.12).clamp(0.0, 1.0);
+        final t  = _tp(labels[i].trim(), el.color.withValues(alpha: op), 12, bold: true);
+        t.paint(canvas, v[i] + offs[i]);
       }
     }
-  }
-
-  // ── Point ──────────────────────────────────────────────────────────────────
-
-  void _drawPoint(Canvas canvas, Size size, WhiteboardElement el, double p) {
-    if (el.x == null) return;
-    final center = Offset(el.x! * size.width, el.y! * size.height);
-
-    // Outer glow
-    canvas.drawCircle(
-        center,
-        8 * p,
-        Paint()
-          ..color = el.color.withValues(alpha: p * 0.25)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-
-    canvas.drawCircle(center, 4.5 * p, Paint()..color = el.color.withValues(alpha: p));
-
-    canvas.drawCircle(
-      center,
-      4.5 * p,
-      Paint()
-        ..color = el.color.withValues(alpha: p * 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-
-    if (p > 0.55 && el.label != null) {
-      final lp = ((p - 0.55) / 0.45).clamp(0.0, 1.0);
-      final tp = _makeTP(el.label!, el.color.withValues(alpha: lp), 11);
-      tp.paint(canvas, center + const Offset(8, -14));
-    }
-  }
-
-  // ── TextPainter helper ─────────────────────────────────────────────────────
-
-  TextPainter _makeTP(
-    String text,
-    Color color,
-    double fontSize, {
-    bool bold = false,
-    double maxWidth = double.infinity,
-  }) {
-    return TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          height: 1.35,
-          letterSpacing: 0.2,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth);
   }
 }

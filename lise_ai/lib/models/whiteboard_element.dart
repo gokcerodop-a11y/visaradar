@@ -191,10 +191,11 @@ class WhiteboardData {
       );
 
   /// Total animation duration in seconds.
+  /// Buffer is 4 s to cover long draw durations (sine = 2.5 s, parabola = 2.2 s).
   double get totalDuration {
     if (elements.isEmpty) return 0;
     final maxDelay = elements.map((e) => e.delay).reduce((a, b) => a > b ? a : b);
-    return maxDelay + 2.0;
+    return maxDelay + 4.0;
   }
 
   /// Default fallback animation shown when AI cannot generate a plan.
