@@ -9,10 +9,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'services/anthropic_service.dart';
+import 'services/pdf_service.dart';
 import 'services/speech_service.dart';
 import 'services/storage_service.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
+import 'widgets/pdf_page_picker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,6 +92,9 @@ class ChatMessage {
   final Uint8List? imageBytes;
   final bool hasBoardLesson;
   final String? lessonQuestion;
+  // PDF attachment metadata (pages are not persisted in Hive)
+  final String? pdfName;
+  final int? pdfPageCount;
 
   const ChatMessage({
     required this.text,
@@ -98,6 +103,8 @@ class ChatMessage {
     this.imageBytes,
     this.hasBoardLesson = false,
     this.lessonQuestion,
+    this.pdfName,
+    this.pdfPageCount,
   });
 }
 
@@ -139,6 +146,10 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isDragging = false;
 
   bool _loadingLesson = false;
+
+  // ── PDF state ─────────────────────────────────────────────────────────────
+  List<Uint8List> _pendingPdfPages = [];
+  String? _pendingPdfName;
 
   // ── Speech-to-text ────────────────────────────────────────────────────────
   SpeechService? _speechSvc;
@@ -332,24 +343,46 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
+    final hasPdf = _pendingPdfPages.isNotEmpty;
     final hasImage = _pendingImage != null;
-    if ((trimmed.isEmpty && !hasImage) || _isBusy) return;
+    if ((trimmed.isEmpty && !hasImage && !hasPdf) || _isBusy) return;
 
     final imageBytes = _pendingImage;
     final mime = _pendingMime;
+    final pdfPages = List<Uint8List>.from(_pendingPdfPages);
+    final pdfName = _pendingPdfName;
     _inputController.clear();
 
-    await _normalSend(trimmed, imageBytes: imageBytes, mime: mime);
+    if (hasPdf) {
+      await _normalSend(trimmed, pdfPages: pdfPages, pdfName: pdfName);
+    } else {
+      await _normalSend(trimmed, imageBytes: imageBytes, mime: mime);
+    }
   }
 
   /// Normal streaming flow for all messages.
-  Future<void> _normalSend(String trimmed,
-      {Uint8List? imageBytes, String mime = 'image/jpeg'}) async {
+  Future<void> _normalSend(
+    String trimmed, {
+    Uint8List? imageBytes,
+    String mime = 'image/jpeg',
+    List<Uint8List>? pdfPages,
+    String? pdfName,
+  }) async {
     setState(() {
-      _messages.add(ChatMessage(text: trimmed, isUser: true, imageBytes: imageBytes));
+      _messages.add(ChatMessage(
+        text: trimmed,
+        isUser: true,
+        imageBytes: pdfPages != null && pdfPages.isNotEmpty
+            ? pdfPages.first // show first page as bubble thumbnail
+            : imageBytes,
+        pdfName: pdfName,
+        pdfPageCount: pdfPages?.length,
+      ));
       _isTyping = true;
       _streamingText = null;
       _pendingImage = null;
+      _pendingPdfPages = [];
+      _pendingPdfName = null;
     });
     _scrollToBottom();
 
@@ -358,7 +391,12 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    if (imageBytes != null) {
+    if (pdfPages != null && pdfPages.isNotEmpty) {
+      _history.add({
+        'role': 'user',
+        'content': AnthropicService.buildMultiImageContent(pdfPages, text: trimmed),
+      });
+    } else if (imageBytes != null) {
       _history.add({
         'role': 'user',
         'content': AnthropicService.buildImageContent(imageBytes, mime, text: trimmed),
@@ -383,7 +421,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _history.add({'role': 'assistant', 'content': fullReply});
 
       if (!mounted) return;
-      final isMathy = _isMathPhysics(trimmed) && imageBytes == null;
+      final isMathy = (_isMathPhysics(trimmed) || (pdfPages != null && pdfPages.isNotEmpty) || _isMathPhysics(fullReply.substring(0, fullReply.length.clamp(0, 300)))) && imageBytes == null;
       setState(() {
         _streamingText = null;
         _messages.add(ChatMessage(
@@ -553,6 +591,28 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _pickPdf() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+    final file = result.files.single;
+    final pdf = await PdfService.fromBytes(file.bytes!, file.name);
+    if (pdf == null || !mounted) return;
+
+    final pages = await showPdfPagePicker(context, pdf);
+    await pdf.close();
+
+    if (pages == null || pages.isEmpty || !mounted) return;
+    setState(() {
+      _pendingPdfPages = pages;
+      _pendingPdfName = file.name;
+      _pendingImage = null; // clear any pending image
+    });
+  }
+
   void _handleDrop(DropDoneDetails details) async {
     for (final file in details.files) {
       final p = file.path.toLowerCase();
@@ -592,6 +652,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Expanded(child: _buildMessageList()),
                         if (_isTyping) _buildTypingIndicator(),
                         if (_pendingImage != null) _buildImagePreview(),
+                        if (_pendingPdfPages.isNotEmpty) _buildPdfPreview(),
                         _buildInputBar(),
                       ],
                     ),
@@ -912,6 +973,92 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildPdfPreview() {
+    final name = _pendingPdfName ?? 'document.pdf';
+    final count = _pendingPdfPages.length;
+    return Container(
+      color: const Color(0xFF0D0D0D),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Row(
+        children: [
+          // First page thumbnail
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  _pendingPdfPages.first,
+                  width: 48,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              // Page count badge
+              Positioned(
+                bottom: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              // Remove button
+              Positioned(
+                top: -6,
+                right: -6,
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    _pendingPdfPages = [];
+                    _pendingPdfName = null;
+                  }),
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFF374151), shape: BoxShape.circle),
+                    child: const Icon(Icons.close, size: 11, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '$count sayfa seçildi — mesaj yaz veya gönder',
+                  style: const TextStyle(
+                      color: Color(0xFF9CA3AF), fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Input bar ─────────────────────────────────────────────────────────────
 
   Widget _buildInputBar() {
@@ -941,6 +1088,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 _InputIconButton(
                     icon: Icons.image_outlined,
                     onTap: _isBusy ? () {} : _pickImage),
+                _InputIconButton(
+                    icon: Icons.picture_as_pdf_outlined,
+                    onTap: _isBusy ? () {} : _pickPdf),
                 Expanded(
                   child: TextField(
                     controller: _inputController,
@@ -972,7 +1122,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 _SendOrMicButton(
                   controller: _inputController,
                   isLoading: _isBusy,
-                  hasPendingImage: _pendingImage != null,
+                  hasPendingImage: _pendingImage != null || _pendingPdfPages.isNotEmpty,
                   onSend: _sendMessage,
                   isListening: _isListening,
                   onMicTap: _speechSvc != null ? _toggleMic : null,
@@ -1179,7 +1329,8 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.isUser;
     final isError = message.isError;
-    final hasImage = message.imageBytes != null;
+    final hasPdf = message.pdfPageCount != null;
+    final hasImage = message.imageBytes != null && !hasPdf; // don't show raw page if PDF label shown
     final hasText = message.text.isNotEmpty;
 
     return Padding(
@@ -1212,6 +1363,28 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (hasPdf)
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.picture_as_pdf_rounded,
+                              color: Color(0xFFEF4444), size: 16),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '${message.pdfName ?? 'PDF'} • ${message.pdfPageCount} sayfa',
+                              style: const TextStyle(
+                                  color: Color(0xFFE5E7EB),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (hasImage)
                     Image.memory(message.imageBytes!, width: 220, fit: BoxFit.cover),
                   if (hasText)

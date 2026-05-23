@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -329,6 +330,32 @@ KURALLAR:
             : text,
       },
     ];
+  }
+
+  /// Build a content block list for multiple PDF page images.
+  static List<Map<String, dynamic>> buildMultiImageContent(
+    List<Uint8List> pages, {
+    String text = '',
+  }) {
+    final blocks = <Map<String, dynamic>>[];
+    for (final pageBytes in pages) {
+      blocks.add({
+        'type': 'image',
+        'source': {
+          'type': 'base64',
+          'media_type': 'image/png',
+          'data': base64Encode(pageBytes),
+        },
+      });
+    }
+    blocks.add({
+      'type': 'text',
+      'text': text.isNotEmpty
+          ? text
+          : 'Bu PDF sayfalarındaki soruları ve konuları analiz et. '
+              'Matematik/fen sorularını adım adım LaTeX ile çöz. Türkçe yanıtla.',
+    });
+    return blocks;
   }
 }
 
