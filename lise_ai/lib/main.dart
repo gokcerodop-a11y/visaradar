@@ -138,7 +138,6 @@ class _ChatScreenState extends State<ChatScreen> {
   WhiteboardData? _wbData;
   int _replayKey = 0;
   String _lastUserQuery = '';
-  String _lastAiReply = '';
 
   bool get _isBusy => _isTyping || _streamingText != null;
   bool get _wbVisible => _wbState != WhiteboardState.closed;
@@ -371,7 +370,6 @@ class _ChatScreenState extends State<ChatScreen> {
       });
 
       _lastUserQuery = trimmed;
-      _lastAiReply = fullReply;
       await _persistCurrent();
 
       // Auto-trigger whiteboard for math/physics/visual questions
@@ -545,20 +543,17 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _wbState = WhiteboardState.closed);
       return;
     }
-    if (_wbData != null) {
-      setState(() => _wbState = WhiteboardState.ready);
-      return;
-    }
-    // No data yet — show default and optionally generate for last query
-    debugPrint('[WB] Manual open — no data, showing fallback');
+    // Open board — show existing data or empty board (never auto-load default)
+    debugPrint('[WB] Manual open — data=${_wbData != null ? "exists" : "empty"}');
+    setState(() => _wbState = WhiteboardState.ready);
+  }
+
+  void _onClearBoard() {
+    debugPrint('[WB] Tahtayı Sil tapped');
     setState(() {
-      _wbData = WhiteboardData.defaultAnimation();
-      _wbState = WhiteboardState.ready;
+      _wbData = null;
       _replayKey++;
     });
-    if (_lastUserQuery.isNotEmpty && _anthropic != null) {
-      _triggerWhiteboard(_lastUserQuery, _lastAiReply);
-    }
   }
 
   // ── Image ─────────────────────────────────────────────────────────────────
@@ -636,6 +631,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 data: _wbData,
                                 onClose: () => setState(() => _wbState = WhiteboardState.closed),
                                 onReplay: () => setState(() => _replayKey++),
+                                onClearBoard: _onClearBoard,
                                 onCheckDrawing: _onCheckDrawing,
                               ),
                             )

@@ -16,6 +16,7 @@ class WhiteboardPanel extends StatelessWidget {
   final WhiteboardData? data;
   final VoidCallback onClose;
   final VoidCallback onReplay;
+  final VoidCallback? onClearBoard;
   final Future<void> Function(Uint8List pngBytes)? onCheckDrawing;
 
   const WhiteboardPanel({
@@ -24,8 +25,12 @@ class WhiteboardPanel extends StatelessWidget {
     required this.data,
     required this.onClose,
     required this.onReplay,
+    this.onClearBoard,
     this.onCheckDrawing,
   });
+
+  // Empty whiteboard data for blank board state
+  static const _empty = WhiteboardData(title: '', elements: []);
 
   @override
   Widget build(BuildContext context) {
@@ -37,16 +42,17 @@ class WhiteboardPanel extends StatelessWidget {
       child: Column(
         children: [
           _Header(
-            title: data?.title ?? 'Tahta',
+            title: data?.title.isNotEmpty == true ? data!.title : 'Tahta',
             onClose: onClose,
-            onReplay: onReplay,
             state: state,
           ),
           Expanded(
             child: switch (state) {
               WhiteboardState.loading => const _LoadingView(),
               WhiteboardState.ready  => _WhiteboardCanvas(
-                  data: data!,
+                  data: data ?? _empty,
+                  onReplay: onReplay,
+                  onClearBoard: onClearBoard,
                   onCheckDrawing: onCheckDrawing,
                 ),
               WhiteboardState.closed => const SizedBox(),
@@ -63,13 +69,11 @@ class WhiteboardPanel extends StatelessWidget {
 class _Header extends StatelessWidget {
   final String title;
   final VoidCallback onClose;
-  final VoidCallback onReplay;
   final WhiteboardState state;
 
   const _Header({
     required this.title,
     required this.onClose,
-    required this.onReplay,
     required this.state,
   });
 
@@ -94,12 +98,13 @@ class _Header extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(7),
             ),
-            child: const Icon(Icons.auto_graph_rounded, color: Colors.white, size: 14),
+            child: const Icon(Icons.auto_graph_rounded,
+                color: Colors.white, size: 14),
           ),
           const SizedBox(width: 9),
           Expanded(
             child: Text(
-              title,
+              title.isNotEmpty ? title : 'Tahta',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
@@ -109,32 +114,6 @@ class _Header extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (state == WhiteboardState.ready) ...[
-            GestureDetector(
-              onTap: onReplay,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A3A),
-                  borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: const Color(0xFF2A2A5A)),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.replay_rounded, color: Color(0xFF9B8BFB), size: 13),
-                    SizedBox(width: 5),
-                    Text('Tekrar Oynat',
-                        style: TextStyle(
-                            color: Color(0xFF9B8BFB),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
           GestureDetector(
             onTap: onClose,
             child: Container(
@@ -143,7 +122,8 @@ class _Header extends StatelessWidget {
                 color: const Color(0xFF1A1A2E),
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: const Icon(Icons.close_rounded, color: Color(0xFF6B7280), size: 15),
+              child: const Icon(Icons.close_rounded,
+                  color: Color(0xFF6B7280), size: 15),
             ),
           ),
         ],
@@ -249,12 +229,94 @@ class _SpinnerPainter extends CustomPainter {
 
 enum _DrawMode { none, pen, eraser }
 
+// ── Drawing notifier (ChangeNotifier for zero-setState drawing repaints) ──────
+
+class _DrawingNotifier extends ChangeNotifier {
+  final List<List<Offset>> strokes = [];
+  List<Offset> currentStroke = [];
+  static const double _minDist = 2.0;
+  static const double _eraseRadius = 22.0;
+
+  bool get hasStrokes => strokes.isNotEmpty;
+
+  void startStroke(Offset pt) {
+    currentStroke = [pt];
+    notifyListeners();
+  }
+
+  void extendStroke(Offset pt) {
+    if (currentStroke.isNotEmpty &&
+        (currentStroke.last - pt).distance < _minDist) return;
+    currentStroke.add(pt);
+    notifyListeners();
+  }
+
+  void commitStroke() {
+    if (currentStroke.length >= 2) strokes.add(List.from(currentStroke));
+    currentStroke = [];
+    notifyListeners();
+  }
+
+  void cancelStroke() {
+    currentStroke = [];
+    notifyListeners();
+  }
+
+  /// Point-proximity eraser: splits strokes at points within [_eraseRadius].
+  void eraseAt(Offset pt) {
+    bool changed = false;
+    final next = <List<Offset>>[];
+    for (final stroke in strokes) {
+      final segs = _splitStroke(stroke, pt);
+      if (segs.length != 1 || segs.first.length != stroke.length) {
+        changed = true;
+      }
+      next.addAll(segs);
+    }
+    if (changed) {
+      strokes
+        ..clear()
+        ..addAll(next);
+      notifyListeners();
+    }
+  }
+
+  List<List<Offset>> _splitStroke(List<Offset> stroke, Offset eraserPt) {
+    final result = <List<Offset>>[];
+    var seg = <Offset>[];
+    for (final pt in stroke) {
+      if ((pt - eraserPt).distance < _eraseRadius) {
+        if (seg.length >= 2) result.add(List.from(seg));
+        seg = [];
+      } else {
+        seg.add(pt);
+      }
+    }
+    if (seg.length >= 2) result.add(List.from(seg));
+    return result;
+  }
+
+  void clearStudent() {
+    strokes.clear();
+    currentStroke = [];
+    notifyListeners();
+  }
+}
+
 // ── Whiteboard canvas ──────────────────────────────────────────────────────────
 
 class _WhiteboardCanvas extends StatefulWidget {
   final WhiteboardData data;
+  final VoidCallback? onReplay;
+  final VoidCallback? onClearBoard;
   final Future<void> Function(Uint8List)? onCheckDrawing;
-  const _WhiteboardCanvas({required this.data, this.onCheckDrawing});
+
+  const _WhiteboardCanvas({
+    required this.data,
+    this.onReplay,
+    this.onClearBoard,
+    this.onCheckDrawing,
+  });
 
   @override
   State<_WhiteboardCanvas> createState() => _WhiteboardCanvasState();
@@ -265,30 +327,26 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
   late AnimationController _ctrl;
   late Animation<double> _time;
 
-  // ── Student drawing state ─────────────────────────────────────────────────
   _DrawMode _drawMode = _DrawMode.none;
-  final List<List<Offset>> _strokes = [];
-  final List<List<Offset>> _eraserStrokes = [];
-  List<Offset>? _currentStroke;
+  final _drawNotifier = _DrawingNotifier();
   bool _pointerDown = false;
   bool _checking = false;
   final _repaintKey = GlobalKey();
 
   bool get _penActive => _drawMode != _DrawMode.none;
-  bool get _hasStrokes => _strokes.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    _start();
+    _startAnimation();
   }
 
-  void _start() {
+  void _startAnimation() {
     final dur = widget.data.totalDuration;
     _ctrl = AnimationController(
       vsync: this,
-      duration: Duration(
-          milliseconds: (dur * 1000).round().clamp(3000, 60000)),
+      duration:
+          Duration(milliseconds: (dur * 1000).round().clamp(1000, 60000)),
     )..forward();
     _time = Tween<double>(begin: 0, end: dur)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.linear));
@@ -299,75 +357,64 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     super.didUpdateWidget(old);
     if (old.data != widget.data) {
       _ctrl.dispose();
-      _start();
+      _startAnimation();
     }
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _drawNotifier.dispose();
     super.dispose();
   }
 
-  // ── Raw pointer handlers (Listener — reliable on macOS desktop) ───────────
+  // ── Raw pointer events (no setState on move — notifier repaints only) ─────
 
   void _onPointerDown(PointerDownEvent e) {
     if (_drawMode == _DrawMode.none) return;
     debugPrint('[Draw] PointerDown mode=$_drawMode pos=${e.localPosition}');
-    setState(() {
-      _pointerDown = true;
-      _currentStroke = [e.localPosition];
-    });
+    _pointerDown = true;
+    if (_drawMode == _DrawMode.pen) {
+      _drawNotifier.startStroke(e.localPosition);
+    }
   }
 
   void _onPointerMove(PointerMoveEvent e) {
-    if (!_pointerDown || _currentStroke == null) return;
-    setState(() => _currentStroke!.add(e.localPosition));
+    if (!_pointerDown) return;
+    if (_drawMode == _DrawMode.pen) {
+      _drawNotifier.extendStroke(e.localPosition);
+    } else if (_drawMode == _DrawMode.eraser) {
+      _drawNotifier.eraseAt(e.localPosition);
+    }
   }
 
   void _onPointerUp(PointerUpEvent e) {
     if (!_pointerDown) return;
-    debugPrint('[Draw] PointerUp stroke=${_currentStroke?.length ?? 0} pts');
-    setState(() {
-      _pointerDown = false;
-      if (_currentStroke != null && _currentStroke!.isNotEmpty) {
-        if (_drawMode == _DrawMode.pen) {
-          _strokes.add(List.from(_currentStroke!));
-        } else if (_drawMode == _DrawMode.eraser) {
-          _eraserStrokes.add(List.from(_currentStroke!));
-        }
-      }
-      _currentStroke = null;
-    });
+    _pointerDown = false;
+    debugPrint(
+        '[Draw] PointerUp pts=${_drawNotifier.currentStroke.length}');
+    if (_drawMode == _DrawMode.pen) {
+      _drawNotifier.commitStroke();
+    } else {
+      _drawNotifier.cancelStroke();
+    }
+    setState(() {}); // refresh toolbar hasStrokes state
   }
 
   void _onPointerCancel(PointerCancelEvent e) {
-    setState(() {
-      _pointerDown = false;
-      _currentStroke = null;
-    });
-  }
-
-  void _clearAll() {
-    debugPrint('[Draw] Clear all strokes');
-    setState(() {
-      _strokes.clear();
-      _eraserStrokes.clear();
-      _currentStroke = null;
-      _pointerDown = false;
-    });
+    _pointerDown = false;
+    _drawNotifier.cancelStroke();
   }
 
   Future<void> _captureAndCheck() async {
-    final ctx = _repaintKey.currentContext;
-    if (ctx == null) return;
-    final boundary = ctx.findRenderObject() as RenderRepaintBoundary?;
+    final boundary =
+        _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return;
-
     setState(() => _checking = true);
     try {
       final image = await boundary.toImage(pixelRatio: 2.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null || !mounted) return;
       await widget.onCheckDrawing?.call(byteData.buffer.asUint8List());
     } finally {
@@ -375,9 +422,20 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     }
   }
 
+  void _setMode(_DrawMode mode) {
+    debugPrint('[Draw] Mode → $mode');
+    setState(() {
+      _drawMode = mode;
+      if (mode == _DrawMode.none) {
+        _pointerDown = false;
+        _drawNotifier.cancelStroke();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final MouseCursor cursor = switch (_drawMode) {
+    final cursor = switch (_drawMode) {
       _DrawMode.pen    => SystemMouseCursors.precise,
       _DrawMode.eraser => SystemMouseCursors.cell,
       _DrawMode.none   => MouseCursor.defer,
@@ -385,6 +443,7 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
 
     return Column(
       children: [
+        // ── Canvas area ─────────────────────────────────────────────────────
         Expanded(
           child: RepaintBoundary(
             key: _repaintKey,
@@ -397,21 +456,17 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
                     animation: _time,
                     builder: (_, __) => CustomPaint(
                       painter: _WhiteboardPainter(
-                          elements: widget.data.elements, time: _time.value),
+                          elements: widget.data.elements,
+                          time: _time.value),
                       child: const SizedBox.expand(),
                     ),
                   ),
-                  // ② Student drawing layer (pen + eraser with BlendMode.clear)
+                  // ② Student drawing layer — repaints via notifier only
                   CustomPaint(
-                    painter: _StudentPainter(
-                      strokes: _strokes,
-                      eraserStrokes: _eraserStrokes,
-                      currentStroke: _currentStroke,
-                      isErasing: _drawMode == _DrawMode.eraser,
-                    ),
+                    painter: _StudentPainter(_drawNotifier),
                     child: const SizedBox.expand(),
                   ),
-                  // ③ Raw pointer input capture (only in pen/eraser mode)
+                  // ③ Raw pointer capture (pen/eraser modes)
                   if (_penActive)
                     Listener(
                       behavior: HitTestBehavior.opaque,
@@ -421,214 +476,116 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
                       onPointerCancel: _onPointerCancel,
                       child: const SizedBox.expand(),
                     ),
-                  // ④ Floating toolbar (above Listener so taps reach buttons)
-                  if (_penActive)
-                    Positioned(
-                      top: 10,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: _FloatingToolbar(
-                          drawMode: _drawMode,
-                          hasStrokes: _hasStrokes,
-                          checking: _checking,
-                          onPen: () {
-                            debugPrint('[Draw] Switched to pen mode');
-                            setState(() => _drawMode = _DrawMode.pen);
-                          },
-                          onEraser: () {
-                            debugPrint('[Draw] Switched to eraser mode');
-                            setState(() => _drawMode = _DrawMode.eraser);
-                          },
-                          onClear: _clearAll,
-                          onClose: () {
-                            debugPrint('[Draw] Pen mode closed');
-                            setState(() {
-                              _drawMode = _DrawMode.none;
-                              _pointerDown = false;
-                              _currentStroke = null;
-                            });
-                          },
-                          onCheck: _hasStrokes && widget.onCheckDrawing != null && !_checking
-                              ? _captureAndCheck
-                              : null,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
           ),
         ),
-        // Bottom bar — Kalem toggle + quick check button
-        Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          clipBehavior: Clip.hardEdge,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0A0A1C),
-            border: Border(top: BorderSide(color: Color(0xFF1A1A3A))),
-          ),
-          child: Row(
-            children: [
-              _ToolBtn(
-                icon: _penActive ? Icons.edit_rounded : Icons.edit_outlined,
-                label: _penActive ? 'Kalem Açık' : 'Kalem',
-                active: _penActive,
-                color: const Color(0xFF4ADE80),
-                onTap: () {
-                  final next = _penActive ? _DrawMode.none : _DrawMode.pen;
-                  debugPrint('[Draw] Kalem tapped → $next');
-                  setState(() {
-                    _drawMode = next;
-                    if (next == _DrawMode.none) {
-                      _pointerDown = false;
-                      _currentStroke = null;
-                    }
-                  });
-                },
-              ),
-              const Spacer(),
-              if (_hasStrokes && widget.onCheckDrawing != null)
-                _CheckBtn(
-                  checking: _checking,
-                  onTap: _checking ? null : _captureAndCheck,
-                ),
-            ],
-          ),
-        ),
+        // ── Always-visible toolbar ──────────────────────────────────────────
+        _buildToolbar(),
       ],
     );
   }
-}
 
-// ── Floating toolbar ─────────────────────────────────────────────────────────
+  Widget _buildToolbar() {
+    final hasStrokes = _drawNotifier.hasStrokes;
 
-class _FloatingToolbar extends StatelessWidget {
-  final _DrawMode drawMode;
-  final bool hasStrokes;
-  final bool checking;
-  final VoidCallback onPen;
-  final VoidCallback onEraser;
-  final VoidCallback onClear;
-  final VoidCallback onClose;
-  final VoidCallback? onCheck;
-
-  const _FloatingToolbar({
-    required this.drawMode,
-    required this.hasStrokes,
-    required this.checking,
-    required this.onPen,
-    required this.onEraser,
-    required this.onClear,
-    required this.onClose,
-    this.onCheck,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xF0080820),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2A2A5A)),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x66000000), blurRadius: 14, offset: Offset(0, 4)),
-        ],
+      clipBehavior: Clip.hardEdge,
+      decoration: const BoxDecoration(
+        color: Color(0xFF08081A),
+        border: Border(top: BorderSide(color: Color(0xFF1A1A3A))),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _FabBtn(
-            icon: Icons.edit_rounded,
-            label: 'Kalem',
-            active: drawMode == _DrawMode.pen,
-            color: const Color(0xFF4ADE80),
-            onTap: onPen,
-          ),
-          const SizedBox(width: 6),
-          _FabBtn(
-            icon: Icons.auto_fix_normal_rounded,
-            label: 'Silgi',
-            active: drawMode == _DrawMode.eraser,
-            color: const Color(0xFFFB923C),
-            onTap: onEraser,
-          ),
-          if (hasStrokes) ...[
-            const SizedBox(width: 6),
-            _FabBtn(
-              icon: Icons.delete_outline_rounded,
-              label: 'Temizle',
-              active: false,
-              color: const Color(0xFFF87171),
-              onTap: onClear,
+          // Row 1 — drawing mode toggles
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                _TBtn(
+                  icon: _drawMode == _DrawMode.pen
+                      ? Icons.edit_rounded
+                      : Icons.edit_outlined,
+                  label: _drawMode == _DrawMode.pen
+                      ? 'Kalem Açık'
+                      : 'Kalem Kapalı',
+                  active: _drawMode == _DrawMode.pen,
+                  activeColor: const Color(0xFF4ADE80),
+                  onTap: () => _setMode(
+                      _drawMode == _DrawMode.pen
+                          ? _DrawMode.none
+                          : _DrawMode.pen),
+                ),
+                const SizedBox(width: 6),
+                _TBtn(
+                  icon: Icons.auto_fix_normal_rounded,
+                  label: 'Silgi',
+                  active: _drawMode == _DrawMode.eraser,
+                  activeColor: const Color(0xFFFB923C),
+                  onTap: () => _setMode(
+                      _drawMode == _DrawMode.eraser
+                          ? _DrawMode.none
+                          : _DrawMode.eraser),
+                ),
+                const Spacer(),
+                _TBtn(
+                  icon: Icons.replay_rounded,
+                  label: 'Tekrar Oynat',
+                  active: false,
+                  activeColor: const Color(0xFF9B8BFB),
+                  onTap: widget.onReplay,
+                ),
+              ],
             ),
-          ],
-          if (onCheck != null) ...[
-            const SizedBox(width: 6),
-            _CheckBtn(checking: checking, onTap: onCheck),
-          ],
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onClose,
-            child: Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A3A),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.close_rounded,
-                  color: Color(0xFF6B7280), size: 13),
+          ),
+          // Divider
+          const Divider(height: 1, color: Color(0xFF12122A)),
+          // Row 2 — board actions
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                _TBtn(
+                  icon: Icons.person_remove_outlined,
+                  label: 'Öğrenci Sil',
+                  active: false,
+                  activeColor: const Color(0xFFF87171),
+                  dimmed: !hasStrokes,
+                  onTap: hasStrokes
+                      ? () {
+                          debugPrint('[Draw] Clear student strokes');
+                          _drawNotifier.clearStudent();
+                          setState(() {});
+                        }
+                      : null,
+                ),
+                const SizedBox(width: 6),
+                _TBtn(
+                  icon: Icons.dashboard_customize_outlined,
+                  label: 'Tahtayı Sil',
+                  active: false,
+                  activeColor: const Color(0xFFF87171),
+                  onTap: () {
+                    debugPrint('[Draw] Clear board');
+                    _drawNotifier.clearStudent();
+                    widget.onClearBoard?.call();
+                    setState(() {});
+                  },
+                ),
+                const Spacer(),
+                if (hasStrokes && widget.onCheckDrawing != null)
+                  _CheckBtn(
+                    checking: _checking,
+                    onTap: _checking ? null : _captureAndCheck,
+                  ),
+              ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FabBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _FabBtn({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = active ? color : const Color(0xFF9B8BFB);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.18) : const Color(0xFF1A1A3A),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: active
-                  ? color.withValues(alpha: 0.7)
-                  : const Color(0xFF2A2A5A)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: c, size: 13),
-            const SizedBox(width: 5),
-            Text(label,
-                style: TextStyle(
-                    color: c, fontSize: 11, fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }
@@ -1301,96 +1258,54 @@ class _WhiteboardPainter extends CustomPainter {
   }
 }
 
-// ── Student drawing painter ────────────────────────────────────────────────────
+// ── Student drawing painter ───────────────────────────────────────────────────
+// Listens to _DrawingNotifier; repaints independently of widget tree.
 
 class _StudentPainter extends CustomPainter {
-  final List<List<Offset>> strokes;
-  final List<List<Offset>> eraserStrokes;
-  final List<Offset>? currentStroke;
-  final bool isErasing;
-
+  final _DrawingNotifier notifier;
   static const _inkColor = Color(0xFFFBBF24); // amber-yellow
 
-  const _StudentPainter({
-    required this.strokes,
-    required this.eraserStrokes,
-    this.currentStroke,
-    this.isErasing = false,
-  });
+  _StudentPainter(this.notifier) : super(repaint: notifier);
 
   @override
-  bool shouldRepaint(_StudentPainter old) =>
-      old.strokes != strokes ||
-      old.eraserStrokes != eraserStrokes ||
-      old.currentStroke != currentStroke ||
-      old.isErasing != isErasing;
+  bool shouldRepaint(_StudentPainter old) => false; // repaint via notifier
 
   @override
   void paint(Canvas canvas, Size size) {
-    // saveLayer so BlendMode.clear only erases within this layer,
-    // not the AI canvas below.
-    canvas.saveLayer(Offset.zero & size, Paint());
+    if (notifier.strokes.isEmpty && notifier.currentStroke.isEmpty) return;
 
-    final inkPaint = Paint()
+    final glow = Paint()
+      ..color = _inkColor.withValues(alpha: 0.14)
+      ..strokeWidth = 5.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+    final ink = Paint()
       ..color = _inkColor
-      ..strokeWidth = 2.6
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..blendMode = BlendMode.srcOver;
+      ..style = PaintingStyle.stroke;
 
-    final glowPaint = Paint()
-      ..color = _inkColor.withValues(alpha: 0.18)
-      ..strokeWidth = 7.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
-      ..blendMode = BlendMode.srcOver;
-
-    // Draw completed pen strokes
-    for (final stroke in strokes) {
-      final path = _buildPath(stroke);
-      if (path != null) {
-        canvas.drawPath(path, glowPaint);
-        canvas.drawPath(path, inkPaint);
-      }
+    for (final stroke in notifier.strokes) {
+      _drawStroke(canvas, stroke, glow, ink);
     }
-    // Draw in-progress pen stroke
-    if (!isErasing && currentStroke != null) {
-      final path = _buildPath(currentStroke!);
-      if (path != null) {
-        canvas.drawPath(path, glowPaint);
-        canvas.drawPath(path, inkPaint);
-      }
+    if (notifier.currentStroke.isNotEmpty) {
+      _drawStroke(canvas, notifier.currentStroke, glow, ink);
     }
+  }
 
-    // Eraser strokes: BlendMode.clear punches holes in student layer only
-    final eraserPaint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 22.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke
-      ..blendMode = BlendMode.clear;
-
-    for (final stroke in eraserStrokes) {
-      final path = _buildPath(stroke);
-      if (path != null) canvas.drawPath(path, eraserPaint);
-    }
-    if (isErasing && currentStroke != null) {
-      final path = _buildPath(currentStroke!);
-      if (path != null) canvas.drawPath(path, eraserPaint);
-    }
-
-    canvas.restore();
+  void _drawStroke(Canvas canvas, List<Offset> pts, Paint glow, Paint ink) {
+    final path = _buildPath(pts);
+    if (path == null) return;
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, ink);
   }
 
   Path? _buildPath(List<Offset> pts) {
-    if (pts.isEmpty) return null;
-    if (pts.length == 1) {
-      return Path()..addOval(Rect.fromCircle(center: pts[0], radius: 1.5));
-    }
+    if (pts.length < 2) return null;
     final path = Path()..moveTo(pts[0].dx, pts[0].dy);
     for (int i = 1; i < pts.length; i++) {
       if (i < pts.length - 1) {
@@ -1407,49 +1322,57 @@ class _StudentPainter extends CustomPainter {
   }
 }
 
-// ── Toolbar buttons ────────────────────────────────────────────────────────────
+// ── Toolbar button widgets ────────────────────────────────────────────────────
 
-class _ToolBtn extends StatelessWidget {
+class _TBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  final Color color;
+  final Color activeColor;
+  final bool dimmed;
   final VoidCallback? onTap;
 
-  const _ToolBtn({
+  const _TBtn({
     required this.icon,
     required this.label,
     required this.active,
-    required this.color,
+    required this.activeColor,
+    this.dimmed = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = active ? color : const Color(0xFF9B8BFB);
+    final Color fg = active
+        ? activeColor
+        : dimmed
+            ? const Color(0xFF3A3A5A)
+            : const Color(0xFF9B8BFB);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
           color: active
-              ? color.withValues(alpha: 0.15)
-              : const Color(0xFF1A1A3A),
+              ? activeColor.withValues(alpha: 0.15)
+              : const Color(0xFF12122A),
           borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: active
-                ? color.withValues(alpha: 0.6)
-                : const Color(0xFF2A2A5A),
+                ? activeColor.withValues(alpha: 0.65)
+                : dimmed
+                    ? const Color(0xFF1A1A2E)
+                    : const Color(0xFF252540),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: c, size: 13),
+            Icon(icon, color: fg, size: 13),
             const SizedBox(width: 5),
             Text(label,
                 style: TextStyle(
-                    color: c, fontSize: 11, fontWeight: FontWeight.w600)),
+                    color: fg, fontSize: 11, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -1460,7 +1383,6 @@ class _ToolBtn extends StatelessWidget {
 class _CheckBtn extends StatelessWidget {
   final bool checking;
   final VoidCallback? onTap;
-
   const _CheckBtn({required this.checking, this.onTap});
 
   @override
@@ -1468,7 +1390,7 @@ class _CheckBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           gradient: checking
               ? null
@@ -1477,8 +1399,12 @@ class _CheckBtn extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-          color: checking ? const Color(0xFF1A1A3A) : null,
+          color: checking ? const Color(0xFF12122A) : null,
           borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+              color: checking
+                  ? const Color(0xFF252540)
+                  : Colors.transparent),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
