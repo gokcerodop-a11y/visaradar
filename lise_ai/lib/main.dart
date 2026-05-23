@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+import 'services/anthropic_service.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env missing or malformed — app will show error in chat
+  }
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
   runApp(const LiseAIApp());
 }
 
@@ -37,12 +48,12 @@ class LiseAIApp extends StatelessWidget {
 class ChatMessage {
   final String text;
   final bool isUser;
-  final DateTime time;
+  final bool isError;
 
   const ChatMessage({
     required this.text,
     required this.isUser,
-    required this.time,
+    this.isError = false,
   });
 }
 
@@ -60,15 +71,39 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
+  late final AnthropicService? _anthropic;
+  final List<Map<String, String>> _history = [];
+
   final List<ChatMessage> _messages = [
-    ChatMessage(
+    const ChatMessage(
       text: 'Bugün ne öğrenmek istiyorsun? ✨',
       isUser: false,
-      time: DateTime.now(),
     ),
   ];
 
   bool _isTyping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
+    if (apiKey.isEmpty || apiKey == 'your_api_key_here') {
+      _anthropic = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showApiKeyError());
+    } else {
+      _anthropic = AnthropicService(apiKey);
+    }
+  }
+
+  void _showApiKeyError() {
+    setState(() {
+      _messages.add(const ChatMessage(
+        text: '⚠️ API anahtarı bulunamadı. Lütfen .env dosyasına geçerli bir ANTHROPIC_API_KEY ekle ve uygulamayı yeniden başlat.',
+        isUser: false,
+        isError: true,
+      ));
+    });
+  }
 
   @override
   void dispose() {
@@ -78,32 +113,53 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _sendMessage(String text) {
+  Future<void> _sendMessage(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty || _isTyping) return;
 
     setState(() {
-      _messages.add(ChatMessage(text: trimmed, isUser: true, time: DateTime.now()));
+      _messages.add(ChatMessage(text: trimmed, isUser: true));
       _isTyping = true;
     });
-
     _inputController.clear();
     _scrollToBottom();
 
-    Future.delayed(const Duration(milliseconds: 1400), () {
+    if (_anthropic == null) {
+      setState(() => _isTyping = false);
+      return;
+    }
+
+    _history.add({'role': 'user', 'content': trimmed});
+
+    try {
+      final reply = await _anthropic!.sendMessage(_history);
+      _history.add({'role': 'assistant', 'content': reply});
       if (!mounted) return;
       setState(() {
         _isTyping = false;
-        _messages.add(
-          ChatMessage(
-            text: 'Harika bir soru! Sana bu konuda yardımcı olmaktan mutluluk duyarım. Hemen inceleyelim 🚀',
-            isUser: false,
-            time: DateTime.now(),
-          ),
-        );
+        _messages.add(ChatMessage(text: reply, isUser: false));
       });
-      _scrollToBottom();
-    });
+    } on AnthropicException catch (e) {
+      if (!mounted) return;
+      _history.removeLast(); // remove the failed user message from history
+      setState(() {
+        _isTyping = false;
+        _messages.add(ChatMessage(text: '⚠️ ${e.message}', isUser: false, isError: true));
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _history.removeLast();
+      setState(() {
+        _isTyping = false;
+        _messages.add(const ChatMessage(
+          text: '⚠️ Bağlantı hatası. İnternetini kontrol edip tekrar dene.',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -173,15 +229,17 @@ class _ChatScreenState extends State<ChatScreen> {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4ADE80),
+                    decoration: BoxDecoration(
+                      color: _anthropic != null
+                          ? const Color(0xFF4ADE80)
+                          : const Color(0xFFF87171),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Text(
-                    'Çevrimiçi',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  Text(
+                    _anthropic != null ? 'Çevrimiçi' : 'API anahtarı eksik',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
                   ),
                 ],
               ),
@@ -203,10 +261,7 @@ class _ChatScreenState extends State<ChatScreen> {
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final msg = _messages[index];
-        return _MessageBubble(message: msg);
-      },
+      itemBuilder: (context, index) => _MessageBubble(message: _messages[index]),
     );
   }
 
@@ -243,25 +298,16 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _InputIconButton(
-              icon: Icons.image_outlined,
-              onTap: () {},
-            ),
-            _InputIconButton(
-              icon: Icons.attach_file_rounded,
-              onTap: () {},
-            ),
+            _InputIconButton(icon: Icons.image_outlined, onTap: () {}),
+            _InputIconButton(icon: Icons.attach_file_rounded, onTap: () {}),
             Expanded(
               child: TextField(
                 controller: _inputController,
                 focusNode: _focusNode,
                 maxLines: 5,
                 minLines: 1,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.white,
-                  height: 1.4,
-                ),
+                enabled: !_isTyping,
+                style: const TextStyle(fontSize: 15, color: Colors.white, height: 1.4),
                 textInputAction: TextInputAction.send,
                 onSubmitted: _sendMessage,
                 decoration: const InputDecoration(
@@ -275,6 +321,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             _SendOrMicButton(
               controller: _inputController,
+              isLoading: _isTyping,
               onSend: _sendMessage,
             ),
           ],
@@ -294,6 +341,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.isUser;
+    final isError = message.isError;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -316,19 +364,30 @@ class _MessageBubble extends StatelessWidget {
                         end: Alignment.bottomRight,
                       )
                     : null,
-                color: isUser ? null : const Color(0xFF1E1E1E),
+                color: isUser
+                    ? null
+                    : isError
+                        ? const Color(0xFF2A1A1A)
+                        : const Color(0xFF1E1E1E),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
                   bottomLeft: Radius.circular(isUser ? 20 : 4),
                   bottomRight: Radius.circular(isUser ? 4 : 20),
                 ),
+                border: isError
+                    ? Border.all(color: const Color(0xFF7F1D1D), width: 0.5)
+                    : null,
               ),
               child: Text(
                 message.text,
                 style: TextStyle(
                   fontSize: 15,
-                  color: isUser ? Colors.white : const Color(0xFFE5E7EB),
+                  color: isUser
+                      ? Colors.white
+                      : isError
+                          ? const Color(0xFFFCA5A5)
+                          : const Color(0xFFE5E7EB),
                   height: 1.45,
                 ),
               ),
@@ -379,19 +438,15 @@ class _TypingDotsState extends State<_TypingDots> with TickerProviderStateMixin 
   void initState() {
     super.initState();
     _controllers = List.generate(3, (i) {
-      final c = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 500),
-      );
+      final c = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
       Future.delayed(Duration(milliseconds: i * 160), () {
         if (mounted) c.repeat(reverse: true);
       });
       return c;
     });
     _animations = _controllers
-        .map((c) => Tween<double>(begin: 0, end: -6).animate(
-              CurvedAnimation(parent: c, curve: Curves.easeInOut),
-            ))
+        .map((c) => Tween<double>(begin: 0, end: -6)
+            .animate(CurvedAnimation(parent: c, curve: Curves.easeInOut)))
         .toList();
   }
 
@@ -410,20 +465,18 @@ class _TypingDotsState extends State<_TypingDots> with TickerProviderStateMixin 
       children: List.generate(3, (i) {
         return AnimatedBuilder(
           animation: _animations[i],
-          builder: (context, _) {
-            return Transform.translate(
-              offset: Offset(0, _animations[i].value),
-              child: Container(
-                width: 7,
-                height: 7,
-                margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7C6BF8),
-                  borderRadius: BorderRadius.circular(4),
-                ),
+          builder: (context, _) => Transform.translate(
+            offset: Offset(0, _animations[i].value),
+            child: Container(
+              width: 7,
+              height: 7,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C6BF8),
+                borderRadius: BorderRadius.circular(4),
               ),
-            );
-          },
+            ),
+          ),
         );
       }),
     );
@@ -454,9 +507,14 @@ class _InputIconButton extends StatelessWidget {
 
 class _SendOrMicButton extends StatefulWidget {
   final TextEditingController controller;
+  final bool isLoading;
   final ValueChanged<String> onSend;
 
-  const _SendOrMicButton({required this.controller, required this.onSend});
+  const _SendOrMicButton({
+    required this.controller,
+    required this.isLoading,
+    required this.onSend,
+  });
 
   @override
   State<_SendOrMicButton> createState() => _SendOrMicButtonState();
@@ -489,37 +547,52 @@ class _SendOrMicButtonState extends State<_SendOrMicButton> {
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-        child: _hasText
-            ? GestureDetector(
-                key: const ValueKey('send'),
-                onTap: () => widget.onSend(widget.controller.text),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+        child: widget.isLoading
+            ? Container(
+                key: const ValueKey('loading'),
+                width: 38,
+                height: 38,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2A2A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF7C6BF8),
                 ),
               )
-            : GestureDetector(
-                key: const ValueKey('mic'),
-                onTap: () {},
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A2A),
-                    borderRadius: BorderRadius.circular(12),
+            : _hasText
+                ? GestureDetector(
+                    key: const ValueKey('send'),
+                    onTap: () => widget.onSend(widget.controller.text),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
+                    ),
+                  )
+                : GestureDetector(
+                    key: const ValueKey('mic'),
+                    onTap: () {},
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A2A),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.mic_rounded, color: Color(0xFF9B8BFB), size: 20),
+                    ),
                   ),
-                  child: const Icon(Icons.mic_rounded, color: Color(0xFF9B8BFB), size: 20),
-                ),
-              ),
       ),
     );
   }
