@@ -7,8 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import 'models/whiteboard_element.dart';
 import 'services/anthropic_service.dart';
 import 'services/storage_service.dart';
+import 'widgets/whiteboard_panel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -130,7 +132,29 @@ class _ChatScreenState extends State<ChatScreen> {
   String _pendingMime = 'image/jpeg';
   bool _isDragging = false;
 
+  // ── Whiteboard ────────────────────────────────────────────────────────────
+  WhiteboardState _wbState = WhiteboardState.closed;
+  WhiteboardData? _wbData;
+  int _replayKey = 0;
+
   bool get _isBusy => _isTyping || _streamingText != null;
+  bool get _wbVisible => _wbState != WhiteboardState.closed;
+
+  static bool _isMathPhysics(String text) {
+    const keywords = [
+      'türev', 'integral', 'denklem', 'fonksiyon', 'limit', 'geometri',
+      'trigonometri', 'karekök', 'matris', 'vektör', 'ispat', 'teorem',
+      'kuvvet', 'hız', 'ivme', 'enerji', 'momentum', 'elektrik',
+      'manyetik', 'dalga', 'frekans', 'periyot', 'basınç', 'yoğunluk',
+      'derivative', 'integral', 'equation', 'function', 'graph', 'formula',
+      'force', 'velocity', 'acceleration', 'energy', 'momentum',
+      'matematik', 'fizik', 'hesapla', 'çöz', 'grafik', 'koordinat',
+      'üçgen', 'açı', 'alan', 'hacim', 'sin', 'cos', 'tan', 'log',
+      'çarpım', 'bölüm', 'toplam', 'fark', 'oran', 'orantı',
+    ];
+    final lower = text.toLowerCase();
+    return keywords.any((k) => lower.contains(k));
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -336,6 +360,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
       await _persistCurrent();
 
+      // Auto-trigger whiteboard for math/physics questions
+      if (_isMathPhysics(trimmed) && _anthropic != null && mounted) {
+        setState(() => _wbState = WhiteboardState.loading);
+        final wb = await _anthropic!.generateWhiteboard(trimmed, fullReply);
+        if (mounted) {
+          setState(() {
+            _wbData = wb;
+            _wbState = wb != null ? WhiteboardState.ready : WhiteboardState.closed;
+          });
+        }
+      }
+
     } on AnthropicException catch (e) {
       if (!mounted) return;
       _history.removeLast();
@@ -428,17 +464,39 @@ class _ChatScreenState extends State<ChatScreen> {
         body: SafeArea(
           child: _loading
               ? _buildLoadingState()
-              : Stack(
+              : Row(
                   children: [
-                    Column(
-                      children: [
-                        Expanded(child: _buildMessageList()),
-                        if (_isTyping) _buildTypingIndicator(),
-                        if (_pendingImage != null) _buildImagePreview(),
-                        _buildInputBar(),
-                      ],
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Column(
+                            children: [
+                              Expanded(child: _buildMessageList()),
+                              if (_isTyping) _buildTypingIndicator(),
+                              if (_pendingImage != null) _buildImagePreview(),
+                              _buildInputBar(),
+                            ],
+                          ),
+                          if (_isDragging) _buildDropOverlay(),
+                        ],
+                      ),
                     ),
-                    if (_isDragging) _buildDropOverlay(),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeInOut,
+                      width: _wbVisible ? 440 : 0,
+                      child: _wbVisible
+                          ? ClipRect(
+                              child: WhiteboardPanel(
+                                key: ValueKey(_replayKey),
+                                state: _wbState,
+                                data: _wbData,
+                                onClose: () => setState(() => _wbState = WhiteboardState.closed),
+                                onReplay: () => setState(() => _replayKey++),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                   ],
                 ),
         ),
@@ -480,6 +538,22 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       actions: [
+        if (_wbData != null)
+          IconButton(
+            tooltip: _wbVisible ? 'Tahtayı Kapat' : 'Tahtayı Göster',
+            icon: Icon(
+              _wbVisible ? Icons.splitscreen_rounded : Icons.auto_graph_rounded,
+              color: _wbVisible ? const Color(0xFF7C6BF8) : const Color(0xFF9CA3AF),
+              size: 20,
+            ),
+            onPressed: () => setState(() {
+              if (_wbVisible) {
+                _wbState = WhiteboardState.closed;
+              } else {
+                _wbState = WhiteboardState.ready;
+              }
+            }),
+          ),
         IconButton(
           tooltip: 'Yeni Sohbet',
           icon: const Icon(Icons.edit_outlined, color: Color(0xFF9CA3AF), size: 20),
