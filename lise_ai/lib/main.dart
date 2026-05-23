@@ -14,6 +14,7 @@ import 'services/anthropic_service.dart';
 import 'services/pdf_service.dart';
 import 'services/profile_service.dart';
 import 'services/speech_service.dart';
+import 'services/teacher_engine.dart';
 import 'services/storage_service.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
@@ -125,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // ── Services ──────────────────────────────────────────────────────────────
   final _storage = StorageService();
   late final ProfileService _profileSvc;
+  final _teacherEngine = TeacherEngine();
   AnthropicService? _anthropic;
 
   // ── Controllers ───────────────────────────────────────────────────────────
@@ -274,6 +276,7 @@ class _ChatScreenState extends State<ChatScreen> {
       text: 'Bugün ne öğrenmek istiyorsun? ✨\nFotoğraf veya ekran görüntüsü de gönderebilirsin.',
       isUser: false,
     );
+    _teacherEngine.reset();
     setState(() {
       _currentConvId = id;
       _messages = [welcome];
@@ -303,6 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     }
 
+    _teacherEngine.reset();
     setState(() {
       _currentConvId = id;
       _messages = messages;
@@ -442,6 +446,15 @@ class _ChatScreenState extends State<ChatScreen> {
       _history.add({'role': 'user', 'content': trimmed});
     }
 
+    // ── Teacher engine analysis (before sending) ───────────────────────────
+    final detectedTopic = TopicDetector.detect(trimmed);
+    _teacherEngine.analyze(
+      history: _history,
+      profile: _profileSvc.profile,
+      mode: _mode,
+      currentTopic: detectedTopic,
+    );
+
     try {
       final accumulated = StringBuffer();
       await for (final token in _anthropic!.streamMessage(
@@ -461,22 +474,29 @@ class _ChatScreenState extends State<ChatScreen> {
       final fullReply = accumulated.toString();
       _history.add({'role': 'assistant', 'content': fullReply});
 
-      // Record interaction for student memory
-      final topic = TopicDetector.detect(trimmed) ??
+      // Notify engine of response
+      _teacherEngine.onAssistantResponse(fullReply);
+      final signal = _teacherEngine.lastSignal;
+
+      // Record interaction for student memory with engine-derived estimates
+      final topic = detectedTopic ??
           TopicDetector.detect(fullReply.substring(0, fullReply.length.clamp(0, 400))) ??
           'Genel';
       _profileSvc.recordInteraction(InteractionRecord(
         timestamp: DateTime.now(),
         topic: topic,
         mode: _mode.name,
-        usedHints: _mode == LessonMode.sadaceIpucu,
-        usedBoard: _mode == LessonMode.tahtadaCoz || _mode == LessonMode.sesliDers,
-        successEstimate: 0.65,
+        usedHints: _mode == LessonMode.sadaceIpucu || signal.hasConfusion,
+        usedBoard: _mode == LessonMode.tahtadaCoz ||
+            _mode == LessonMode.sesliDers ||
+            signal.shouldTriggerBoard,
+        successEstimate: signal.successEstimate,
       ));
 
       if (!mounted) return;
       final alwaysBoard = _mode.alwaysShowBoard;
       final isMathy = alwaysBoard ||
+          signal.shouldTriggerBoard ||
           ((_isMathPhysics(trimmed) ||
                   (pdfPages != null && pdfPages.isNotEmpty) ||
                   _isMathPhysics(
@@ -553,7 +573,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _currentSystemPrompt =>
       AnthropicService.buildSystemPrompt(_mode, _level) +
-      _profileSvc.buildMemorySummary();
+      _profileSvc.buildMemorySummary() +
+      _teacherEngine.buildOrchestrationPrompt();
 
   // ── Mic / STT ─────────────────────────────────────────────────────────────
 
