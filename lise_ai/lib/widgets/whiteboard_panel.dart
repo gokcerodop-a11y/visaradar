@@ -245,6 +245,10 @@ class _SpinnerPainter extends CustomPainter {
   bool shouldRepaint(_SpinnerPainter old) => old.t != t;
 }
 
+// ── Draw mode ─────────────────────────────────────────────────────────────────
+
+enum _DrawMode { none, pen, eraser }
+
 // ── Whiteboard canvas ──────────────────────────────────────────────────────────
 
 class _WhiteboardCanvas extends StatefulWidget {
@@ -262,11 +266,16 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
   late Animation<double> _time;
 
   // ── Student drawing state ─────────────────────────────────────────────────
-  bool _penMode = false;
+  _DrawMode _drawMode = _DrawMode.none;
   final List<List<Offset>> _strokes = [];
+  final List<List<Offset>> _eraserStrokes = [];
   List<Offset>? _currentStroke;
+  bool _pointerDown = false;
   bool _checking = false;
   final _repaintKey = GlobalKey();
+
+  bool get _penActive => _drawMode != _DrawMode.none;
+  bool get _hasStrokes => _strokes.isNotEmpty;
 
   @override
   void initState() {
@@ -300,22 +309,52 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
     super.dispose();
   }
 
-  // ── Drawing gestures ──────────────────────────────────────────────────────
+  // ── Raw pointer handlers (Listener — reliable on macOS desktop) ───────────
 
-  void _onPanStart(DragStartDetails d) {
-    setState(() => _currentStroke = [d.localPosition]);
-  }
-
-  void _onPanUpdate(DragUpdateDetails d) {
-    if (_currentStroke == null) return;
-    setState(() => _currentStroke!.add(d.localPosition));
-  }
-
-  void _onPanEnd(DragEndDetails _) {
-    if (_currentStroke == null) return;
+  void _onPointerDown(PointerDownEvent e) {
+    if (_drawMode == _DrawMode.none) return;
+    debugPrint('[Draw] PointerDown mode=$_drawMode pos=${e.localPosition}');
     setState(() {
-      if (_currentStroke!.isNotEmpty) _strokes.add(List.from(_currentStroke!));
+      _pointerDown = true;
+      _currentStroke = [e.localPosition];
+    });
+  }
+
+  void _onPointerMove(PointerMoveEvent e) {
+    if (!_pointerDown || _currentStroke == null) return;
+    setState(() => _currentStroke!.add(e.localPosition));
+  }
+
+  void _onPointerUp(PointerUpEvent e) {
+    if (!_pointerDown) return;
+    debugPrint('[Draw] PointerUp stroke=${_currentStroke?.length ?? 0} pts');
+    setState(() {
+      _pointerDown = false;
+      if (_currentStroke != null && _currentStroke!.isNotEmpty) {
+        if (_drawMode == _DrawMode.pen) {
+          _strokes.add(List.from(_currentStroke!));
+        } else if (_drawMode == _DrawMode.eraser) {
+          _eraserStrokes.add(List.from(_currentStroke!));
+        }
+      }
       _currentStroke = null;
+    });
+  }
+
+  void _onPointerCancel(PointerCancelEvent e) {
+    setState(() {
+      _pointerDown = false;
+      _currentStroke = null;
+    });
+  }
+
+  void _clearAll() {
+    debugPrint('[Draw] Clear all strokes');
+    setState(() {
+      _strokes.clear();
+      _eraserStrokes.clear();
+      _currentStroke = null;
+      _pointerDown = false;
     });
   }
 
@@ -338,45 +377,90 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
 
   @override
   Widget build(BuildContext context) {
-    final hasStrokes = _strokes.isNotEmpty || _currentStroke != null;
+    final MouseCursor cursor = switch (_drawMode) {
+      _DrawMode.pen    => SystemMouseCursors.precise,
+      _DrawMode.eraser => SystemMouseCursors.cell,
+      _DrawMode.none   => MouseCursor.defer,
+    };
+
     return Column(
       children: [
         Expanded(
           child: RepaintBoundary(
             key: _repaintKey,
-            child: Stack(
-              children: [
-                // AI animation layer
-                AnimatedBuilder(
-                  animation: _time,
-                  builder: (_, __) => CustomPaint(
-                    painter: _WhiteboardPainter(
-                        elements: widget.data.elements, time: _time.value),
+            child: MouseRegion(
+              cursor: cursor,
+              child: Stack(
+                children: [
+                  // ① AI animation layer
+                  AnimatedBuilder(
+                    animation: _time,
+                    builder: (_, __) => CustomPaint(
+                      painter: _WhiteboardPainter(
+                          elements: widget.data.elements, time: _time.value),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  // ② Student drawing layer (pen + eraser with BlendMode.clear)
+                  CustomPaint(
+                    painter: _StudentPainter(
+                      strokes: _strokes,
+                      eraserStrokes: _eraserStrokes,
+                      currentStroke: _currentStroke,
+                      isErasing: _drawMode == _DrawMode.eraser,
+                    ),
                     child: const SizedBox.expand(),
                   ),
-                ),
-                // Student drawing layer
-                CustomPaint(
-                  painter: _StudentPainter(
-                    strokes: _strokes,
-                    currentStroke: _currentStroke,
-                  ),
-                  child: const SizedBox.expand(),
-                ),
-                // Input capture layer (pen mode only)
-                if (_penMode)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanStart: _onPanStart,
-                    onPanUpdate: _onPanUpdate,
-                    onPanEnd: _onPanEnd,
-                    child: const SizedBox.expand(),
-                  ),
-              ],
+                  // ③ Raw pointer input capture (only in pen/eraser mode)
+                  if (_penActive)
+                    Listener(
+                      behavior: HitTestBehavior.opaque,
+                      onPointerDown: _onPointerDown,
+                      onPointerMove: _onPointerMove,
+                      onPointerUp: _onPointerUp,
+                      onPointerCancel: _onPointerCancel,
+                      child: const SizedBox.expand(),
+                    ),
+                  // ④ Floating toolbar (above Listener so taps reach buttons)
+                  if (_penActive)
+                    Positioned(
+                      top: 10,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _FloatingToolbar(
+                          drawMode: _drawMode,
+                          hasStrokes: _hasStrokes,
+                          checking: _checking,
+                          onPen: () {
+                            debugPrint('[Draw] Switched to pen mode');
+                            setState(() => _drawMode = _DrawMode.pen);
+                          },
+                          onEraser: () {
+                            debugPrint('[Draw] Switched to eraser mode');
+                            setState(() => _drawMode = _DrawMode.eraser);
+                          },
+                          onClear: _clearAll,
+                          onClose: () {
+                            debugPrint('[Draw] Pen mode closed');
+                            setState(() {
+                              _drawMode = _DrawMode.none;
+                              _pointerDown = false;
+                              _currentStroke = null;
+                            });
+                          },
+                          onCheck: _hasStrokes && widget.onCheckDrawing != null && !_checking
+                              ? _captureAndCheck
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-        // Drawing toolbar
+        // Bottom bar — Kalem toggle + quick check button
         Container(
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -388,27 +472,24 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
           child: Row(
             children: [
               _ToolBtn(
-                icon: Icons.edit_rounded,
-                label: 'Kalem',
-                active: _penMode,
+                icon: _penActive ? Icons.edit_rounded : Icons.edit_outlined,
+                label: _penActive ? 'Kalem Açık' : 'Kalem',
+                active: _penActive,
                 color: const Color(0xFF4ADE80),
-                onTap: () => setState(() => _penMode = !_penMode),
+                onTap: () {
+                  final next = _penActive ? _DrawMode.none : _DrawMode.pen;
+                  debugPrint('[Draw] Kalem tapped → $next');
+                  setState(() {
+                    _drawMode = next;
+                    if (next == _DrawMode.none) {
+                      _pointerDown = false;
+                      _currentStroke = null;
+                    }
+                  });
+                },
               ),
-              if (hasStrokes) ...[
-                const SizedBox(width: 7),
-                _ToolBtn(
-                  icon: Icons.delete_outline_rounded,
-                  label: 'Temizle',
-                  active: false,
-                  color: const Color(0xFFF87171),
-                  onTap: () => setState(() {
-                    _strokes.clear();
-                    _currentStroke = null;
-                  }),
-                ),
-              ],
               const Spacer(),
-              if (hasStrokes && widget.onCheckDrawing != null)
+              if (_hasStrokes && widget.onCheckDrawing != null)
                 _CheckBtn(
                   checking: _checking,
                   onTap: _checking ? null : _captureAndCheck,
@@ -417,6 +498,138 @@ class _WhiteboardCanvasState extends State<_WhiteboardCanvas>
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Floating toolbar ─────────────────────────────────────────────────────────
+
+class _FloatingToolbar extends StatelessWidget {
+  final _DrawMode drawMode;
+  final bool hasStrokes;
+  final bool checking;
+  final VoidCallback onPen;
+  final VoidCallback onEraser;
+  final VoidCallback onClear;
+  final VoidCallback onClose;
+  final VoidCallback? onCheck;
+
+  const _FloatingToolbar({
+    required this.drawMode,
+    required this.hasStrokes,
+    required this.checking,
+    required this.onPen,
+    required this.onEraser,
+    required this.onClear,
+    required this.onClose,
+    this.onCheck,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xF0080820),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A5A)),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x66000000), blurRadius: 14, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _FabBtn(
+            icon: Icons.edit_rounded,
+            label: 'Kalem',
+            active: drawMode == _DrawMode.pen,
+            color: const Color(0xFF4ADE80),
+            onTap: onPen,
+          ),
+          const SizedBox(width: 6),
+          _FabBtn(
+            icon: Icons.auto_fix_normal_rounded,
+            label: 'Silgi',
+            active: drawMode == _DrawMode.eraser,
+            color: const Color(0xFFFB923C),
+            onTap: onEraser,
+          ),
+          if (hasStrokes) ...[
+            const SizedBox(width: 6),
+            _FabBtn(
+              icon: Icons.delete_outline_rounded,
+              label: 'Temizle',
+              active: false,
+              color: const Color(0xFFF87171),
+              onTap: onClear,
+            ),
+          ],
+          if (onCheck != null) ...[
+            const SizedBox(width: 6),
+            _CheckBtn(checking: checking, onTap: onCheck),
+          ],
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onClose,
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A3A),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(Icons.close_rounded,
+                  color: Color(0xFF6B7280), size: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FabBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _FabBtn({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = active ? color : const Color(0xFF9B8BFB);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.18) : const Color(0xFF1A1A3A),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: active
+                  ? color.withValues(alpha: 0.7)
+                  : const Color(0xFF2A2A5A)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: c, size: 13),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    color: c, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1092,24 +1305,39 @@ class _WhiteboardPainter extends CustomPainter {
 
 class _StudentPainter extends CustomPainter {
   final List<List<Offset>> strokes;
+  final List<List<Offset>> eraserStrokes;
   final List<Offset>? currentStroke;
+  final bool isErasing;
 
   static const _inkColor = Color(0xFFFBBF24); // amber-yellow
 
-  const _StudentPainter({required this.strokes, this.currentStroke});
+  const _StudentPainter({
+    required this.strokes,
+    required this.eraserStrokes,
+    this.currentStroke,
+    this.isErasing = false,
+  });
 
   @override
   bool shouldRepaint(_StudentPainter old) =>
-      old.strokes != strokes || old.currentStroke != currentStroke;
+      old.strokes != strokes ||
+      old.eraserStrokes != eraserStrokes ||
+      old.currentStroke != currentStroke ||
+      old.isErasing != isErasing;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    // saveLayer so BlendMode.clear only erases within this layer,
+    // not the AI canvas below.
+    canvas.saveLayer(Offset.zero & size, Paint());
+
+    final inkPaint = Paint()
       ..color = _inkColor
       ..strokeWidth = 2.6
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..blendMode = BlendMode.srcOver;
 
     final glowPaint = Paint()
       ..color = _inkColor.withValues(alpha: 0.18)
@@ -1117,22 +1345,45 @@ class _StudentPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
+      ..blendMode = BlendMode.srcOver;
 
+    // Draw completed pen strokes
     for (final stroke in strokes) {
       final path = _buildPath(stroke);
       if (path != null) {
         canvas.drawPath(path, glowPaint);
-        canvas.drawPath(path, paint);
+        canvas.drawPath(path, inkPaint);
       }
     }
-    if (currentStroke != null) {
+    // Draw in-progress pen stroke
+    if (!isErasing && currentStroke != null) {
       final path = _buildPath(currentStroke!);
       if (path != null) {
         canvas.drawPath(path, glowPaint);
-        canvas.drawPath(path, paint);
+        canvas.drawPath(path, inkPaint);
       }
     }
+
+    // Eraser strokes: BlendMode.clear punches holes in student layer only
+    final eraserPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 22.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke
+      ..blendMode = BlendMode.clear;
+
+    for (final stroke in eraserStrokes) {
+      final path = _buildPath(stroke);
+      if (path != null) canvas.drawPath(path, eraserPaint);
+    }
+    if (isErasing && currentStroke != null) {
+      final path = _buildPath(currentStroke!);
+      if (path != null) canvas.drawPath(path, eraserPaint);
+    }
+
+    canvas.restore();
   }
 
   Path? _buildPath(List<Offset> pts) {
