@@ -365,9 +365,10 @@ class _ChatScreenState extends State<ChatScreen> {
         setState(() => _wbState = WhiteboardState.loading);
         final wb = await _anthropic!.generateWhiteboard(trimmed, fullReply);
         if (mounted) {
+          final data = wb ?? WhiteboardData.defaultAnimation();
           setState(() {
-            _wbData = wb;
-            _wbState = wb != null ? WhiteboardState.ready : WhiteboardState.closed;
+            _wbData = data;
+            _wbState = WhiteboardState.ready;
           });
         }
       }
