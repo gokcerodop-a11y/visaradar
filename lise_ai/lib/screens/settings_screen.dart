@@ -6,6 +6,7 @@ import '../models/lesson_mode.dart';
 import '../services/storage_service.dart';
 import '../services/long_term_memory.dart';
 import '../services/short_term_memory.dart';
+import 'privacy_settings_screen.dart';
 
 // ── Colours ───────────────────────────────────────────────────────────────────
 
@@ -171,6 +172,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showPrivacyDialog() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PrivacySettingsScreen(storage: widget.storage),
+      ),
+    );
+  }
+
+  void _showPrivacyDialogLegacy() {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

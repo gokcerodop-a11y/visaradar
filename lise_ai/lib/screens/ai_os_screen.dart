@@ -45,8 +45,11 @@ import '../services/achievement_service.dart';
 import '../services/demo_service.dart';
 import '../services/haptics_service.dart';
 import '../services/session_recovery_service.dart';
+import '../services/auth_service.dart';
 import '../services/streak_service.dart';
 import '../services/study_analytics_service.dart';
+import '../services/subscription_service.dart';
+import '../screens/privacy_settings_screen.dart';
 import '../services/pedagogy_engine.dart';
 import '../services/silence_detector.dart';
 import '../core/feature_flags.dart';
@@ -111,6 +114,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _streakSvc = StreakService();
   final _achievementSvc = AchievementService();
   final _recoverySvc = SessionRecoveryService();
+  final _authSvc = AuthService();
+  final _subscriptionSvc = SubscriptionService();
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -261,6 +266,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
       if (FeatureFlags.sessionRecovery) {
         await _recoverySvc.init(_storage);
       }
+      await _authSvc.init(_storage);
+      await _subscriptionSvc.init(_storage);
     } catch (e) {
       AppLogger.error('Init', 'Storage setup error', e);
     }
