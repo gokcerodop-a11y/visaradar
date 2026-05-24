@@ -26,7 +26,11 @@ import '../services/session_continuity_service.dart';
 import '../services/speech_service.dart';
 import '../services/storage_service.dart';
 import '../models/speech_tag.dart';
+import '../services/ambient_engine.dart';
+import '../services/attention_engine.dart';
+import '../services/exam_camp_service.dart';
 import '../services/human_pacing_engine.dart';
+import '../services/lesson_transition_service.dart';
 import '../services/streaming_teacher_session.dart';
 import '../services/teacher_engine.dart';
 import '../services/teacher_identity_service.dart';
@@ -35,6 +39,8 @@ import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
 import '../services/voice_command_detector.dart';
 import '../widgets/ambient_layer.dart';
+import '../widgets/atmosphere_layer.dart';
+import '../widgets/exam_camp_overlay.dart';
 import '../widgets/lesson_board_page.dart';
 import '../widgets/live_subtitle_engine.dart';
 import '../widgets/orb_renderer.dart';
@@ -64,6 +70,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _identitySvc = TeacherIdentityService();
   final _continuitySvc = SessionContinuityService();
   final _journalSvc = LearningJournalService();
+  final _ambientEngine = AmbientEngine();
+  final _attentionEngine = AttentionEngine();
+  final _examCampSvc = ExamCampService();
+  final _transitionSvc = LessonTransitionService();
   AnthropicService? _anthropic;
   VisualReasoningEngine? _visualEngine;
   BoardRedrawService? _boardRedrawSvc;
@@ -118,6 +128,11 @@ class _AOSState extends State<AIOperatingSystemScreen>
   // ── Session recap card ────────────────────────────────────────────────────
   bool _showRecapCard = false;
 
+  // ── Immersive environment state ───────────────────────────────────────────
+  bool _focusModeActive = false;
+  bool _examCampActive = false;
+  Timer? _ambientTick;
+
   // ── Whiteboard ────────────────────────────────────────────────────────────
   String? _boardQuestion;
   String? _boardReply;
@@ -149,6 +164,11 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _subtitleCtrl = LiveSubtitleController(
       onWordAdvanced: () { if (mounted) setState(() {}); },
     );
+    // Ambient engine tick: fades transient effects (success/urgency pulses)
+    _ambientTick = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      _ambientEngine.tick();
+      if (mounted) setState(() {});
+    });
     _initServices();
   }
 
@@ -195,6 +215,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
     });
 
     if (mounted) {
+      // Auto-detect atmosphere mode from time + session history
+      final autoMode = AmbientEngine.suggestMode(
+        now: DateTime.now(),
+        isExamSession: false,
+        avgConfidence: _continuitySvc.data.avgConfidence,
+        frustrationStreak: _continuitySvc.data.frustrationStreak,
+      );
+      _ambientEngine.setMode(autoMode);
+
       setState(() => _loading = false);
 
       await Future.delayed(const Duration(milliseconds: 400));
@@ -242,6 +271,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _activeSession?.dispose();
     _voiceSvc?.dispose();
     _speechSvc?.dispose();
+    _examCampSvc.dispose();
+    _ambientTick?.cancel();
     super.dispose();
   }
 
@@ -424,6 +455,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
     }
     if (_anthropic == null || _isStreaming) return;
 
+    // ── Attention engine: record input ─────────────────────────────────────
+    _attentionEngine.recordUserInput(text, timestamp: DateTime.now());
+    final attentionSig = _attentionEngine.currentSignal;
+    if (attentionSig.focusModeRecommended != _focusModeActive) {
+      setState(() => _focusModeActive = attentionSig.focusModeRecommended);
+    }
+
     _addSubtitle(text.isNotEmpty ? text : '(Dosya)', isUser: true);
 
     // Visual reference detection: enrich text when student refers to image
@@ -596,6 +634,30 @@ class _AOSState extends State<AIOperatingSystemScreen>
       await _journalSvc.addHomework(hwItem);
     }
 
+    // ── Atmosphere + attention reactions ──────────────────────────────────
+    if (signal.successEstimate >= 0.85) {
+      _ambientEngine.triggerSuccessPulse();
+    }
+    _ambientEngine.reactToEmotionalState(_identitySvc.emotionalState);
+    _ambientEngine.reactToTopicDifficulty(1.0 - signal.successEstimate);
+
+    // Exam camp: record answer based on success estimate
+    if (_examCampSvc.isActive) {
+      _examCampSvc.recordAnswer(correct: signal.successEstimate >= 0.65);
+    }
+
+    // Attention-driven break suggestion (inject as subtitle)
+    final attnSig = _attentionEngine.currentSignal;
+    if (attnSig.shouldSuggestBreak && mounted) {
+      final phrase = attnSig.adjustment.teacherPhrase;
+      if (phrase != null) _addSubtitle(phrase, isUser: false);
+    }
+
+    // Natural lesson transition detection (result used by Claude via prompt context)
+    if (cleanReply.isNotEmpty) {
+      _transitionSvc.detectTransitionFromReply(cleanReply);
+    }
+
     // Update motivation-adaptive UI (orb color follows teacher emotional state)
     setState(() {
       _ui.motivation = cogProfile.motivationState;
@@ -660,6 +722,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           _isStreaming = false;
           _ui.orbState = OrbVisualState.idle;
         });
+        _attentionEngine.recordInterruption();
         _addSubtitle(contextualReply, isUser: false);
 
       case VoiceCommandApplied(:final command):
@@ -749,6 +812,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _flowEngine.buildFlowPrompt() +
       StreamingTeacherSession.buildPacingPromptBlock(_identitySvc.identity) +
       SpeechTagParser.systemPromptBlock +
+      _transitionSvc.buildContinuityReferenceBlock(
+        continuity: _continuitySvc.data,
+        journal: _journalSvc.journal,
+        teacher: _identitySvc.identity,
+      ) +
+      _attentionEngine.buildAttentionPromptBlock() +
+      _examCampSvc.buildExamCampPromptBlock() +
       (_imageCtx?.buildContextBlock() ?? '');
 
   // ── Whiteboard ────────────────────────────────────────────────────────────
@@ -974,6 +1044,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
                     particleCtrl: _particleCtrl,
                   ),
 
+                  // ── Layer 0b: Atmosphere glow overlay ────────────────────
+                  AtmosphereLayer(
+                    engine: _ambientEngine,
+                    breatheCtrl: _breatheCtrl,
+                    focusMode: _focusModeActive,
+                  ),
+
                   // ── Layer 1: Main UI ─────────────────────────────────────
                   SafeArea(
                     child: Column(
@@ -1042,6 +1119,21 @@ class _AOSState extends State<AIOperatingSystemScreen>
                             result: _imageCtx!.analysisResult!,
                             onDismiss: () =>
                                 setState(() => _imageCtx = null),
+                          ),
+
+                        // Exam camp overlay
+                        if (_examCampActive)
+                          ExamCampOverlay(
+                            service: _examCampSvc,
+                            onEnd: () => setState(() {
+                              _examCampSvc.endSession();
+                              _examCampActive = false;
+                              _ambientEngine.setMode(AtmosphereMode.focusRoom);
+                            }),
+                            onCorrect: () =>
+                                _examCampSvc.recordAnswer(correct: true),
+                            onIncorrect: () =>
+                                _examCampSvc.recordAnswer(correct: false),
                           ),
 
                         // Board badge
@@ -1153,6 +1245,23 @@ class _AOSState extends State<AIOperatingSystemScreen>
             ],
           ),
           const Spacer(),
+          // Atmosphere mode badge
+          AtmosphereModeBadge(
+            mode: _ambientEngine.mode,
+            onTap: () async {
+              final picked = await AtmospherePicker.show(
+                context,
+                current: _ambientEngine.mode,
+              );
+              if (picked != null && mounted) {
+                setState(() => _ambientEngine.setMode(picked));
+                if (picked == AtmosphereMode.examMode) {
+                  _ui.motivation = MotivationState.normal;
+                }
+              }
+            },
+          ),
+          const SizedBox(width: 8),
           // Teacher mood indicator
           TeacherMoodIndicator(
             teacher: _identitySvc.identity,
@@ -1508,8 +1617,54 @@ class _AOSState extends State<AIOperatingSystemScreen>
             },
             tooltip: _imageCtx != null ? 'Görseli gizle/göster' : 'Görsel yükle',
           ),
+          // Sınav Kampı
+          _BottomBtn(
+            icon: Icons.timer_rounded,
+            active: _examCampActive,
+            color: _examCampActive ? const Color(0xFFF87171) : null,
+            onTap: _toggleExamCamp,
+            tooltip: 'Sınav Kampı',
+          ),
         ],
       ),
+    );
+  }
+
+  // ── Exam camp toggle ───────────────────────────────────────────────────────
+
+  Future<void> _toggleExamCamp() async {
+    if (_examCampActive) {
+      setState(() {
+        _examCampSvc.endSession();
+        _examCampActive = false;
+        _ambientEngine.setMode(AtmosphereMode.focusRoom);
+      });
+      return;
+    }
+
+    final currentTopic = _continuitySvc.data.lastTopics.isNotEmpty
+        ? _continuitySvc.data.lastTopics.last
+        : '';
+
+    final result = await showDialog<({int minutes, String topic})>(
+      context: context,
+      builder: (_) => ExamCampStartDialog(defaultTopic: currentTopic),
+    );
+
+    if (result == null || !mounted) return;
+
+    _examCampSvc.startSession(
+      durationMinutes: result.minutes,
+      topic: result.topic.isEmpty ? 'Genel' : result.topic,
+    );
+    setState(() {
+      _examCampActive = true;
+      _ambientEngine.setMode(AtmosphereMode.examMode);
+    });
+
+    _addSubtitle(
+      '${_identitySvc.identity.teacherName}: "Sınav kampı başlıyor — ${result.minutes} dakika. Hazır mısın?"',
+      isUser: false,
     );
   }
 }
