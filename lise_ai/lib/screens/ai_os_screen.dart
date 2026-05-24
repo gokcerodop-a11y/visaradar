@@ -39,6 +39,14 @@ import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
 import '../services/voice_command_detector.dart';
 import '../services/work_analysis_service.dart';
+import '../services/short_term_memory.dart';
+import '../services/working_memory.dart';
+import '../services/long_term_memory.dart';
+import '../services/episodic_memory.dart';
+import '../services/semantic_memory.dart';
+import '../services/memory_retrieval_engine.dart';
+import '../services/memory_summarizer.dart';
+import '../services/memory_prompt_layer.dart';
 import 'visual_teaching_screen.dart';
 import '../widgets/ambient_layer.dart';
 import '../widgets/atmosphere_layer.dart';
@@ -80,6 +88,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
   VisualReasoningEngine? _visualEngine;
   BoardRedrawService? _boardRedrawSvc;
   WorkAnalysisService? _workAnalysisSvc;
+  MemorySummarizer? _memorySummarizer;
+
+  // ── Cognitive memory system ────────────────────────────────────────────────
+  final _shortTermMem = ShortTermMemory();
+  final _workingMem = WorkingMemory();
+  final _longTermMem = LongTermMemory();
+  final _episodicMem = EpisodicMemory();
+  final _semanticMem = SemanticMemory();
+  final _memRetrieval = MemoryRetrievalEngine();
 
   // ── UI state engine ───────────────────────────────────────────────────────
   final _ui = UIStateEngine();
@@ -182,6 +199,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _visualEngine = VisualReasoningEngine(_anthropic!);
       _boardRedrawSvc = BoardRedrawService(_anthropic!);
       _workAnalysisSvc = WorkAnalysisService(_anthropic!);
+      _memorySummarizer = MemorySummarizer(_anthropic!);
     }
 
     _voiceSvc = await TeacherVoiceService.create();
@@ -195,6 +213,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
     await _identitySvc.init(_storage);
     await _continuitySvc.init(_storage);
     await _journalSvc.init(_storage);
+    await _longTermMem.init(_storage);
+    await _episodicMem.init(_storage);
+    await _semanticMem.init(_storage);
 
     // Restore saved mode/level
     final savedMode = _storage.loadSetting('ui_mode');
@@ -461,6 +482,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     // ── Attention engine: record input ─────────────────────────────────────
     _attentionEngine.recordUserInput(text, timestamp: DateTime.now());
+    if (_workingMem.wasInterrupted) _workingMem.resume();
+
+    // ── Short-term memory: record user turn ────────────────────────────────
+    _shortTermMem.addTurn(ShortTermTurn(
+      role: 'user',
+      text: text,
+      timestamp: DateTime.now(),
+      topic: TopicDetector.detect(text),
+    ));
     final attentionSig = _attentionEngine.currentSignal;
     if (attentionSig.focusModeRecommended != _focusModeActive) {
       setState(() => _focusModeActive = attentionSig.focusModeRecommended);
@@ -662,6 +692,62 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _transitionSvc.detectTransitionFromReply(cleanReply);
     }
 
+    // ── Cognitive memory recording ─────────────────────────────────────────
+    _shortTermMem.addTurn(ShortTermTurn(
+      role: 'assistant',
+      text: cleanReply.length > 300 ? cleanReply.substring(0, 300) : cleanReply,
+      timestamp: DateTime.now(),
+      topic: topic != 'Genel' ? topic : null,
+    ));
+    _shortTermMem.recentEmotionalState = _identitySvc.emotionalState;
+    _shortTermMem.currentPacing = _attentionEngine.currentSignal.adjustment;
+
+    // Long-term: update mastery and record mistakes
+    if (topic != 'Genel') {
+      final mastery = signal.successEstimate >= 0.65
+          ? signal.successEstimate * 0.05
+          : -0.03;
+      await _longTermMem.updateSubjectMastery(topic, mastery);
+
+      if (signal.successEstimate < 0.4 && signal.hasConfusion) {
+        await _longTermMem.recordMistake(topic, example: text.length > 80 ? null : text);
+      }
+    }
+    await _longTermMem.recordMotivation(signal.successEstimate);
+
+    // Episodic: record notable moments
+    if (signal.successEstimate >= 0.90 && topic != 'Genel') {
+      await _episodicMem.recordEpisode(Episode(
+        id: 'ep_${DateTime.now().millisecondsSinceEpoch}',
+        type: EpisodeType.confidenceBoost,
+        title: topic,
+        description: 'Başarıyla açıkladı: "${text.length > 60 ? text.substring(0, 60) : text}"',
+        topic: topic,
+        timestamp: DateTime.now(),
+        emotionalValence: 0.8,
+      ));
+    } else if (signal.hasConfusion && _shortTermMem.currentConfusion != null) {
+      await _episodicMem.recordEpisode(Episode(
+        id: 'ep_conf_${DateTime.now().millisecondsSinceEpoch}',
+        type: EpisodeType.struggle,
+        title: topic != 'Genel' ? topic : 'Konu belirsiz',
+        description: 'Karışıklık: "${_shortTermMem.currentConfusion}"',
+        topic: topic != 'Genel' ? topic : null,
+        timestamp: DateTime.now(),
+        emotionalValence: -0.4,
+      ));
+    }
+
+    // Working memory: update active goal if topic shifted
+    if (topic != 'Genel' && _workingMem.currentGoal == null) {
+      _workingMem.setGoal('$topic konusunu kavramak');
+    }
+    if (signal.hasConfusion && topic != 'Genel') {
+      _workingMem.addUnresolvedConcept(topic);
+    } else if (signal.successEstimate >= 0.75 && topic != 'Genel') {
+      _workingMem.resolveConcept(topic);
+    }
+
     // Update motivation-adaptive UI (orb color follows teacher emotional state)
     setState(() {
       _ui.motivation = cogProfile.motivationState;
@@ -720,6 +806,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
       case BoardSyncTriggered():
         setState(() => _showBoardBadge = true);
+        _workingMem.addReasoningStep('Tahta açıldı — görsel açıklama başladı');
 
       case SessionInterrupted(:final contextualReply):
         setState(() {
@@ -727,6 +814,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           _ui.orbState = OrbVisualState.idle;
         });
         _attentionEngine.recordInterruption();
+        _workingMem.markInterrupted();
         _addSubtitle(contextualReply, isUser: false);
 
       case VoiceCommandApplied(:final command):
@@ -823,6 +911,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
       ) +
       _attentionEngine.buildAttentionPromptBlock() +
       _examCampSvc.buildExamCampPromptBlock() +
+      MemoryPromptLayer.build(
+        shortTerm: _shortTermMem,
+        workingMemory: _workingMem,
+        longTerm: _longTermMem,
+        episodic: _episodicMem,
+        semantic: _semanticMem,
+        retrieval: _memRetrieval,
+        currentTopic: topic ?? _shortTermMem.activeProblem?.substring(0, 30) ?? '',
+      ) +
       (_imageCtx?.buildContextBlock() ?? '');
 
   // ── Whiteboard ────────────────────────────────────────────────────────────
