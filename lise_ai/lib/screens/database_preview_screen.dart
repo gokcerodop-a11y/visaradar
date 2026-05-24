@@ -4,8 +4,6 @@
 // index inventory, RLS status, and sync health simulation.
 // No real backend connection required — all estimates are local.
 
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,7 +20,6 @@ class _TableSpec {
   final double avgRowBytes;       // bytes per row (estimated)
   final String writeFreq;
   final String syncStrategy;
-  final bool hasRls;
   final bool hasTtl;
   final bool softDelete;
   final List<String> indexes;
@@ -34,7 +31,6 @@ class _TableSpec {
     required this.avgRowBytes,
     required this.writeFreq,
     required this.syncStrategy,
-    this.hasRls = true,
     this.hasTtl = false,
     this.softDelete = true,
     this.indexes = const [],
@@ -203,7 +199,6 @@ class _DatabasePreviewScreenState extends State<DatabasePreviewScreen>
     setState(() { _running = true; _simResults = null; });
     await Future<void>.delayed(const Duration(milliseconds: 600));
     final svc = SupabaseSyncService.instance;
-    final rng = math.Random();
     final results = <_SimResult>[
       _SimResult(
         check: 'Supabase Yapılandırması',
@@ -346,7 +341,7 @@ class _DatabasePreviewScreenState extends State<DatabasePreviewScreen>
         _SummaryRow(
           tables: _tables.length,
           indexes: _totalIndexes,
-          rlsTables: _tables.where((t) => t.hasRls).length,
+          rlsTables: _tables.length, // all tables have RLS enabled
           ttlTables: _tables.where((t) => t.hasTtl).length,
         ),
         const SizedBox(height: 12),
@@ -683,7 +678,7 @@ class _TableCardState extends State<_TableCard> {
                     // Properties grid
                     Row(
                       children: [
-                        _PropChip('RLS', t.hasRls, const Color(0xFF4ADE80)),
+                        _PropChip('RLS', true, const Color(0xFF4ADE80)),
                         const SizedBox(width: 6),
                         _PropChip('TTL', t.hasTtl, const Color(0xFFFBBF24)),
                         const SizedBox(width: 6),
