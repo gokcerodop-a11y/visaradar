@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/country_info/presentation/screens/country_info_screen.dart';
+import '../../features/diagnostics/presentation/screens/diagnostics_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/profile/presentation/providers/profile_provider.dart';
 import '../../features/radar/presentation/screens/radar_screen.dart';
@@ -35,6 +36,7 @@ abstract class AppRoutes {
   static const languageSettings = '/settings/language';
   static const notificationSettings = '/settings/notifications';
   static const legalText = '/settings/legal';
+  static const diagnostics = '/settings/diagnostics';
   static const addTrip = '/trips/add';
   static const editTrip = '/trips/edit/:id';
 }
@@ -108,6 +110,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final type = state.uri.queryParameters['type'] ?? 'generic';
           return LegalScreen(title: title, type: type);
         },
+      ),
+      GoRoute(
+        path: AppRoutes.diagnostics,
+        builder: (context, state) => const DiagnosticsScreen(),
       ),
 
       // Main shell — bottom navigation

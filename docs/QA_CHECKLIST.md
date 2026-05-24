@@ -3,8 +3,8 @@
 Pre-release test plan for the MVP. Run this end-to-end on a **real device** before
 each TestFlight / internal build submission. Works for both iOS and Android.
 
-**Version:** 0.1.0
-**Platforms:** iOS 16+, Android 10+
+**Version:** 1.0.0
+**Platforms:** iOS 13+, Android 10+
 
 ---
 
@@ -142,22 +142,26 @@ each TestFlight / internal build submission. Works for both iOS and Android.
 
 ## 11. Settings Screen
 
-- [ ] Settings screen shows: Membership card, Account, Preferences, Privacy & Legal sections.
+- [ ] Settings screen shows: Account, Preferences, Privacy & Legal, Help & Diagnostics sections.
 - [ ] **Travel Profile** tile shows nationality and passport type as subtitle, with a chevron.
 - [ ] **Language** tile shows selected language, with a chevron.
 - [ ] **Privacy Policy, Terms of Service, About VisaRadar** — all navigate to the legal screen.
-- [ ] **About VisaRadar** shows version number (0.1.0), not a placeholder message.
-- [ ] **Start Free Trial** button on the Membership card opens the Subscription screen.
+- [ ] **About VisaRadar** shows version number (1.0.0), not a placeholder message.
+- [ ] **Diagnostics** tile opens the Diagnostics screen.
+- [ ] No "Membership", "Premium", "Start Free Trial", or pricing UI anywhere in Settings — subscription is intentionally hidden in v1.
 
 ---
 
-## 12. Subscription / Premium Screen
+## 12. Diagnostics Screen
 
-- [ ] Subscription screen shows: hero section, 7-day trial badge, feature list, pricing.
-- [ ] Both pricing rows visible: Turkish (₺) and International (€).
-- [ ] **Start 7-Day Free Trial** button shows a snackbar: "In-app purchase coming soon."
-- [ ] **Restore Purchase** button shows a snackbar: "Purchase restore coming soon."
-- [ ] Close button (×) returns to Settings.
+- [ ] Open **Settings → Diagnostics**. All rows populate; none stay on "Checking…".
+- [ ] **Build → Version** matches `pubspec.yaml` (1.0.0).
+- [ ] **Build → Build mode** shows `Release` on a TestFlight install, `Debug` from `flutter run`.
+- [ ] **Build → Bundle ID** = `com.visaradar.visaradar`.
+- [ ] **Permissions → Location** matches current OS setting (green when granted, amber otherwise).
+- [ ] **Permissions → Notifications** matches current OS setting.
+- [ ] **Runtime → Connectivity** updates after toggling Airplane mode + Refresh.
+- [ ] **Release readiness** — all 5 rows show green check marks.
 
 ---
 
@@ -235,9 +239,9 @@ each TestFlight / internal build submission. Works for both iOS and Android.
 | | | iOS | |
 | | | Android | |
 
-**Build tested:** `0.1.0 (1)`
+**Build tested:** `1.0.0 (1)`
 **Notes:**
 
 ---
 
-*Last updated: March 2026*
+*Last updated: May 2026*

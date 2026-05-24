@@ -105,6 +105,19 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // ── Help & Diagnostics ────────────────────────────────────────
+            _SettingsSection(
+              title: 'Help & Diagnostics',
+              items: [
+                _SettingsTile(
+                  icon: Icons.health_and_safety_outlined,
+                  title: 'Diagnostics',
+                  onTap: () => context.push(AppRoutes.diagnostics),
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
           ],
         ),
