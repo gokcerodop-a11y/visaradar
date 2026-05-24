@@ -40,6 +40,9 @@ import '../services/visual_reasoning_engine.dart';
 import '../services/voice_command_detector.dart';
 import '../services/work_analysis_service.dart';
 import '../services/error_handler.dart';
+import '../services/app_logger.dart';
+import '../services/study_analytics_service.dart';
+import 'progress_dashboard_screen.dart';
 import '../services/short_term_memory.dart';
 import '../services/working_memory.dart';
 import '../services/long_term_memory.dart';
@@ -92,6 +95,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
   BoardRedrawService? _boardRedrawSvc;
   WorkAnalysisService? _workAnalysisSvc;
   MemorySummarizer? _memorySummarizer; // used in _onSessionEnd for async summarization
+  final _analyticsSvc = StudyAnalyticsService();
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -205,13 +209,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
         _memorySummarizer = MemorySummarizer(_anthropic!);
       }
     } catch (e) {
-      debugPrint('[Init] API setup error: $e');
+      AppLogger.error('Init', 'API setup error', e);
     }
 
     try {
       _voiceSvc = await TeacherVoiceService.create();
     } catch (e) {
-      debugPrint('[Init] TTS setup error: $e');
+      AppLogger.warn('Init', 'TTS setup error: $e');
     }
 
     try {
@@ -228,7 +232,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       await _episodicMem.init(_storage);
       await _semanticMem.init(_storage);
     } catch (e) {
-      debugPrint('[Init] Storage setup error: $e');
+      AppLogger.error('Init', 'Storage setup error', e);
     }
 
     // Restore saved mode/level
@@ -252,6 +256,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
         setState(() => _speechSvc = svc);
       }
     });
+
+    // Start session timer (persisted on dispose).
+    _analyticsSvc.startSession();
 
     if (mounted) {
       // Auto-detect atmosphere mode from time + session history
@@ -312,6 +319,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _speechSvc?.dispose();
     _examCampSvc.dispose();
     _ambientTick?.cancel();
+    // Fire-and-forget: persist session minutes before widget is torn down.
+    _analyticsSvc.endSession(_profileSvc);
     super.dispose();
   }
 
@@ -621,6 +630,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           fullReply.contains('[board_sync]'),
       successEstimate: signal.successEstimate,
     ));
+    _profileSvc.incrementSolvedCount();
 
     if (topic != 'Genel') {
       _graphEngine.recordStudy(
@@ -1166,6 +1176,26 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
+  void _openDashboard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProgressDashboardScreen(
+          profile: _profileSvc.profile,
+          longTermMemory: _longTermMem,
+          continuitySvc: _continuitySvc,
+          onContinueLesson: () {
+            final unfinished = _continuitySvc.data.unfinishedTopic;
+            if (unfinished != null && mounted) {
+              Navigator.pop(context);
+              _sendText('$unfinished konusuna devam edelim');
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _openSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -1492,6 +1522,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
             },
           ),
           const SizedBox(width: 4),
+          // Progress dashboard
+          GestureDetector(
+            onTap: _openDashboard,
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(Icons.bar_chart_rounded,
+                  color: Color(0xFF6B7280), size: 18),
+            ),
+          ),
           // Settings
           GestureDetector(
             onTap: _openSettings,

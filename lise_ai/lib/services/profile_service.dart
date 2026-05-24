@@ -23,6 +23,17 @@ class ProfileService {
       }
     }
     _updateStreak();
+    // Sync target exam from onboarding settings (first-time or upgrade path).
+    _syncTargetExam();
+  }
+
+  /// Sync targetExam from onboarding storage key if not already set on profile.
+  void _syncTargetExam() {
+    final exam = _storage.loadSetting('target_exam');
+    if (exam != null && _profile.targetExam == null) {
+      _profile.targetExam = exam;
+      // No await here — streak update already persisted; save lazily on next interaction.
+    }
   }
 
   // ── Interaction recording ─────────────────────────────────────────────────
@@ -133,6 +144,27 @@ class ProfileService {
     }
     return '👋 Tekrar hoş geldin! Bugün ne öğrenmek istiyorsun?';
   }
+
+  // ── Study metrics ──────────────────────────────────────────────────────────
+
+  /// Record minutes studied today (keyed by 'YYYY-MM-DD').
+  Future<void> recordStudyMinutes(int minutes) async {
+    if (minutes <= 0) return;
+    final key = _dateKey(DateTime.now());
+    _profile.dailyStudyMinutes[key] =
+        (_profile.dailyStudyMinutes[key] ?? 0) + minutes;
+    await _save();
+  }
+
+  /// Increment the lifetime solved question counter.
+  Future<void> incrementSolvedCount() async {
+    _profile.solvedQuestionCount++;
+    await _save();
+  }
+
+  static String _dateKey(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+      '${dt.day.toString().padLeft(2, '0')}';
 
   // ── Persistence ───────────────────────────────────────────────────────────
 

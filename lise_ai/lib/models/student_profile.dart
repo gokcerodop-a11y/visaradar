@@ -43,17 +43,37 @@ class InteractionRecord {
 // ── Student profile ───────────────────────────────────────────────────────────
 
 class StudentProfile {
+  /// Stable device-local student ID, generated once on first launch.
+  final String studentId;
+
   String? name;
+
+  /// Target exam selected during onboarding ('TYT', 'AYT', 'LGS', 'Genel').
+  String? targetExam;
+
   List<InteractionRecord> recentHistory; // last 40
   int streakDays;
   DateTime? lastActiveDate;
 
+  /// 'YYYY-MM-DD' → minutes studied that day.
+  Map<String, int> dailyStudyMinutes;
+
+  /// Cumulative count of questions answered (each _sendText call).
+  int solvedQuestionCount;
+
   StudentProfile({
+    String? studentId,
     this.name,
+    this.targetExam,
     List<InteractionRecord>? recentHistory,
     this.streakDays = 0,
     this.lastActiveDate,
-  }) : recentHistory = recentHistory ?? [];
+    Map<String, int>? dailyStudyMinutes,
+    this.solvedQuestionCount = 0,
+  })  : studentId =
+            studentId ?? 'std_${DateTime.now().millisecondsSinceEpoch}',
+        recentHistory = recentHistory ?? [],
+        dailyStudyMinutes = dailyStudyMinutes ?? {};
 
   // ── Computed analytics ──────────────────────────────────────────────────
 
@@ -107,14 +127,20 @@ class StudentProfile {
   // ── Serialisation ───────────────────────────────────────────────────────
 
   Map<String, dynamic> toJson() => {
+        'studentId': studentId,
         'name': name,
+        'targetExam': targetExam,
         'streak': streakDays,
         'lastActive': lastActiveDate?.millisecondsSinceEpoch,
         'history': recentHistory.map((r) => r.toJson()).toList(),
+        'dailyMinutes': dailyStudyMinutes,
+        'solvedCount': solvedQuestionCount,
       };
 
   factory StudentProfile.fromJson(Map<String, dynamic> j) => StudentProfile(
+        studentId: j['studentId'] as String?,
         name: j['name'] as String?,
+        targetExam: j['targetExam'] as String?,
         streakDays: (j['streak'] as int?) ?? 0,
         lastActiveDate: j['lastActive'] != null
             ? DateTime.fromMillisecondsSinceEpoch(j['lastActive'] as int)
@@ -123,6 +149,11 @@ class StudentProfile {
             .map((e) => InteractionRecord.fromJson(
                 Map<String, dynamic>.from(e as Map)))
             .toList(),
+        dailyStudyMinutes: (j['dailyMinutes'] as Map?)?.map(
+              (k, v) => MapEntry(k as String, (v as num).toInt()),
+            ) ??
+            {},
+        solvedQuestionCount: (j['solvedCount'] as int?) ?? 0,
       );
 
   String toJsonString() => jsonEncode(toJson());
