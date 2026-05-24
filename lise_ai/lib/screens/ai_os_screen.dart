@@ -49,7 +49,9 @@ import '../services/auth_service.dart';
 import '../services/streak_service.dart';
 import '../services/study_analytics_service.dart';
 import '../services/subscription_service.dart';
-import '../screens/privacy_settings_screen.dart';
+import '../services/telemetry_service.dart';
+import '../services/ai_cost_tracker.dart';
+import '../services/crash_reporter.dart';
 import '../services/pedagogy_engine.dart';
 import '../services/silence_detector.dart';
 import '../core/feature_flags.dart';
@@ -116,6 +118,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _recoverySvc = SessionRecoveryService();
   final _authSvc = AuthService();
   final _subscriptionSvc = SubscriptionService();
+  final _telemetrySvc = TelemetryService();
+  final _costTracker = AICostTracker();
+  DateTime? _sessionStart;
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -268,9 +273,14 @@ class _AOSState extends State<AIOperatingSystemScreen>
       }
       await _authSvc.init(_storage);
       await _subscriptionSvc.init(_storage);
+      await _telemetrySvc.init(_storage);
+      await _costTracker.init(_storage);
     } catch (e) {
       AppLogger.error('Init', 'Storage setup error', e);
     }
+
+    // Install crash reporter error hooks
+    FlutterError.onError = CrashReporter.instance.handleFlutterError;
 
     // Restore saved mode/level
     final savedMode = _storage.loadSetting('ui_mode');
@@ -307,6 +317,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       );
       _ambientEngine.setMode(autoMode);
 
+      _sessionStart = DateTime.now();
       setState(() => _loading = false);
 
       // ── Streak check-in + achievements ────────────────────────────────────
@@ -391,6 +402,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _ambientTick?.cancel();
     // Fire-and-forget: persist session minutes before widget is torn down.
     _analyticsSvc.endSession(_profileSvc);
+    // Emit session duration telemetry
+    final start = _sessionStart;
+    if (start != null) {
+      final secs = DateTime.now().difference(start).inSeconds;
+      _telemetrySvc.track(TelemetryEventType.sessionDuration,
+          properties: {'durationSeconds': secs});
+    }
     super.dispose();
   }
 
@@ -413,6 +431,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     // Auto-activate voice engine when switching to voice mode
     if (mode.isVoiceMode && mounted) {
+      _telemetrySvc.track(TelemetryEventType.voiceModeUsed,
+          properties: {'mode': mode.name});
       await _activateVoiceEngine();
     }
   }
@@ -671,6 +691,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _ui.orbState = OrbVisualState.thinking;
     });
 
+    // Telemetry: lesson started on first user turn
+    if (_history.length == 1) {
+      _telemetrySvc.lessonStarted(
+        topic: detectedTopic ?? 'Genel',
+        mode: _ui.lessonMode.name,
+        storage: _storage,
+      );
+    }
+
     // ── StreamingTeacherSession ──────────────────────────────────────────────
     final voice = _voiceSvc ?? await TeacherVoiceService.create();
     final session = StreamingTeacherSession(
@@ -718,6 +747,19 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     _teacherEngine.onAssistantResponse(cleanReply);
     final signal = _teacherEngine.lastSignal;
+
+    // Track AI cost for this turn
+    _costTracker.recordChatTurn(
+      systemPrompt: _buildSystemPrompt(topic: detectedTopic),
+      history: _history,
+      reply: cleanReply,
+    );
+
+    // Telemetry: confusion spike
+    if (signal.hasConfusion) {
+      _telemetrySvc.track(TelemetryEventType.confusionSpike,
+          properties: {'topic': detectedTopic ?? 'Genel', 'mode': _ui.lessonMode.name});
+    }
 
     final topic = detectedTopic ??
         TopicDetector.detect(
@@ -1158,6 +1200,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
     final r = _boardReply;
     if (q == null || r == null || _anthropic == null) return;
 
+    _telemetrySvc.track(TelemetryEventType.boardOpened);
     final lesson = await _anthropic!.generateLesson(q, r);
     if (!mounted) return;
 
@@ -1387,7 +1430,12 @@ class _AOSState extends State<AIOperatingSystemScreen>
     HapticsService.medium();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+      MaterialPageRoute(
+        builder: (_) => DiagnosticsScreen(
+          telemetrySvc: _telemetrySvc,
+          costTracker: _costTracker,
+        ),
+      ),
     );
   }
 
@@ -1455,16 +1503,20 @@ class _AOSState extends State<AIOperatingSystemScreen>
                 fit: StackFit.expand,
                 children: [
                   // ── Layer 0: Ambient background ──────────────────────────
-                  AmbientLayer(
-                    uiEngine: _ui,
-                    particleCtrl: _particleCtrl,
+                  RepaintBoundary(
+                    child: AmbientLayer(
+                      uiEngine: _ui,
+                      particleCtrl: _particleCtrl,
+                    ),
                   ),
 
                   // ── Layer 0b: Atmosphere glow overlay ────────────────────
-                  AtmosphereLayer(
-                    engine: _ambientEngine,
-                    breatheCtrl: _breatheCtrl,
-                    focusMode: _focusModeActive,
+                  RepaintBoundary(
+                    child: AtmosphereLayer(
+                      engine: _ambientEngine,
+                      breatheCtrl: _breatheCtrl,
+                      focusMode: _focusModeActive,
+                    ),
                   ),
 
                   // ── Layer 1: Main UI ─────────────────────────────────────

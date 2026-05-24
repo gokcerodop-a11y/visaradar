@@ -25,6 +25,7 @@ import 'services/storage_service.dart';
 import 'screens/ai_os_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/connectivity_service.dart';
+import 'services/crash_reporter.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
@@ -38,6 +39,9 @@ Future<void> main() async {
   // Crash safety: ensureInitialized must be in the same zone as runApp.
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Install crash reporter hooks
+    FlutterError.onError = CrashReporter.instance.handleFlutterError;
 
     try {
       await dotenv.load(fileName: '.env');
@@ -57,6 +61,7 @@ Future<void> main() async {
   }, (error, stack) {
     debugPrint('[CrashGuard] Unhandled: $error');
     debugPrintStack(stackTrace: stack, maxFrames: 12);
+    CrashReporter.instance.handlePlatformError(error, stack);
   });
 }
 

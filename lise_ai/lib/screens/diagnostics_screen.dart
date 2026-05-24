@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/scenario_runner.dart';
+import '../services/telemetry_service.dart';
+import '../services/ai_cost_tracker.dart';
 
 /// Developer diagnostics screen — hidden behind long-press on "Lise AI" title.
-/// Shows system health checks for all major components.
+/// Shows system health checks for all major components plus production readiness.
 class DiagnosticsScreen extends StatefulWidget {
-  const DiagnosticsScreen({super.key});
+  final TelemetryService? telemetrySvc;
+  final AICostTracker? costTracker;
+
+  const DiagnosticsScreen({super.key, this.telemetrySvc, this.costTracker});
 
   @override
   State<DiagnosticsScreen> createState() => _DiagnosticsScreenState();
@@ -131,6 +136,29 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         // Per-check cards
         ...results.map((r) => _CheckCard(result: r)),
 
+        // ── Production readiness section ──────────────────────────────────
+        if (widget.telemetrySvc != null || widget.costTracker != null) ...[
+          const SizedBox(height: 16),
+          const _SectionLabel(label: 'ÜRETIM HAZIRLIĞI'),
+          const SizedBox(height: 8),
+          if (widget.costTracker != null)
+            _MetricCard(
+              icon: '💰',
+              label: 'Oturum AI Maliyeti',
+              value: widget.costTracker!.currentSession.displayCost,
+              sub: '${widget.costTracker!.currentSession.totalTokens} token',
+            ),
+          if (widget.telemetrySvc != null) ...[
+            const SizedBox(height: 8),
+            _MetricCard(
+              icon: '📊',
+              label: 'Telemetri Kuyruğu',
+              value: '${widget.telemetrySvc!.queueSize} olay',
+              sub: '${widget.telemetrySvc!.unsyncedCount} senkronize edilmedi',
+            ),
+          ],
+        ],
+
         const SizedBox(height: 24),
         const Text(
           'Bu ekran yalnızca geliştirici modunda görünür.\n'
@@ -168,6 +196,73 @@ class _SummaryBadge extends StatelessWidget {
         Text(label,
             style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
       ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) => Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF7C6BF8),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+        ),
+      );
+}
+
+class _MetricCard extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String value;
+  final String sub;
+
+  const _MetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.sub,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0A12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: Color(0xFF9CA3AF), fontSize: 11)),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+                Text(sub,
+                    style: const TextStyle(
+                        color: Color(0xFF4B5563), fontSize: 10)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
