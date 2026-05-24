@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/scenario_runner.dart';
 import '../services/telemetry_service.dart';
 import '../services/ai_cost_tracker.dart';
+import '../services/backend_provider_service.dart';
+import '../services/storage_service.dart';
+import '../core/backend_provider.dart';
 
 /// Developer diagnostics screen — hidden behind long-press on "Lise AI" title.
 /// Shows system health checks for all major components plus production readiness.
@@ -11,12 +15,14 @@ class DiagnosticsScreen extends StatefulWidget {
   final TelemetryService? telemetrySvc;
   final AICostTracker? costTracker;
   final VoidCallback? onOpenSimLab;
+  final StorageService? storage;
 
   const DiagnosticsScreen({
     super.key,
     this.telemetrySvc,
     this.costTracker,
     this.onOpenSimLab,
+    this.storage,
   });
 
   @override
@@ -141,6 +147,98 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
 
         // Per-check cards
         ...results.map((r) => _CheckCard(result: r)),
+
+        // ── Backend provider section ──────────────────────────────────────
+        const SizedBox(height: 16),
+        const _SectionLabel(label: 'BACKEND SAĞLAYICI'),
+        const SizedBox(height: 8),
+        ListenableBuilder(
+          listenable: BackendProviderService.instance,
+          builder: (_, __) {
+            final svc = BackendProviderService.instance;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MetricCard(
+                  icon: svc.selectedProvider.emoji,
+                  label: 'Aktif Sağlayıcı',
+                  value: svc.selectedProvider.label,
+                  sub: svc.status.label,
+                ),
+                const SizedBox(height: 8),
+                // Capability pills
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _CapabilityPill('Auth', svc.authAvailable),
+                    _CapabilityPill('Sync', svc.syncAvailable),
+                    _CapabilityPill('Storage', svc.storageAvailable),
+                    _CapabilityPill('Crashlytics', svc.crashAvailable),
+                  ],
+                ),
+                // Provider switcher (debug mode only)
+                if (kDebugMode && widget.storage != null) ...[
+                  const SizedBox(height: 12),
+                  const Text('Sağlayıcı Değiştir (yalnızca geliştirici)',
+                      style: TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 10)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: BackendProvider.values.map((p) {
+                      final isSelected = svc.selectedProvider == p;
+                      return GestureDetector(
+                        onTap: () async {
+                          await svc.setProvider(p, widget.storage!);
+                          if (p != BackendProvider.none) {
+                            await svc.testConnection();
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF7C6BF8).withValues(alpha: 0.15)
+                                : const Color(0xFF0A0A12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF7C6BF8)
+                                  : const Color(0xFF1F2937),
+                            ),
+                          ),
+                          child: Text(
+                            '${p.emoji} ${p.label}',
+                            style: TextStyle(
+                              color: isSelected
+                                  ? const Color(0xFF7C6BF8)
+                                  : const Color(0xFF6B7280),
+                              fontSize: 11,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  if (svc.lastError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      svc.lastError!,
+                      style: const TextStyle(
+                          color: Color(0xFFF87171), fontSize: 10, height: 1.4),
+                    ),
+                  ],
+                ],
+              ],
+            );
+          },
+        ),
 
         // ── Production readiness section ──────────────────────────────────
         if (widget.telemetrySvc != null || widget.costTracker != null) ...[
@@ -355,6 +453,36 @@ class _CheckCard extends StatelessWidget {
             style: const TextStyle(color: Color(0xFF374151), fontSize: 10),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CapabilityPill extends StatelessWidget {
+  final String label;
+  final bool available;
+
+  const _CapabilityPill(this.label, this.available);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = available
+        ? const Color(0xFF4ADE80)
+        : const Color(0xFF374151);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

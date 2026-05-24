@@ -52,6 +52,7 @@ import '../services/subscription_service.dart';
 import '../services/telemetry_service.dart';
 import '../services/ai_cost_tracker.dart';
 import '../services/crash_reporter.dart';
+import '../services/backend_provider_service.dart';
 import '../services/pedagogy_engine.dart';
 import 'simulation_lab_screen.dart';
 import '../services/silence_detector.dart';
@@ -276,6 +277,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       await _subscriptionSvc.init(_storage);
       await _telemetrySvc.init(_storage);
       await _costTracker.init(_storage);
+      await BackendProviderService.instance.init(_storage);
     } catch (e) {
       AppLogger.error('Init', 'Storage setup error', e);
     }
@@ -1436,6 +1438,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           telemetrySvc: _telemetrySvc,
           costTracker: _costTracker,
           onOpenSimLab: _openSimulationLab,
+          storage: _storage,
         ),
       ),
     );
