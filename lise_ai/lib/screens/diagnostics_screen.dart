@@ -9,6 +9,7 @@ import '../services/backend_provider_service.dart';
 import '../services/supabase_sync_service.dart';
 import '../services/storage_service.dart';
 import '../core/backend_provider.dart';
+import 'database_preview_screen.dart';
 
 /// Developer diagnostics screen — hidden behind long-press on "Lise AI" title.
 /// Shows system health checks for all major components plus production readiness.
@@ -351,7 +352,41 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
           ],
         ],
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        // ── Database architecture preview ──────────────────────────────────
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DatabasePreviewScreen(storage: widget.storage),
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A0A12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF60A5FA).withValues(alpha: 0.4)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.storage_rounded, color: Color(0xFF60A5FA), size: 18),
+                SizedBox(width: 8),
+                Text('Veritabanı Mimarisi →',
+                    style: TextStyle(
+                        color: Color(0xFF60A5FA),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
         // ── Simulation Lab entry ────────────────────────────────────────────
         if (widget.onOpenSimLab != null)
           GestureDetector(
