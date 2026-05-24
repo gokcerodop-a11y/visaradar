@@ -17,14 +17,15 @@ import 'services/lesson_flow_engine.dart';
 import 'services/pdf_service.dart';
 import 'services/learning_graph_engine.dart';
 import 'services/profile_service.dart';
+import 'services/realtime_voice_engine.dart';
 import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
 import 'services/storage_service.dart';
 import 'widgets/analytics_panel.dart';
-import 'widgets/live_lesson_page.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
 import 'widgets/pdf_page_picker.dart';
+import 'widgets/voice_conversation_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -628,17 +629,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _currentSystemPrompt => _buildSystemPrompt();
 
-  // ── Live lesson ────────────────────────────────────────────────────────────
+  // ── Live lesson (Realtime Voice) ──────────────────────────────────────────
 
   Future<void> _startLiveLesson() async {
     if (_anthropic == null || _isBusy) return;
-    final sessionHistory = await pushLiveLesson(
+    final sessionHistory = await pushVoiceConversation(
       context,
-      anthropic: _anthropic!,
-      history: List.from(_history),
-      mode: _mode,
-      level: _level,
-      profileSvc: _profileSvc,
+      ctx: VoiceSessionContext(
+        anthropic: _anthropic!,
+        profileSvc: _profileSvc,
+        cogEngine: _cogEngine,
+        flowEngine: _flowEngine,
+        graphEngine: _graphEngine,
+        mode: _mode,
+        level: _level,
+        history: List.from(_history),
+      ),
     );
     // Merge session turns back into main history
     if (sessionHistory != null && sessionHistory.isNotEmpty && mounted) {
