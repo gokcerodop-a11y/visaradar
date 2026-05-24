@@ -25,21 +25,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentStep = 0;
   bool _saving = false;
 
-  // Step index of the nationality page
+  // Step indices
+  static const int _languageStep = 0;
   static const int _nationalityStep = 1;
-  static const int _totalSteps = 7;
+  static const int _totalSteps = 4;
 
   // Collected profile data
   String? _nationality;
   String? _nationalityLabel;
   PassportType _passportType = PassportType.ordinary;
-  ResidenceStatus _residenceStatus = ResidenceStatus.none;
+  // Residence status is no longer asked during onboarding — it defaults to
+  // none and can be changed later in Settings → Travel Profile.
+  static const ResidenceStatus _residenceStatus = ResidenceStatus.none;
   TravelMode _travelMode = TravelMode.plane;
   String? _preferredLocale;
 
   bool get _canContinue {
     if (_saving) return false;
-    // Nationality must be selected before proceeding from step 1
+    if (_currentStep == _languageStep && _preferredLocale == null) {
+      return false;
+    }
     if (_currentStep == _nationalityStep && _nationality == null) return false;
     return true;
   }
@@ -48,8 +53,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (!_canContinue) return;
     if (_currentStep < _totalSteps - 1) {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
       );
     } else {
       _complete();
@@ -59,8 +64,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _back() {
     if (_currentStep > 0) {
       _controller.previousPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
       );
     }
   }
@@ -85,6 +90,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
+  // Short bilingual helper. After step 0 the locale is guaranteed non-null;
+  // on step 0 the screen is bilingual by design so this helper is unused.
+  String _t(String en, String tr) =>
+      _preferredLocale == 'tr' ? tr : en;
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -93,6 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (!didPop) _back();
       },
       child: Scaffold(
+        backgroundColor: AppColors.brandNavy,
         body: SafeArea(
           child: Column(
             children: [
@@ -107,8 +118,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   onPageChanged: (i) => setState(() => _currentStep = i),
                   children: [
-                    const _WelcomePage(),
+                    _WelcomeLanguagePage(
+                      selected: _preferredLocale,
+                      onSelect: (code) =>
+                          setState(() => _preferredLocale = code),
+                    ),
                     _NationalityPage(
+                      locale: _preferredLocale,
                       selected: _nationality,
                       onSelect: (code, label) => setState(() {
                         _nationality = code;
@@ -116,130 +132,140 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       }),
                     ),
                     _SelectionPage<PassportType>(
-                      title: 'Passport Type',
-                      subtitle: 'Select the type of passport you travel with.',
+                      locale: _preferredLocale,
+                      titleEn: 'Passport Type',
+                      titleTr: 'Pasaport Türü',
+                      subtitleEn:
+                          'Select the type of passport you travel with.',
+                      subtitleTr:
+                          'Seyahat ettiğiniz pasaport türünü seçin.',
                       options: const [
                         _SelectOption(
                           value: PassportType.ordinary,
                           icon: Icons.book_outlined,
-                          title: 'Ordinary passport',
-                          subtitle: 'Standard passport issued to citizens',
+                          titleEn: 'Ordinary passport',
+                          titleTr: 'Umuma mahsus pasaport',
+                          subtitleEn: 'Standard passport issued to citizens',
+                          subtitleTr:
+                              'Vatandaşlara verilen standart pasaport',
                         ),
                         _SelectOption(
                           value: PassportType.euEeaSwiss,
                           icon: Icons.flag_outlined,
-                          title: 'EU / EEA / Swiss passport',
-                          subtitle: 'Free movement within the Schengen area',
+                          titleEn: 'EU / EEA / Swiss passport',
+                          titleTr: 'AB / AEA / İsviçre pasaportu',
+                          subtitleEn:
+                              'Free movement within the Schengen area',
+                          subtitleTr:
+                              'Schengen bölgesinde serbest dolaşım',
                         ),
                         _SelectOption(
                           value: PassportType.diplomatic,
                           icon: Icons.shield_outlined,
-                          title: 'Diplomatic passport',
-                          subtitle: 'Issued to diplomatic personnel',
+                          titleEn: 'Diplomatic passport',
+                          titleTr: 'Diplomatik pasaport',
+                          subtitleEn: 'Issued to diplomatic personnel',
+                          subtitleTr: 'Diplomatik personele verilir',
                         ),
                         _SelectOption(
                           value: PassportType.serviceOfficial,
                           icon: Icons.badge_outlined,
-                          title: 'Service / official passport',
-                          subtitle: 'Issued for official government travel',
+                          titleEn: 'Service / official passport',
+                          titleTr: 'Hizmet / hususi pasaport',
+                          subtitleEn:
+                              'Issued for official government travel',
+                          subtitleTr: 'Resmi devlet seyahati için',
                         ),
                         _SelectOption(
                           value: PassportType.special,
                           icon: Icons.star_border_outlined,
-                          title: 'Special passport',
-                          subtitle: 'Other special-category passport',
+                          titleEn: 'Special passport',
+                          titleTr: 'Özel pasaport',
+                          subtitleEn:
+                              'Other special-category passport',
+                          subtitleTr: 'Diğer özel kategori pasaport',
                         ),
                       ],
                       selected: _passportType,
                       onChanged: (v) => setState(() => _passportType = v),
                     ),
-                    _SelectionPage<ResidenceStatus>(
-                      title: 'Residence Status',
-                      subtitle: 'Do you hold a residence permit?',
-                      options: const [
-                        _SelectOption(
-                          value: ResidenceStatus.none,
-                          icon: Icons.person_outline,
-                          title: 'No residence permit',
-                          subtitle: 'Visiting on a tourist or short-stay visa',
-                        ),
-                        _SelectOption(
-                          value: ResidenceStatus.euSchengenResident,
-                          icon: Icons.home_outlined,
-                          title: 'EU / Schengen residence permit',
-                          subtitle: 'Long-stay visa or permit in a Schengen country',
-                        ),
-                        _SelectOption(
-                          value: ResidenceStatus.otherResidenceStatus,
-                          icon: Icons.location_city_outlined,
-                          title: 'Other residence status',
-                          subtitle: 'Permit outside the EU / Schengen area',
-                        ),
-                      ],
-                      selected: _residenceStatus,
-                      onChanged: (v) => setState(() => _residenceStatus = v),
-                    ),
                     _SelectionPage<TravelMode>(
-                      title: 'How do you travel?',
-                      subtitle: 'Choose your primary mode of travel.',
+                      locale: _preferredLocale,
+                      titleEn: 'How do you travel?',
+                      titleTr: 'Nasıl seyahat ediyorsunuz?',
+                      subtitleEn: 'Choose your primary mode of travel.',
+                      subtitleTr: 'Birincil seyahat şeklinizi seçin.',
                       options: const [
                         _SelectOption(
                           value: TravelMode.plane,
                           icon: Icons.flight_outlined,
-                          title: 'Plane',
-                          subtitle: 'Air travel',
+                          titleEn: 'Plane',
+                          titleTr: 'Uçak',
+                          subtitleEn: 'Air travel',
+                          subtitleTr: 'Havayolu',
                         ),
                         _SelectOption(
                           value: TravelMode.car,
                           icon: Icons.directions_car_outlined,
-                          title: 'Car',
-                          subtitle: 'Driving across borders',
+                          titleEn: 'Car',
+                          titleTr: 'Araba',
+                          subtitleEn: 'Driving across borders',
+                          subtitleTr: 'Sınırları araçla geçmek',
                         ),
                         _SelectOption(
                           value: TravelMode.train,
                           icon: Icons.train_outlined,
-                          title: 'Train',
-                          subtitle: 'Rail travel',
+                          titleEn: 'Train',
+                          titleTr: 'Tren',
+                          subtitleEn: 'Rail travel',
+                          subtitleTr: 'Demiryolu',
                         ),
                         _SelectOption(
                           value: TravelMode.bus,
                           icon: Icons.directions_bus_outlined,
-                          title: 'Bus',
-                          subtitle: 'Coach or intercity bus',
+                          titleEn: 'Bus',
+                          titleTr: 'Otobüs',
+                          subtitleEn: 'Coach or intercity bus',
+                          subtitleTr: 'Şehirler arası otobüs',
                         ),
                         _SelectOption(
                           value: TravelMode.ferry,
                           icon: Icons.directions_boat_outlined,
-                          title: 'Ferry',
-                          subtitle: 'Sea crossing',
+                          titleEn: 'Ferry',
+                          titleTr: 'Feribot',
+                          subtitleEn: 'Sea crossing',
+                          subtitleTr: 'Deniz geçişi',
                         ),
                         _SelectOption(
                           value: TravelMode.camperCaravan,
                           icon: Icons.rv_hookup_outlined,
-                          title: 'Camper / caravan',
-                          subtitle: 'Motorhome or caravan travel',
+                          titleEn: 'Camper / caravan',
+                          titleTr: 'Karavan',
+                          subtitleEn: 'Motorhome or caravan travel',
+                          subtitleTr: 'Karavan ile seyahat',
                         ),
                         _SelectOption(
                           value: TravelMode.motorcycle,
                           icon: Icons.two_wheeler_outlined,
-                          title: 'Motorcycle',
-                          subtitle: 'Motorbike travel',
+                          titleEn: 'Motorcycle',
+                          titleTr: 'Motosiklet',
+                          subtitleEn: 'Motorbike travel',
+                          subtitleTr: 'Motosiklet ile seyahat',
                         ),
                         _SelectOption(
                           value: TravelMode.onFoot,
                           icon: Icons.directions_walk_outlined,
-                          title: 'On foot',
-                          subtitle: 'Hiking or walking across borders',
+                          titleEn: 'On foot',
+                          titleTr: 'Yürüyerek',
+                          subtitleEn:
+                              'Hiking or walking across borders',
+                          subtitleTr:
+                              'Yürüyerek sınır geçişi',
                         ),
                       ],
                       selected: _travelMode,
                       onChanged: (v) => setState(() => _travelMode = v),
                     ),
-                    _LanguagePage(
-                      selected: _preferredLocale,
-                      onChanged: (v) => setState(() => _preferredLocale = v),
-                    ),
-                    const _PermissionsPage(),
                   ],
                 ),
               ),
@@ -248,16 +274,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 canContinue: _canContinue,
                 isLastStep: _currentStep == _totalSteps - 1,
                 onContinue: _next,
-                // Show hint on nationality step when nothing selected
-                hint: _currentStep == _nationalityStep && _nationality == null
-                    ? 'Select your country to continue'
-                    : null,
+                continueLabel: _continueLabel(),
+                hint: _bottomHint(),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _continueLabel() {
+    final isLast = _currentStep == _totalSteps - 1;
+    // Step 0 before language pick: show both, neutral.
+    if (_currentStep == _languageStep && _preferredLocale == null) {
+      return 'Continue · Devam';
+    }
+    if (isLast) return _t('Get Started', 'Başla');
+    return _t('Continue', 'Devam');
+  }
+
+  String? _bottomHint() {
+    if (_currentStep == _languageStep && _preferredLocale == null) {
+      return 'Select a language · Bir dil seçin';
+    }
+    if (_currentStep == _nationalityStep && _nationality == null) {
+      return _t(
+        'Select your country to continue',
+        'Devam etmek için ülkenizi seçin',
+      );
+    }
+    return null;
   }
 }
 
@@ -271,6 +318,7 @@ class _BottomBar extends StatelessWidget {
     required this.canContinue,
     required this.isLastStep,
     required this.onContinue,
+    required this.continueLabel,
     this.hint,
   });
 
@@ -278,6 +326,7 @@ class _BottomBar extends StatelessWidget {
   final bool canContinue;
   final bool isLastStep;
   final VoidCallback onContinue;
+  final String continueLabel;
   final String? hint;
 
   @override
@@ -290,22 +339,46 @@ class _BottomBar extends StatelessWidget {
           if (hint != null) ...[
             Text(
               hint!,
-              style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+              style: AppTextStyles.caption
+                  .copyWith(color: AppColors.textMuted),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
           ],
-          ElevatedButton(
-            onPressed: canContinue ? onContinue : null,
-            child: saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.brandNavy,
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: canContinue ? onContinue : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandTeal,
+                foregroundColor: AppColors.brandNavy,
+                disabledBackgroundColor:
+                    AppColors.brandTeal.withAlpha(70),
+                disabledForegroundColor:
+                    AppColors.brandNavy.withAlpha(180),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.brandNavy,
+                      ),
+                    )
+                  : Text(
+                      isLastStep ? continueLabel : continueLabel,
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.brandNavy,
+                        fontSize: 16,
+                      ),
                     ),
-                  )
-                : Text(isLastStep ? 'Get Started' : 'Continue'),
+            ),
           ),
         ],
       ),
@@ -352,7 +425,7 @@ class _StepHeader extends StatelessWidget {
                 final active = i <= current;
                 return Expanded(
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
+                    duration: const Duration(milliseconds: 280),
                     height: 3,
                     margin: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
                     decoration: BoxDecoration(
@@ -371,102 +444,181 @@ class _StepHeader extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Page: Welcome
+// Page 0: Welcome + Language (bilingual)
 // ---------------------------------------------------------------------------
 
-class _WelcomePage extends StatelessWidget {
-  const _WelcomePage();
+class _WelcomeLanguagePage extends StatelessWidget {
+  const _WelcomeLanguagePage({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final String? selected;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 16),
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: AppColors.brandTeal.withAlpha(25),
-              shape: BoxShape.circle,
+    return _FadeIn(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: AppColors.brandTeal.withAlpha(25),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.brandTeal.withAlpha(60),
+                  width: 1,
+                ),
+              ),
+              child: const Icon(Icons.radar,
+                  color: AppColors.brandTeal, size: 44),
             ),
-            child: const Icon(Icons.radar, color: AppColors.brandTeal, size: 44),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            'Welcome to VisaRadar',
-            style: AppTextStyles.displayMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Know exactly where you stand — Schengen days counted,\nborder crossings logged, alerts sent before you overstay.',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 36),
-          _FeatureRow(
-            icon: Icons.timer_outlined,
-            label: 'Accurate 90/180-day Schengen calculator',
-          ),
-          const SizedBox(height: 14),
-          _FeatureRow(
-            icon: Icons.notifications_outlined,
-            label: 'Alerts before your allowance runs out',
-          ),
-          const SizedBox(height: 14),
-          _FeatureRow(
-            icon: Icons.lock_outline,
-            label: 'Your data stays on your device only',
-          ),
-        ],
+            const SizedBox(height: 28),
+            Text(
+              'Welcome to VisaRadar',
+              style: AppTextStyles.displayMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "VisaRadar'a Hoşgeldiniz",
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Choose your language',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Dilinizi seçin',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            _LanguageCard(
+              flag: '🇬🇧',
+              title: 'English',
+              subtitle: 'Continue in English',
+              isSelected: selected == 'en',
+              onTap: () => onSelect('en'),
+            ),
+            const SizedBox(height: 12),
+            _LanguageCard(
+              flag: '🇹🇷',
+              title: 'Türkçe',
+              subtitle: 'Türkçe ile devam et',
+              isSelected: selected == 'tr',
+              onTap: () => onSelect('tr'),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
+class _LanguageCard extends StatelessWidget {
+  const _LanguageCard({
+    required this.flag,
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String flag;
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: AppColors.brandTeal.withAlpha(20),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: AppColors.brandTeal, size: 16),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.brandTeal.withAlpha(20)
+              : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.brandTeal : AppColors.divider,
+            width: isSelected ? 1.5 : 1,
           ),
         ),
-      ],
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.brandNavy,
+                shape: BoxShape.circle,
+              ),
+              child: Text(flag, style: const TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyLarge
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            AnimatedOpacity(
+              opacity: isSelected ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(Icons.check_circle_rounded,
+                  color: AppColors.brandTeal, size: 22),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Page: Nationality
+// Page 1: Nationality
 // ---------------------------------------------------------------------------
 
 class _NationalityPage extends StatefulWidget {
   const _NationalityPage({
+    required this.locale,
     required this.selected,
     required this.onSelect,
   });
 
+  final String? locale;
   final String? selected;
   final void Function(String code, String label) onSelect;
 
@@ -477,6 +629,8 @@ class _NationalityPage extends StatefulWidget {
 class _NationalityPageState extends State<_NationalityPage> {
   final _searchController = TextEditingController();
   String _query = '';
+
+  bool get _isTr => widget.locale == 'tr';
 
   List<Country> get _filtered {
     if (_query.isEmpty) return kCountries;
@@ -503,75 +657,84 @@ class _NationalityPageState extends State<_NationalityPage> {
   Widget build(BuildContext context) {
     final filtered = _filtered;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Your Nationality', style: AppTextStyles.displayMedium),
-              const SizedBox(height: 6),
-              Text(
-                'Select the country that issued your passport.',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _searchController,
-                onChanged: (v) => setState(() => _query = v),
-                style: AppTextStyles.bodyMedium,
-                decoration: InputDecoration(
-                  hintText: 'Search country…',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: _query.isNotEmpty
-                      ? GestureDetector(
-                          onTap: _clearSearch,
-                          child: const Icon(Icons.close, size: 18,
-                              color: AppColors.textMuted),
-                        )
-                      : null,
+    return _FadeIn(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isTr ? 'Vatandaşlığınız' : 'Your Nationality',
+                  style: AppTextStyles.displayMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _isTr
+                      ? 'Pasaportunuzu veren ülkeyi seçin.'
+                      : 'Select the country that issued your passport.',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (v) => setState(() => _query = v),
+                  style: AppTextStyles.bodyMedium,
+                  decoration: InputDecoration(
+                    hintText: _isTr ? 'Ülke ara…' : 'Search country…',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _query.isNotEmpty
+                        ? GestureDetector(
+                            onTap: _clearSearch,
+                            child: const Icon(Icons.close,
+                                size: 18, color: AppColors.textMuted),
+                          )
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (filtered.isEmpty)
+            Expanded(
+              child: Center(
+                child: Text(
+                  _isTr ? 'Ülke bulunamadı' : 'No countries found',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textMuted),
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (filtered.isEmpty)
-          Expanded(
-            child: Center(
-              child: Text(
-                'No countries found',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textMuted),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 4),
+                itemCount: filtered.length,
+                itemBuilder: (ctx, i) {
+                  final country = filtered[i];
+                  final isSelected = country.code == widget.selected;
+                  return _CountryRow(
+                    country: country,
+                    isSelected: isSelected,
+                    onTap: () =>
+                        widget.onSelect(country.code, country.name),
+                  );
+                },
               ),
             ),
-          )
-        else
-          Expanded(
-            child: ListView.builder(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              itemCount: filtered.length,
-              itemBuilder: (ctx, i) {
-                final country = filtered[i];
-                final isSelected = country.code == widget.selected;
-                return _CountryRow(
-                  country: country,
-                  isSelected: isSelected,
-                  onTap: () => widget.onSelect(country.code, country.name),
-                );
-              },
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// A single country row — custom widget for full control over appearance.
 class _CountryRow extends StatelessWidget {
   const _CountryRow({
     required this.country,
@@ -613,9 +776,7 @@ class _CountryRow extends StatelessWidget {
                 child: Text(
                   country.name,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: isSelected
-                        ? AppColors.textPrimary
-                        : AppColors.textPrimary,
+                    color: AppColors.textPrimary,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
@@ -634,61 +795,78 @@ class _CountryRow extends StatelessWidget {
   }
 }
 
-
 // ---------------------------------------------------------------------------
-// Page: Generic selection (passport type, residence, travel mode)
+// Pages 2-3: Generic selection
 // ---------------------------------------------------------------------------
 
 class _SelectOption<T> {
   const _SelectOption({
     required this.value,
     required this.icon,
-    required this.title,
-    required this.subtitle,
+    required this.titleEn,
+    required this.titleTr,
+    required this.subtitleEn,
+    required this.subtitleTr,
   });
 
   final T value;
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String titleEn;
+  final String titleTr;
+  final String subtitleEn;
+  final String subtitleTr;
 }
 
 class _SelectionPage<T> extends StatelessWidget {
   const _SelectionPage({
-    required this.title,
-    required this.subtitle,
+    required this.locale,
+    required this.titleEn,
+    required this.titleTr,
+    required this.subtitleEn,
+    required this.subtitleTr,
     required this.options,
     required this.selected,
     required this.onChanged,
   });
 
-  final String title;
-  final String subtitle;
+  final String? locale;
+  final String titleEn;
+  final String titleTr;
+  final String subtitleEn;
+  final String subtitleTr;
   final List<_SelectOption<T>> options;
   final T selected;
   final ValueChanged<T> onChanged;
 
+  bool get _isTr => locale == 'tr';
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.displayMedium),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 28),
-          ...options.map((opt) => _SelectCard<T>(
-                option: opt,
-                isSelected: opt.value == selected,
-                onTap: () => onChanged(opt.value),
-              )),
-        ],
+    return _FadeIn(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isTr ? titleTr : titleEn,
+              style: AppTextStyles.displayMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _isTr ? subtitleTr : subtitleEn,
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 28),
+            ...options.map((opt) => _SelectCard<T>(
+                  option: opt,
+                  isTr: _isTr,
+                  isSelected: opt.value == selected,
+                  onTap: () => onChanged(opt.value),
+                )),
+          ],
+        ),
       ),
     );
   }
@@ -697,11 +875,13 @@ class _SelectionPage<T> extends StatelessWidget {
 class _SelectCard<T> extends StatelessWidget {
   const _SelectCard({
     required this.option,
+    required this.isTr,
     required this.isSelected,
     required this.onTap,
   });
 
   final _SelectOption<T> option;
+  final bool isTr;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -720,8 +900,7 @@ class _SelectCard<T> extends StatelessWidget {
                 : AppColors.surfaceCard,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color:
-                  isSelected ? AppColors.brandTeal : AppColors.divider,
+              color: isSelected ? AppColors.brandTeal : AppColors.divider,
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -750,13 +929,13 @@ class _SelectCard<T> extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      option.title,
+                      isTr ? option.titleTr : option.titleEn,
                       style: AppTextStyles.bodyLarge
                           .copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      option.subtitle,
+                      isTr ? option.subtitleTr : option.subtitleEn,
                       style: AppTextStyles.bodySmall
                           .copyWith(color: AppColors.textSecondary),
                     ),
@@ -779,255 +958,30 @@ class _SelectCard<T> extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Page: Language
+// Subtle fade-in transition wrapper used on every page for premium feel.
 // ---------------------------------------------------------------------------
 
-class _LanguagePage extends StatelessWidget {
-  const _LanguagePage({required this.selected, required this.onChanged});
+class _FadeIn extends StatelessWidget {
+  const _FadeIn({required this.child});
 
-  final String? selected;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Language', style: AppTextStyles.displayMedium),
-          const SizedBox(height: 6),
-          Text(
-            'Choose the language you want VisaRadar to use.',
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 28),
-          _LangOption(
-            label: 'Automatic',
-            sublabel: 'Follows your device language',
-            isSelected: selected == null,
-            onTap: () => onChanged(null),
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            label: 'English',
-            sublabel: 'English',
-            isSelected: selected == 'en',
-            onTap: () => onChanged('en'),
-          ),
-          const SizedBox(height: 10),
-          _LangOption(
-            label: 'Türkçe',
-            sublabel: 'Turkish',
-            isSelected: selected == 'tr',
-            onTap: () => onChanged('tr'),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'More languages will be added over time.',
-            style: AppTextStyles.caption
-                .copyWith(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LangOption extends StatelessWidget {
-  const _LangOption({
-    required this.label,
-    required this.sublabel,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final String sublabel;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.brandTeal.withAlpha(18)
-              : AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.brandTeal : AppColors.divider,
-            width: isSelected ? 1.5 : 1,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, c) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 8),
+            child: c,
           ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppTextStyles.bodyLarge
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    sublabel,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            AnimatedOpacity(
-              opacity: isSelected ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: const Icon(Icons.check_circle_rounded,
-                  color: AppColors.brandTeal, size: 20),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Page: Permissions
-// ---------------------------------------------------------------------------
-
-class _PermissionsPage extends StatelessWidget {
-  const _PermissionsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Almost there', style: AppTextStyles.displayMedium),
-          const SizedBox(height: 6),
-          Text(
-            'VisaRadar works best with a couple of permissions. '
-            'You can change these any time in your device settings.',
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 28),
-          _PermissionCard(
-            icon: Icons.location_on_outlined,
-            color: AppColors.brandTeal,
-            title: 'Location Access',
-            body: 'Detects when you cross a border and logs entries '
-                'automatically. Location is only used when VisaRadar needs '
-                'to update your travel record.',
-          ),
-          const SizedBox(height: 12),
-          _PermissionCard(
-            icon: Icons.notifications_outlined,
-            color: AppColors.info,
-            title: 'Notifications',
-            body: 'Sends reminders before your Schengen allowance runs out. '
-                'You choose which alerts are enabled in Settings.',
-          ),
-          const SizedBox(height: 12),
-          _PermissionCard(
-            icon: Icons.lock_outline,
-            color: AppColors.success,
-            title: 'Privacy by Default',
-            body: 'All your travel data stays on this device. '
-                'VisaRadar never shares your location or history with third parties.',
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.divider),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline,
-                    size: 16, color: AppColors.textSecondary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Permission prompts will appear the first time each feature activates.',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PermissionCard extends StatelessWidget {
-  const _PermissionCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.body,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withAlpha(22),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  body,
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary, height: 1.5),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
+      child: child,
     );
   }
 }
