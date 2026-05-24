@@ -132,16 +132,19 @@ class _LessonBoardPageState extends State<LessonBoardPage>
   Timer? _timer;
 
   // ── Speed settings ─────────────────────────────────────────────────────────
-  _TeachingSpeed _speed = _TeachingSpeed.slow;
+  // Slow mode used to be painfully slow (0.40). Calibrated to: slow=0.75,
+  // normal=1.0, fast=1.25 — calm but not lethargic. Default starts at normal
+  // so first-time users do not see crawling animation.
+  _TeachingSpeed _speed = _TeachingSpeed.normal;
   double get _boardSpeed => switch (_speed) {
-        _TeachingSpeed.slow => 0.40,
-        _TeachingSpeed.normal => 0.80,
-        _TeachingSpeed.fast => 1.40,
+        _TeachingSpeed.slow => 0.75,
+        _TeachingSpeed.normal => 1.0,
+        _TeachingSpeed.fast => 1.25,
       };
   double get _textCps => switch (_speed) {
-        _TeachingSpeed.slow => 5.83,
-        _TeachingSpeed.normal => 9.17,
-        _TeachingSpeed.fast => 12.5,
+        _TeachingSpeed.slow => 9.0,
+        _TeachingSpeed.normal => 12.0,
+        _TeachingSpeed.fast => 15.0,
       };
 
   // ── Drawing state ──────────────────────────────────────────────────────────
@@ -549,26 +552,29 @@ class _LessonBoardPageState extends State<LessonBoardPage>
       ),
       child: Row(
         children: [
-          // Back button
+          // Exit board button — high-contrast, clearly labeled so the user
+          // never feels trapped inside the board.
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E),
-                borderRadius: BorderRadius.circular(7),
+                color: const Color(0xFF1F1F3A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF7C6BF8).withValues(alpha: 0.55)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.arrow_back_ios_rounded,
-                      color: Color(0xFF6B7280), size: 13),
-                  SizedBox(width: 3),
-                  Text('Geri',
+                  Icon(Icons.close_rounded,
+                      color: Color(0xFFE5E7EB), size: 15),
+                  SizedBox(width: 5),
+                  Text('Tahtadan Çık',
                       style: TextStyle(
-                          color: Color(0xFF6B7280),
+                          color: Color(0xFFE5E7EB),
                           fontSize: 12,
-                          fontWeight: FontWeight.w500)),
+                          fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -1786,19 +1792,21 @@ class _SpeedChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF4ADE80).withValues(alpha: 0.18)
-              : const Color(0xFF0A1A0A),
+              ? const Color(0xFF4ADE80).withValues(alpha: 0.22)
+              : const Color(0xFF12241A),
           borderRadius: BorderRadius.circular(5),
           border: Border.all(
             color: selected
-                ? const Color(0xFF4ADE80).withValues(alpha: 0.7)
-                : const Color(0xFF1A3A1A),
+                ? const Color(0xFF4ADE80).withValues(alpha: 0.8)
+                : const Color(0xFF2A4A2A),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? const Color(0xFF4ADE80) : const Color(0xFF3A6A3A),
+            // Unselected was 0xFF3A6A3A (dark green on dark green) — unreadable.
+            // Lifted to a much higher-luminance neutral green for legibility.
+            color: selected ? const Color(0xFF4ADE80) : const Color(0xFFB4D9B4),
             fontSize: 10,
             fontWeight: FontWeight.w700,
           ),

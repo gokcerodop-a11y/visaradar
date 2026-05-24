@@ -749,7 +749,8 @@ class _MetricCard extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
                 Text(sub,
                     style: const TextStyle(
-                        color: Color(0xFF4B5563), fontSize: 10)),
+                        // Was 0xFF4B5563 — too dim on the dark card.
+                        color: Color(0xFF9CA3AF), fontSize: 10)),
               ],
             ),
           ),
