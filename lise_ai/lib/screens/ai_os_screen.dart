@@ -38,6 +38,8 @@ import '../services/teacher_voice_service.dart';
 import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
 import '../services/voice_command_detector.dart';
+import '../services/work_analysis_service.dart';
+import 'visual_teaching_screen.dart';
 import '../widgets/ambient_layer.dart';
 import '../widgets/atmosphere_layer.dart';
 import '../widgets/exam_camp_overlay.dart';
@@ -77,6 +79,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
   AnthropicService? _anthropic;
   VisualReasoningEngine? _visualEngine;
   BoardRedrawService? _boardRedrawSvc;
+  WorkAnalysisService? _workAnalysisSvc;
 
   // ── UI state engine ───────────────────────────────────────────────────────
   final _ui = UIStateEngine();
@@ -178,6 +181,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _anthropic = AnthropicService(apiKey);
       _visualEngine = VisualReasoningEngine(_anthropic!);
       _boardRedrawSvc = BoardRedrawService(_anthropic!);
+      _workAnalysisSvc = WorkAnalysisService(_anthropic!);
     }
 
     _voiceSvc = await TeacherVoiceService.create();
@@ -997,6 +1001,40 @@ class _AOSState extends State<AIOperatingSystemScreen>
     }
   }
 
+  // ── Visual teaching screen ────────────────────────────────────────────────
+
+  Future<void> _openVisualTeaching() async {
+    final ctx = _imageCtx;
+    final svc = _workAnalysisSvc;
+    if (ctx == null || svc == null) return;
+
+    final teacher = _identitySvc.identity;
+    final initialMode = ctx.analysisResult?.suggestedMode == VisualMode.errorAnalysis
+        ? VisualTeachingMode.hataAnalizi
+        : ctx.analysisResult?.suggestedMode == VisualMode.teachingMode
+            ? VisualTeachingMode.ogretim
+            : VisualTeachingMode.cozum;
+
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => VisualTeachingScreen(
+          imageCtx: ctx,
+          analysisService: svc,
+          initialMode: initialMode,
+          teacherName: teacher?.teacherName ?? 'Öğretmen',
+        ),
+        transitionsBuilder: (_, anim, __, child) => SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          child: child,
+        ),
+        transitionDuration: const Duration(milliseconds: 480),
+      ),
+    );
+  }
+
   // ── Orb interaction ───────────────────────────────────────────────────────
 
   void _onOrbTap() {
@@ -1165,6 +1203,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
                         _imageCtx!.isVisible = false;
                       }),
                       onOpenBoard: _openVisualBoard,
+                      onOpenAnalysis: _workAnalysisSvc != null
+                          ? _openVisualTeaching
+                          : null,
                       onCompareModeChanged: (v) => setState(() {
                         _imageCtx!.isCompareMode = v;
                         if (v) {

@@ -17,6 +17,7 @@ class VisualOverlay extends StatefulWidget {
   final ImageContext ctx;
   final VoidCallback onDismiss;
   final VoidCallback onOpenBoard;
+  final VoidCallback? onOpenAnalysis;
   final ValueChanged<bool> onCompareModeChanged;
   final ValueChanged<bool> onSpotlightModeChanged;
   final ValueChanged<Offset> onPositionChanged;
@@ -26,6 +27,7 @@ class VisualOverlay extends StatefulWidget {
     required this.ctx,
     required this.onDismiss,
     required this.onOpenBoard,
+    this.onOpenAnalysis,
     required this.onCompareModeChanged,
     required this.onSpotlightModeChanged,
     required this.onPositionChanged,
@@ -312,6 +314,14 @@ class _VisualOverlayState extends State<VisualOverlay>
             color: modeColor,
             onTap: widget.onOpenBoard,
           ),
+          // Interactive analysis
+          if (widget.onOpenAnalysis != null)
+            _ActionBtn(
+              icon: Icons.rate_review_rounded,
+              label: 'Analiz',
+              color: modeColor,
+              onTap: widget.onOpenAnalysis!,
+            ),
           // Compare toggle
           _ActionBtn(
             icon: Icons.compare_rounded,
