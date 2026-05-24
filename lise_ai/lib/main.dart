@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -22,27 +23,41 @@ import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
 import 'services/storage_service.dart';
 import 'screens/ai_os_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'services/connectivity_service.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
 import 'widgets/pdf_page_picker.dart';
 import 'widgets/voice_conversation_page.dart';
 
+// Global connectivity service — started once, shared across app.
+final connectivityService = ConnectivityService();
+
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Crash safety: ensureInitialized must be in the same zone as runApp.
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (_) {}
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {}
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-  );
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
-  runApp(const LiseAIApp());
+    // Start connectivity monitoring (non-blocking)
+    connectivityService.start();
+
+    runApp(const LiseAIApp());
+  }, (error, stack) {
+    debugPrint('[CrashGuard] Unhandled: $error');
+    debugPrintStack(stackTrace: stack, maxFrames: 12);
+  });
 }
 
 class LiseAIApp extends StatelessWidget {
@@ -61,8 +76,70 @@ class LiseAIApp extends StatelessWidget {
         ),
         drawerTheme: const DrawerThemeData(backgroundColor: Color(0xFF111111)),
       ),
-      home: const AIOperatingSystemScreen(),
+      home: const _AppRouter(),
     );
+  }
+}
+
+// ── App router: onboarding gate ───────────────────────────────────────────────
+
+class _AppRouter extends StatefulWidget {
+  const _AppRouter();
+
+  @override
+  State<_AppRouter> createState() => _AppRouterState();
+}
+
+class _AppRouterState extends State<_AppRouter> {
+  final _storage = StorageService();
+  bool _loading = true;
+  bool _needsOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    try {
+      await _storage.init();
+      final done = _storage.loadSetting('onboarding_done');
+      setState(() {
+        _needsOnboarding = done != 'true';
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() { _needsOnboarding = false; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF050510),
+        body: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              color: Color(0xFF7C6BF8),
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_needsOnboarding) {
+      return OnboardingScreen(
+        storage: _storage,
+        onComplete: () => setState(() => _needsOnboarding = false),
+      );
+    }
+
+    return const AIOperatingSystemScreen();
   }
 }
 

@@ -39,6 +39,7 @@ import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
 import '../services/voice_command_detector.dart';
 import '../services/work_analysis_service.dart';
+import '../services/error_handler.dart';
 import '../services/short_term_memory.dart';
 import '../services/working_memory.dart';
 import '../services/long_term_memory.dart';
@@ -48,6 +49,8 @@ import '../services/memory_retrieval_engine.dart';
 import '../services/memory_summarizer.dart';
 import '../services/memory_prompt_layer.dart';
 import 'visual_teaching_screen.dart';
+import 'settings_screen.dart';
+import '../main.dart' show connectivityService;
 import '../widgets/ambient_layer.dart';
 import '../widgets/atmosphere_layer.dart';
 import '../widgets/exam_camp_overlay.dart';
@@ -192,29 +195,41 @@ class _AOSState extends State<AIOperatingSystemScreen>
   }
 
   Future<void> _initServices() async {
-    final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
-    if (apiKey.isNotEmpty && apiKey != 'your_api_key_here') {
-      _anthropic = AnthropicService(apiKey);
-      _visualEngine = VisualReasoningEngine(_anthropic!);
-      _boardRedrawSvc = BoardRedrawService(_anthropic!);
-      _workAnalysisSvc = WorkAnalysisService(_anthropic!);
-      _memorySummarizer = MemorySummarizer(_anthropic!);
+    try {
+      final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
+      if (apiKey.isNotEmpty && apiKey != 'your_api_key_here') {
+        _anthropic = AnthropicService(apiKey);
+        _visualEngine = VisualReasoningEngine(_anthropic!);
+        _boardRedrawSvc = BoardRedrawService(_anthropic!);
+        _workAnalysisSvc = WorkAnalysisService(_anthropic!);
+        _memorySummarizer = MemorySummarizer(_anthropic!);
+      }
+    } catch (e) {
+      debugPrint('[Init] API setup error: $e');
     }
 
-    _voiceSvc = await TeacherVoiceService.create();
+    try {
+      _voiceSvc = await TeacherVoiceService.create();
+    } catch (e) {
+      debugPrint('[Init] TTS setup error: $e');
+    }
 
-    await _storage.init();
-    _profileSvc = ProfileService(_storage);
-    await _profileSvc.init();
-    await _graphEngine.init(_storage);
-    await _cogEngine.init(_storage);
-    await _flowEngine.init(_storage);
-    await _identitySvc.init(_storage);
-    await _continuitySvc.init(_storage);
-    await _journalSvc.init(_storage);
-    await _longTermMem.init(_storage);
-    await _episodicMem.init(_storage);
-    await _semanticMem.init(_storage);
+    try {
+      await _storage.init();
+      _profileSvc = ProfileService(_storage);
+      await _profileSvc.init();
+      await _graphEngine.init(_storage);
+      await _cogEngine.init(_storage);
+      await _flowEngine.init(_storage);
+      await _identitySvc.init(_storage);
+      await _continuitySvc.init(_storage);
+      await _journalSvc.init(_storage);
+      await _longTermMem.init(_storage);
+      await _episodicMem.init(_storage);
+      await _semanticMem.init(_storage);
+    } catch (e) {
+      debugPrint('[Init] Storage setup error: $e');
+    }
 
     // Restore saved mode/level
     final savedMode = _storage.loadSetting('ui_mode');
@@ -562,8 +577,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
         systemPrompt: _buildSystemPrompt(topic: detectedTopic),
         maxTokens: _ui.lessonMode.maxTokens,
       );
-    } catch (_) {
-      if (mounted) _addSubtitle('⚠️ Bağlantı hatası.', isUser: false);
+    } catch (e) {
+      if (mounted) {
+        final appErr = ErrorHandler.classify(e, context: 'Claude');
+        _addSubtitle('⚠️ ${appErr.userMessage}', isUser: false);
+        setState(() {
+          _isStreaming = false;
+          _ui.orbState = OrbVisualState.idle;
+        });
+      }
     }
 
     _sessionSub?.cancel();
@@ -1142,6 +1164,29 @@ class _AOSState extends State<AIOperatingSystemScreen>
     );
   }
 
+  // ── Settings ──────────────────────────────────────────────────────────────
+
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          storage: _storage,
+          longTermMemory: _longTermMem,
+          shortTermMemory: _shortTermMem,
+          onClearHistory: () {
+            setState(() => _history.clear());
+          },
+          onResetMemory: () {
+            _shortTermMem.clear();
+            _workingMem.resolveGoal();
+          },
+        ),
+      ),
+    );
+    // Re-sync any settings changed in settings screen
+    if (mounted) setState(() {});
+  }
+
   // ── Orb interaction ───────────────────────────────────────────────────────
 
   void _onOrbTap() {
@@ -1205,6 +1250,19 @@ class _AOSState extends State<AIOperatingSystemScreen>
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
+                              // Offline banner
+                              ListenableBuilder(
+                                listenable: connectivityService,
+                                builder: (_, __) => connectivityService.isOffline
+                                    ? Positioned(
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        child: _OfflineBanner(),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+
                               // Partial transcript (top)
                               if (_partialTranscript.isNotEmpty)
                                 Positioned(
@@ -1431,6 +1489,16 @@ class _AOSState extends State<AIOperatingSystemScreen>
               setState(() => _level = l);
               _storage.saveSetting('level', l.name);
             },
+          ),
+          const SizedBox(width: 4),
+          // Settings
+          GestureDetector(
+            onTap: _openSettings,
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(Icons.tune_rounded,
+                  color: Color(0xFF6B7280), size: 18),
+            ),
           ),
         ],
       ),
@@ -1933,5 +2001,33 @@ class _BottomBtn extends StatelessWidget {
       ),
     );
     return tooltip != null ? Tooltip(message: tooltip!, child: btn) : btn;
+  }
+}
+
+// ── Offline banner ────────────────────────────────────────────────────────────
+
+class _OfflineBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: const Color(0xFF1F1F2E),
+      child: const Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, color: Color(0xFFFBBF24), size: 14),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Internet baglantisi yok — AI ozellikleri icin baglanti gerekli.',
+              style: TextStyle(
+                color: Color(0xFFFBBF24),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -30,6 +30,10 @@
 	<string>Sesli soru sormak için mikrofon erişimi gerekiyor.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Konuşmayı metne çevirmek için konuşma tanıma erişimi gerekiyor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ödev veya sınav fotoğrafı yüklemek için fotoğraf kütüphanesi erişimi gerekiyor.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ödev veya sınav sayfası çekmek için kamera erişimi gerekiyor.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
