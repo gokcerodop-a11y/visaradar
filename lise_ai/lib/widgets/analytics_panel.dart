@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/cognitive_profile.dart';
 import '../models/lesson_mode.dart';
 import '../models/student_profile.dart';
+import '../services/cognitive_profile_engine.dart';
 import '../services/learning_graph_engine.dart';
 import '../services/profile_service.dart';
 
@@ -11,6 +13,7 @@ Future<void> showAnalyticsPanel(
   BuildContext context,
   ProfileService profileService,
   LearningGraphEngine graphEngine,
+  CognitiveProfileEngine cogEngine,
   StudentLevel level,
 ) {
   return showDialog(
@@ -18,6 +21,7 @@ Future<void> showAnalyticsPanel(
     builder: (ctx) => _AnalyticsDialog(
       profile: profileService.profile,
       graph: graphEngine,
+      cogProfile: cogEngine.profile,
       level: level,
     ),
   );
@@ -28,11 +32,13 @@ Future<void> showAnalyticsPanel(
 class _AnalyticsDialog extends StatefulWidget {
   final StudentProfile profile;
   final LearningGraphEngine graph;
+  final CognitiveProfile cogProfile;
   final StudentLevel level;
 
   const _AnalyticsDialog({
     required this.profile,
     required this.graph,
+    required this.cogProfile,
     required this.level,
   });
 
@@ -47,7 +53,7 @@ class _AnalyticsDialogState extends State<_AnalyticsDialog>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -74,6 +80,7 @@ class _AnalyticsDialogState extends State<_AnalyticsDialog>
                 children: [
                   _ProfileTab(profile: widget.profile),
                   _GraphTab(graph: widget.graph, level: widget.level),
+                  _CognitiveTab(cogProfile: widget.cogProfile),
                 ],
               ),
             ),
@@ -132,10 +139,11 @@ class _AnalyticsDialogState extends State<_AnalyticsDialog>
         indicatorSize: TabBarIndicatorSize.label,
         labelColor: const Color(0xFF9B8BFB),
         unselectedLabelColor: const Color(0xFF4B5563),
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         tabs: const [
           Tab(text: 'Profil & Geçmiş'),
           Tab(text: 'Öğrenim Haritası'),
+          Tab(text: 'Bilişsel Profil'),
         ],
       ),
     );
@@ -343,6 +351,301 @@ class _GraphTab extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Cognitive profile tab ─────────────────────────────────────────────────────
+
+class _CognitiveTab extends StatelessWidget {
+  final CognitiveProfile cogProfile;
+
+  const _CognitiveTab({required this.cogProfile});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = cogProfile;
+    final hasAnyData = p.learningStyle != LearningStyle.unknown ||
+        p.motivationState != MotivationState.normal ||
+        p.errorTypeCounts.isNotEmpty;
+
+    if (!hasAnyData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.psychology_outlined,
+                  color: Color(0xFF374151), size: 44),
+              SizedBox(height: 12),
+              Text(
+                'Dersler yaptıkça öğrenme\ntarzın burada belirir.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF4B5563), fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Learning style + motivation row
+          Row(
+            children: [
+              _CogCard(
+                icon: Icons.palette_rounded,
+                iconColor: const Color(0xFF818CF8),
+                label: 'Öğrenme Tarzı',
+                value: p.learningStyle.label,
+              ),
+              const SizedBox(width: 10),
+              _CogCard(
+                icon: Icons.mood_rounded,
+                iconColor: _motivationColor(p.motivationState),
+                label: 'Motivasyon',
+                value: p.motivationState.label,
+                valueColor: _motivationColor(p.motivationState),
+              ),
+            ],
+          ),
+
+          // Attention span
+          const SizedBox(height: 12),
+          _AttentionBar(value: p.attentionSpanEstimate),
+
+          // Error types
+          if (p.topErrors.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _SectionLabel(
+              icon: Icons.error_outline_rounded,
+              color: const Color(0xFFFBBF24),
+              title: 'Sık Yapılan Hata Tipleri',
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: p.topErrors.map((e) {
+                final count = p.errorTypeCounts[e] ?? 0;
+                return _ErrorChip(errorType: e, count: count);
+              }).toList(),
+            ),
+          ],
+
+          // Recommended teaching style
+          const SizedBox(height: 18),
+          _SectionLabel(
+            icon: Icons.lightbulb_rounded,
+            color: const Color(0xFF34D399),
+            title: 'Önerilen Anlatım Stili',
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A1F14),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: const Color(0xFF34D399).withValues(alpha: 0.25)),
+            ),
+            child: Text(
+              p.recommendedTeachingStyle,
+              style: const TextStyle(
+                  color: Color(0xFF6EE7B7), fontSize: 12, height: 1.5),
+            ),
+          ),
+
+          // Last detected signals
+          if (p.lastDetectedSignals.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _SectionLabel(
+              icon: Icons.sensors_rounded,
+              color: const Color(0xFF9CA3AF),
+              title: 'Son Algılanan Sinyaller',
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 5,
+              runSpacing: 5,
+              children: p.lastDetectedSignals
+                  .map((s) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F2937),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(s,
+                            style: const TextStyle(
+                                color: Color(0xFF6B7280), fontSize: 10)),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _motivationColor(MotivationState state) => switch (state) {
+        MotivationState.normal     => const Color(0xFF9CA3AF),
+        MotivationState.frustrated => const Color(0xFFF87171),
+        MotivationState.confident  => const Color(0xFF4ADE80),
+        MotivationState.anxious    => const Color(0xFFFBBF24),
+        MotivationState.bored      => const Color(0xFF60A5FA),
+      };
+}
+
+class _CogCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _CogCard({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111111),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF1F2937)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: iconColor, size: 18),
+            const SizedBox(height: 8),
+            Text(value,
+                style: TextStyle(
+                    color: valueColor ?? Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2)),
+            const SizedBox(height: 4),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFF6B7280), fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttentionBar extends StatelessWidget {
+  final int value; // 1-10
+
+  const _AttentionBar({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.timer_rounded,
+                color: Color(0xFF9B8BFB), size: 14),
+            const SizedBox(width: 6),
+            const Text('Dikkat Kapasitesi',
+                style: TextStyle(
+                    color: Color(0xFF9B8BFB),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            const Spacer(),
+            Text('$value / 10',
+                style: const TextStyle(
+                    color: Color(0xFF4B5563), fontSize: 11)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LayoutBuilder(
+          builder: (_, c) => Stack(
+            children: [
+              Container(
+                height: 5,
+                width: c.maxWidth,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                height: 5,
+                width: c.maxWidth * (value / 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorChip extends StatelessWidget {
+  final ErrorType errorType;
+  final int count;
+
+  const _ErrorChip({required this.errorType, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A1F0A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: const Color(0xFFFBBF24).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(errorType.label,
+              style: const TextStyle(
+                  color: Color(0xFFFCD34D),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(width: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFBBF24).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text('$count',
+                style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );

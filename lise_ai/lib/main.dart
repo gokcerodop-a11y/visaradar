@@ -11,6 +11,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'models/lesson_mode.dart';
 import 'models/student_profile.dart';
 import 'services/anthropic_service.dart';
+import 'services/cognitive_profile_engine.dart';
 import 'services/pdf_service.dart';
 import 'services/learning_graph_engine.dart';
 import 'services/profile_service.dart';
@@ -130,6 +131,7 @@ class _ChatScreenState extends State<ChatScreen> {
   late final ProfileService _profileSvc;
   final _teacherEngine = TeacherEngine();
   final _graphEngine = LearningGraphEngine();
+  final _cogEngine = CognitiveProfileEngine();
   AnthropicService? _anthropic;
 
   // ── Controllers ───────────────────────────────────────────────────────────
@@ -218,6 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _profileSvc = ProfileService(_storage);
     await _profileSvc.init();
     await _graphEngine.init(_storage);
+    await _cogEngine.init(_storage);
 
     // Restore saved mode and level
     final savedMode = _storage.loadSetting('mode');
@@ -506,6 +509,18 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
 
+      // Update cognitive profile
+      final usedHints = _mode == LessonMode.sadaceIpucu || signal.hasConfusion;
+      final usedBoard = _mode == LessonMode.tahtadaCoz ||
+          _mode == LessonMode.sesliDers ||
+          signal.shouldTriggerBoard;
+      await _cogEngine.processInteraction(
+        userMessage: trimmed,
+        assistantReply: fullReply,
+        usedBoard: usedBoard,
+        usedHints: usedHints,
+      );
+
       if (!mounted) return;
       final alwaysBoard = _mode.alwaysShowBoard;
       final isMathy = alwaysBoard ||
@@ -589,7 +604,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _profileSvc.buildMemorySummary() +
       _teacherEngine.buildOrchestrationPrompt() +
       _graphEngine.buildContextPrompt(
-          currentTopic: topic, mode: _mode, level: _level);
+          currentTopic: topic, mode: _mode, level: _level) +
+      _cogEngine.buildProfilePrompt();
 
   String get _currentSystemPrompt => _buildSystemPrompt();
 
@@ -845,7 +861,7 @@ class _ChatScreenState extends State<ChatScreen> {
         IconButton(
           tooltip: 'İlerleme',
           icon: const Icon(Icons.bar_chart_rounded, color: Color(0xFF9CA3AF), size: 20),
-          onPressed: () => showAnalyticsPanel(context, _profileSvc, _graphEngine, _level),
+          onPressed: () => showAnalyticsPanel(context, _profileSvc, _graphEngine, _cogEngine, _level),
         ),
         IconButton(
           tooltip: 'Yeni Sohbet',
