@@ -8,6 +8,9 @@ import '../services/ai_cost_tracker.dart';
 import '../services/backend_provider_service.dart';
 import '../services/supabase_sync_service.dart';
 import '../services/storage_service.dart';
+import '../services/runtime_stability_monitor.dart';
+import '../services/runtime_validation_service.dart';
+import '../services/connectivity_service.dart';
 import '../core/backend_provider.dart';
 import 'database_preview_screen.dart';
 
@@ -19,6 +22,7 @@ class DiagnosticsScreen extends StatefulWidget {
   final VoidCallback? onOpenSimLab;
   final StorageService? storage;
   final SupabaseSyncService? syncSvc;
+  final ConnectivityService? connectivity;
 
   const DiagnosticsScreen({
     super.key,
@@ -27,6 +31,7 @@ class DiagnosticsScreen extends StatefulWidget {
     this.onOpenSimLab,
     this.storage,
     this.syncSvc,
+    this.connectivity,
   });
 
   @override
@@ -37,6 +42,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   List<CheckResult>? _results;
   bool _running = false;
   String? _copyText;
+  ValidationReport? _validationReport;
+  bool _validating = false;
 
   @override
   void initState() {
@@ -49,6 +56,19 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     final results = await ScenarioRunner.runAll();
     if (mounted) {
       setState(() { _results = results; _running = false; });
+    }
+  }
+
+  Future<void> _runValidation() async {
+    if (_validating) return;
+    if (widget.storage == null || widget.connectivity == null) return;
+    setState(() { _validating = true; _validationReport = null; });
+    final report = await RuntimeValidationService.instance.runAll(
+      storage: widget.storage!,
+      connectivity: widget.connectivity!,
+    );
+    if (mounted) {
+      setState(() { _validationReport = report; _validating = false; });
     }
   }
 
@@ -320,6 +340,220 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+
+        // ── Runtime health section ─────────────────────────────────────────
+        const SizedBox(height: 16),
+        const _SectionLabel(label: 'RUNTIME SAĞLIK'),
+        const SizedBox(height: 8),
+        ListenableBuilder(
+          listenable: RuntimeStabilityMonitor.instance,
+          builder: (_, __) {
+            final mon = RuntimeStabilityMonitor.instance;
+            final uptime = mon.uptime;
+            final uptimeLabel = uptime.inHours > 0
+                ? '${uptime.inHours}sa ${uptime.inMinutes.remainder(60)}dk'
+                : uptime.inMinutes > 0
+                    ? '${uptime.inMinutes}dk ${uptime.inSeconds.remainder(60)}sn'
+                    : '${uptime.inSeconds}sn';
+            final memMb = (mon.memoryBytes / (1024 * 1024)).toStringAsFixed(1);
+            final orphans = mon.orphanLoadingIds.length;
+            final duplicateStreams = mon.duplicateStreamIds.length;
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '⏱️',
+                        label: 'Çalışma Süresi',
+                        value: uptimeLabel,
+                        sub: 'Açılıştan beri',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '🧠',
+                        label: 'Bellek (RSS)',
+                        value: '$memMb MB',
+                        sub: 'Tahmini',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '🔀',
+                        label: 'Aktif Akış',
+                        value: '${mon.activeStreamCount}',
+                        sub: duplicateStreams > 0
+                            ? '⚠️ $duplicateStreams yinelenen'
+                            : 'Yinelenen yok',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '⏳',
+                        label: 'Yükleme',
+                        value: '${mon.activeLoadingCount}',
+                        sub: orphans > 0
+                            ? '⚠️ $orphans yetim'
+                            : 'Yetim yok',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '⚡',
+                        label: 'AI Gecikme',
+                        value: mon.aiLatencyAvg.inMilliseconds > 0
+                            ? '${mon.aiLatencyAvg.inMilliseconds}ms'
+                            : 'Ölçülmedi',
+                        sub:
+                            '${mon.aiRequestCount} istek / ${mon.aiTimeoutCount} zaman aşımı',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '🗄️',
+                        label: 'Depolama',
+                        value: '${mon.storageEntryCount} kayıt',
+                        sub: 'Hive girişi',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  icon: mon.lastCrashAt == null ? '✅' : '⚠️',
+                  label: 'Son Çökme',
+                  value: mon.lastCrashAt == null
+                      ? 'Hiç'
+                      : _ago(mon.lastCrashAt!),
+                  sub: mon.lastFreezeAt != null
+                      ? 'Son donma: ${_ago(mon.lastFreezeAt!)} (toplam ${mon.freezeCount})'
+                      : 'Donma kaydı yok',
+                ),
+                if (mon.boardRepaintsLastMinute > 0) ...[
+                  const SizedBox(height: 8),
+                  _MetricCard(
+                    icon: '🎨',
+                    label: 'Tahta Tekrar Boyama',
+                    value: '${mon.boardRepaintsLastMinute}/dk',
+                    sub: 'Son 60 sn',
+                  ),
+                ],
+                if (widget.storage != null && widget.connectivity != null) ...[
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: _validating ? null : _runValidation,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A0A12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFF7C6BF8).withValues(alpha: 0.4)),
+                      ),
+                      child: Center(
+                        child: _validating
+                            ? const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF7C6BF8),
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Doğrulama çalışıyor…',
+                                    style: TextStyle(
+                                        color: Color(0xFF7C6BF8),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              )
+                            : const Text(
+                                'Doğrulama Süitini Çalıştır',
+                                style: TextStyle(
+                                    color: Color(0xFF7C6BF8),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (_validationReport != null) ...[
+                  const SizedBox(height: 8),
+                  _MetricCard(
+                    icon: _validationReport!.isClean ? '✅' : '❌',
+                    label: 'Doğrulama Sonucu',
+                    value:
+                        '${_validationReport!.passCount} geçti / ${_validationReport!.warnCount} uyarı / ${_validationReport!.failCount} hata',
+                    sub:
+                        '${_validationReport!.totalElapsed.inMilliseconds}ms toplam',
+                  ),
+                  const SizedBox(height: 4),
+                  ..._validationReport!.checks.map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c.icon,
+                              style: const TextStyle(fontSize: 11)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.name,
+                                  style: const TextStyle(
+                                      color: Color(0xFFE5E7EB),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  c.detail,
+                                  style: const TextStyle(
+                                      color: Color(0xFF6B7280),
+                                      fontSize: 10,
+                                      height: 1.3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${c.elapsed.inMilliseconds}ms',
+                            style: const TextStyle(
+                                color: Color(0xFF374151), fontSize: 9),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -609,4 +843,12 @@ class _CapabilityPill extends StatelessWidget {
       ),
     );
   }
+}
+
+String _ago(DateTime t) {
+  final d = DateTime.now().difference(t);
+  if (d.inSeconds < 60) return '${d.inSeconds} sn önce';
+  if (d.inMinutes < 60) return '${d.inMinutes} dk önce';
+  if (d.inHours < 24) return '${d.inHours} sa önce';
+  return '${d.inDays} gün önce';
 }

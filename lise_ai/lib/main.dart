@@ -27,6 +27,7 @@ import 'screens/ai_os_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/crash_reporter.dart';
+import 'services/runtime_stability_monitor.dart';
 import 'core/supabase_config.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
@@ -43,7 +44,10 @@ Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     // Install crash reporter hooks
-    FlutterError.onError = CrashReporter.instance.handleFlutterError;
+    FlutterError.onError = (details) {
+      RuntimeStabilityMonitor.instance.noteCrash();
+      CrashReporter.instance.handleFlutterError(details);
+    };
 
     try {
       await dotenv.load(fileName: '.env');
@@ -67,10 +71,14 @@ Future<void> main() async {
     // Start connectivity monitoring (non-blocking)
     connectivityService.start();
 
+    // Start lightweight runtime stability monitor (diagnostics-only).
+    RuntimeStabilityMonitor.instance.start();
+
     runApp(const LiseAIApp());
   }, (error, stack) {
     debugPrint('[CrashGuard] Unhandled: $error');
     debugPrintStack(stackTrace: stack, maxFrames: 12);
+    RuntimeStabilityMonitor.instance.noteCrash();
     CrashReporter.instance.handlePlatformError(error, stack);
   });
 }

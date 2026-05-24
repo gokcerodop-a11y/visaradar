@@ -1443,6 +1443,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           onOpenSimLab: _openSimulationLab,
           storage: _storage,
           syncSvc: SupabaseSyncService.instance,
+          connectivity: connectivityService,
         ),
       ),
     );
