@@ -8,10 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import 'models/lesson_flow.dart';
 import 'models/lesson_mode.dart';
 import 'models/student_profile.dart';
 import 'services/anthropic_service.dart';
 import 'services/cognitive_profile_engine.dart';
+import 'services/lesson_flow_engine.dart';
 import 'services/pdf_service.dart';
 import 'services/learning_graph_engine.dart';
 import 'services/profile_service.dart';
@@ -132,6 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _teacherEngine = TeacherEngine();
   final _graphEngine = LearningGraphEngine();
   final _cogEngine = CognitiveProfileEngine();
+  final _flowEngine = StructuredLessonFlowEngine();
   AnthropicService? _anthropic;
 
   // ── Controllers ───────────────────────────────────────────────────────────
@@ -221,6 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
     await _profileSvc.init();
     await _graphEngine.init(_storage);
     await _cogEngine.init(_storage);
+    await _flowEngine.init(_storage);
 
     // Restore saved mode and level
     final savedMode = _storage.loadSetting('mode');
@@ -284,6 +288,7 @@ class _ChatScreenState extends State<ChatScreen> {
       isUser: false,
     );
     _teacherEngine.reset();
+    _flowEngine.reset();
     setState(() {
       _currentConvId = id;
       _messages = [welcome];
@@ -314,6 +319,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     _teacherEngine.reset();
+    _flowEngine.reset();
     setState(() {
       _currentConvId = id;
       _messages = messages;
@@ -521,6 +527,18 @@ class _ChatScreenState extends State<ChatScreen> {
         usedHints: usedHints,
       );
 
+      // Advance structured lesson flow
+      await _flowEngine.advance(
+        signal: signal,
+        topic: detectedTopic,
+        mode: _mode,
+        level: _level,
+        cogProfile: _cogEngine.profile,
+        weakTopics: _profileSvc.profile.weakTopics,
+        graphEngine: _graphEngine,
+      );
+      if (mounted) setState(() {}); // refresh phase strip
+
       if (!mounted) return;
       final alwaysBoard = _mode.alwaysShowBoard;
       final isMathy = alwaysBoard ||
@@ -605,7 +623,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _teacherEngine.buildOrchestrationPrompt() +
       _graphEngine.buildContextPrompt(
           currentTopic: topic, mode: _mode, level: _level) +
-      _cogEngine.buildProfilePrompt();
+      _cogEngine.buildProfilePrompt() +
+      _flowEngine.buildFlowPrompt();
 
   String get _currentSystemPrompt => _buildSystemPrompt();
 
@@ -802,6 +821,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     Column(
                       children: [
                         if (_greetingBanner != null) _buildGreetingBanner(),
+                        if (_flowEngine.isActive) _buildPhaseStrip(),
                         Expanded(child: _buildMessageList()),
                         if (_isTyping) _buildTypingIndicator(),
                         if (_pendingImage != null) _buildImagePreview(),
@@ -1072,6 +1092,73 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Phase strip ───────────────────────────────────────────────────────────
+
+  Widget _buildPhaseStrip() {
+    final phases = StructuredPhase.values;
+    final currentIdx = _flowEngine.currentPhase.index;
+    final topic = _flowEngine.currentTopic;
+
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFF1F2937), width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Phase dots
+          ...phases.map((phase) {
+            final idx = phase.index;
+            final isCurrent = idx == currentIdx;
+            final isPast = idx < currentIdx;
+            return Padding(
+              padding: const EdgeInsets.only(right: 5),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isCurrent ? 44 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? const Color(0xFF7C6BF8)
+                      : isPast
+                          ? const Color(0xFF374151)
+                          : const Color(0xFF1F2937),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: isCurrent
+                    ? null
+                    : null,
+              ),
+            );
+          }),
+          const SizedBox(width: 8),
+          // Phase label
+          Text(
+            _flowEngine.currentPhase.label,
+            style: const TextStyle(
+              color: Color(0xFF7C6BFB),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (topic != null) ...[
+            const Text(' · ', style: TextStyle(color: Color(0xFF374151), fontSize: 11)),
+            Flexible(
+              child: Text(
+                topic,
+                style: const TextStyle(color: Color(0xFF4B5563), fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
