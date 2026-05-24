@@ -42,6 +42,8 @@ import '../services/work_analysis_service.dart';
 import '../services/error_handler.dart';
 import '../services/app_logger.dart';
 import '../services/study_analytics_service.dart';
+import '../services/pedagogy_engine.dart';
+import '../services/silence_detector.dart';
 import 'progress_dashboard_screen.dart';
 import '../services/short_term_memory.dart';
 import '../services/working_memory.dart';
@@ -96,6 +98,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
   WorkAnalysisService? _workAnalysisSvc;
   MemorySummarizer? _memorySummarizer; // used in _onSessionEnd for async summarization
   final _analyticsSvc = StudyAnalyticsService();
+  final _pedagogyEngine = PedagogyEngine();
+  final _silenceDetector = SilenceDetector();
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -168,10 +172,11 @@ class _AOSState extends State<AIOperatingSystemScreen>
   bool _loading = true;
 
   // ── Animation controllers (isolated from logic) ───────────────────────────
-  late final AnimationController _breatheCtrl;  // 1.4s slow orb breath
-  late final AnimationController _waveCtrl;     // 700ms fast wave
-  late final AnimationController _flashCtrl;    // 450ms interrupt flash
-  late final AnimationController _particleCtrl; // continuous tick for particles
+  late final AnimationController _breatheCtrl;       // 1.4s slow orb breath
+  late final AnimationController _waveCtrl;           // 700ms fast wave
+  late final AnimationController _flashCtrl;          // 450ms interrupt flash
+  late final AnimationController _particleCtrl;       // continuous tick for particles
+  late final AnimationController _celebrationCtrl;    // 1.2s success burst
 
   @override
   void initState() {
@@ -184,16 +189,24 @@ class _AOSState extends State<AIOperatingSystemScreen>
       ..repeat();
     _flashCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 450));
+    _celebrationCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
     _particleCtrl = AnimationController(
         vsync: this, duration: const Duration(seconds: 60))
       ..repeat();
     _subtitleCtrl = LiveSubtitleController(
       onWordAdvanced: () { if (mounted) setState(() {}); },
     );
-    // Ambient engine tick: fades transient effects (success/urgency pulses)
+    // Ambient engine tick: fades transient effects (success/urgency pulses).
+    // We snapshot key values and only rebuild when they actually change to
+    // avoid needless 5 fps full-tree rebuilds during idle periods.
     _ambientTick = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (!mounted) return;
+      final prevIntensity = _ambientEngine.currentIntensity;
       _ambientEngine.tick();
-      if (mounted) setState(() {});
+      if (_ambientEngine.currentIntensity != prevIntensity) {
+        setState(() {});
+      }
     });
     _initServices();
   }
@@ -306,7 +319,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _breatheCtrl.dispose();
     _waveCtrl.dispose();
     _flashCtrl.dispose();
+    _celebrationCtrl.dispose();
     _particleCtrl.dispose();
+    _silenceDetector.dispose();
     _subtitleCtrl.dispose();
     _inputCtrl.dispose();
     _inputFocus.dispose();
@@ -503,6 +518,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
     }
     if (_anthropic == null || _isStreaming) return;
 
+    // ── Pedagogy + silence: record send, cancel idle timers ────────────────
+    _pedagogyEngine.recordSent();
+    _silenceDetector.disarm();
+
     // ── Attention engine: record input ─────────────────────────────────────
     _attentionEngine.recordUserInput(text, timestamp: DateTime.now());
     if (_workingMem.wasInterrupted) _workingMem.resume();
@@ -631,6 +650,55 @@ class _AOSState extends State<AIOperatingSystemScreen>
       successEstimate: signal.successEstimate,
     ));
     _profileSvc.incrementSolvedCount();
+
+    // ── Pedagogy engine: record outcome + compute visual signals ───────────
+    _pedagogyEngine.recordReceived(
+      successEstimate: signal.successEstimate,
+      hadConfusion: signal.hasConfusion,
+    );
+    final pedSig = _pedagogyEngine.signal;
+
+    // Orb emotional overlay: challenge vs. confidence-rebuild via motivation
+    if (mounted) {
+      if (pedSig.isChallengeMode) {
+        _ui.motivation = MotivationState.confident;
+        _celebrationCtrl.forward(from: 0);
+      } else if (pedSig.isConfidenceRebuild) {
+        _ui.motivation = MotivationState.anxious;
+      } else {
+        _ui.motivation = _cogEngine.profile.motivationState;
+      }
+    }
+
+    // Auto-trigger visual mode on persistent confusion
+    if (pedSig.triggerVisualMode && mounted) {
+      _addSubtitle(
+        'Bunu görsel olarak gösterelim — tahta moduna geçebilirsin.',
+        isUser: false,
+      );
+    }
+
+    // Arm silence detector after AI finishes speaking
+    if (mounted) {
+      final checkInPhrases = _identitySvc.identity.phrases.checkIns;
+      _silenceDetector.arm(
+        onCheckIn: () {
+          if (!mounted) return;
+          final phrase = checkInPhrases.isNotEmpty
+              ? checkInPhrases[
+                  DateTime.now().millisecond % checkInPhrases.length]
+              : 'Hâlâ benimle misin?';
+          _addSubtitle(phrase, isUser: false);
+        },
+        onDeepSilence: () {
+          if (!mounted) return;
+          _addSubtitle(
+            'Devam etmeye hazır olduğunda yaz veya konuş — buradayım.',
+            isUser: false,
+          );
+        },
+      );
+    }
 
     if (topic != 'Genel') {
       _graphEngine.recordStudy(
@@ -953,6 +1021,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       ) +
       _attentionEngine.buildAttentionPromptBlock() +
       _examCampSvc.buildExamCampPromptBlock() +
+      _pedagogyEngine.buildPedagogyPrompt() +
       MemoryPromptLayer.build(
         shortTerm: _shortTermMem,
         workingMemory: _workingMem,
@@ -1552,24 +1621,52 @@ class _AOSState extends State<AIOperatingSystemScreen>
     return GestureDetector(
       onTap: _onOrbTap,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_breatheCtrl, _waveCtrl, _flashCtrl]),
+        animation: Listenable.merge(
+            [_breatheCtrl, _waveCtrl, _flashCtrl, _celebrationCtrl]),
         builder: (_, __) {
+          // Celebration: brief outer glow ring that fades out.
+          final celebV = _celebrationCtrl.value;
+          final celebOpacity =
+              celebV > 0 ? (1.0 - celebV).clamp(0.0, 0.7) : 0.0;
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              OrbRenderer(
-                state: _ui.orbState,
-                orbColor: orbColor,
-                breathe: _breatheCtrl.value,
-                wave: _waveCtrl.value,
-                flash: _flashCtrl.value,
-                amp: _ui.speechAmplitude,
-                size: size,
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Celebration radial burst
+                  if (celebOpacity > 0)
+                    Opacity(
+                      opacity: celebOpacity,
+                      child: Container(
+                        width: size * (1.0 + celebV * 0.5),
+                        height: size * (1.0 + celebV * 0.5),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              const Color(0xFF4ADE80).withValues(alpha: 0.35),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  OrbRenderer(
+                    state: _ui.orbState,
+                    orbColor: orbColor,
+                    breathe: _breatheCtrl.value,
+                    wave: _waveCtrl.value,
+                    flash: _flashCtrl.value,
+                    amp: _ui.speechAmplitude,
+                    size: size,
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               // State hint
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 300),
                 child: Text(
                   _orbHint(),
                   key: ValueKey(_ui.orbState),

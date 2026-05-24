@@ -105,6 +105,10 @@ class AmbientEngine {
   }
 
   /// Tick down transient pulses (call every ~200 ms from a timer).
+  /// Sum of active transient pulse values — used by the UI tick to detect
+  /// whether a repaint is actually needed.
+  double get currentIntensity => _successPulse + _urgencyPulse;
+
   void tick() {
     if (_successPulse > 0) _successPulse = (_successPulse - 0.04).clamp(0.0, 1.0);
     if (_urgencyPulse > 0 && _mode != AtmosphereMode.examMode) {
