@@ -25,16 +25,21 @@ import '../services/realtime_voice_engine.dart';
 import '../services/session_continuity_service.dart';
 import '../services/speech_service.dart';
 import '../services/storage_service.dart';
+import '../models/speech_tag.dart';
+import '../services/human_pacing_engine.dart';
+import '../services/streaming_teacher_session.dart';
 import '../services/teacher_engine.dart';
 import '../services/teacher_identity_service.dart';
+import '../services/teacher_voice_service.dart';
 import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
+import '../services/voice_command_detector.dart';
 import '../widgets/ambient_layer.dart';
 import '../widgets/lesson_board_page.dart';
+import '../widgets/live_subtitle_engine.dart';
 import '../widgets/orb_renderer.dart';
 import '../widgets/pdf_page_picker.dart';
 import '../widgets/session_recap_card.dart';
-import '../widgets/subtitle_overlay.dart';
 import '../widgets/visual_overlay.dart';
 
 // ── AIOperatingSystemScreen ───────────────────────────────────────────────────
@@ -73,12 +78,18 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final List<Map<String, dynamic>> _history = [];
 
   // ── Subtitles ─────────────────────────────────────────────────────────────
-  final List<SubtitleItem> _subtitles = [];
+  final List<LiveSubtitleItem> _subtitles = [];
+  late final LiveSubtitleController _subtitleCtrl;
   String _partialTranscript = '';
 
   // ── Voice engine (active when in voice mode) ──────────────────────────────
   RealtimeVoiceEngine? _voiceEngine;
   StreamSubscription<RealtimeEvent>? _voiceSub;
+
+  // ── Teacher voice + streaming session (non-voice modes) ───────────────────
+  TeacherVoiceService? _voiceSvc;
+  StreamingTeacherSession? _activeSession;
+  StreamSubscription<TeacherSessionEvent>? _sessionSub;
 
   // ── STT (for non-voice modes) ─────────────────────────────────────────────
   SpeechService? _speechSvc;
@@ -135,6 +146,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _particleCtrl = AnimationController(
         vsync: this, duration: const Duration(seconds: 60))
       ..repeat();
+    _subtitleCtrl = LiveSubtitleController(
+      onWordAdvanced: () { if (mounted) setState(() {}); },
+    );
     _initServices();
   }
 
@@ -145,6 +159,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _visualEngine = VisualReasoningEngine(_anthropic!);
       _boardRedrawSvc = BoardRedrawService(_anthropic!);
     }
+
+    _voiceSvc = await TeacherVoiceService.create();
 
     await _storage.init();
     _profileSvc = ProfileService(_storage);
@@ -216,11 +232,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
     _waveCtrl.dispose();
     _flashCtrl.dispose();
     _particleCtrl.dispose();
+    _subtitleCtrl.dispose();
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _anthropic?.dispose();
     _voiceSub?.cancel();
     _voiceEngine?.dispose();
+    _sessionSub?.cancel();
+    _activeSession?.dispose();
+    _voiceSvc?.dispose();
     _speechSvc?.dispose();
     super.dispose();
   }
@@ -361,8 +381,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
       onResult: (text, isFinal) {
         if (!mounted) return;
         if (isFinal && text.trim().isNotEmpty) {
-          _inputCtrl.text = text.trim();
-          _stopListening().then((_) => _sendText(text.trim()));
+          final transcript = text.trim();
+          _inputCtrl.text = transcript;
+          // Intercept voice commands before forwarding to Claude
+          final cmd = VoiceCommandDetector.detect(transcript);
+          if (cmd != null && VoiceCommandDetector.isStandaloneCommand(transcript)) {
+            _stopListening().then((_) => _handleVoiceCommand(cmd));
+          } else {
+            _stopListening().then((_) => _sendText(transcript));
+          }
         } else {
           setState(() => _partialTranscript = text);
         }
@@ -404,7 +431,6 @@ class _AOSState extends State<AIOperatingSystemScreen>
     if (_imageCtx != null && _visualEngine != null && text.isNotEmpty) {
       effectiveText = _visualEngine!.buildVisualPrompt(_imageCtx!, text);
       if (effectiveText != text) {
-        // Update last discussed element in session memory
         _imageCtx!.addDiscussion(text);
       }
     }
@@ -448,48 +474,50 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _ui.orbState = OrbVisualState.thinking;
     });
 
-    final accumulated = StringBuffer();
-    bool firstToken = true;
+    // ── StreamingTeacherSession ──────────────────────────────────────────────
+    final voice = _voiceSvc ?? await TeacherVoiceService.create();
+    final session = StreamingTeacherSession(
+      anthropic: _anthropic!,
+      voice: voice,
+      identity: _identitySvc.identity,
+      lessonMode: _ui.lessonMode,
+      emotionalSpeedModifier: _identitySvc.emotionalState.animSpeedModifier,
+    );
+    _activeSession = session;
+    _sessionSub = session.events.listen(_onSessionEvent);
 
     try {
-      await for (final token in _anthropic!.streamMessage(
-        _history,
+      await session.explain(
+        history: _history,
         systemPrompt: _buildSystemPrompt(topic: detectedTopic),
         maxTokens: _ui.lessonMode.maxTokens,
-      )) {
-        if (_streamCancelled || !mounted) break;
-
-        if (firstToken) {
-          setState(() => _ui.orbState = _orbStateForMode());
-          firstToken = false;
-        }
-
-        accumulated.write(token);
-        _streamBuf.write(token);
-        _sentenceFlushToSubtitles();
-      }
+      );
     } catch (_) {
       if (mounted) _addSubtitle('⚠️ Bağlantı hatası.', isUser: false);
     }
 
-    if (!mounted) return;
+    _sessionSub?.cancel();
+    _sessionSub = null;
+    _activeSession = null;
 
-    // Flush remaining
-    final rem = _streamBuf.toString().trim();
-    if (rem.isNotEmpty) _addSubtitle(_cleanText(rem), isUser: false);
-    _streamBuf.clear();
-
-    final fullReply = accumulated.toString();
-    if (fullReply.isNotEmpty) {
-      _history.add({'role': 'assistant', 'content': fullReply});
+    if (!mounted) {
+      session.dispose();
+      return;
     }
 
-    _teacherEngine.onAssistantResponse(fullReply);
+    final fullReply = session.fullReply;
+    final cleanReply = SpeechTagParser.strip(fullReply);
+    if (cleanReply.isNotEmpty) {
+      _history.add({'role': 'assistant', 'content': cleanReply});
+    }
+    session.dispose();
+
+    _teacherEngine.onAssistantResponse(cleanReply);
     final signal = _teacherEngine.lastSignal;
 
     final topic = detectedTopic ??
         TopicDetector.detect(
-            fullReply.substring(0, fullReply.length.clamp(0, 400))) ??
+            cleanReply.substring(0, cleanReply.length.clamp(0, 400))) ??
         'Genel';
 
     _profileSvc.recordInteraction(InteractionRecord(
@@ -498,7 +526,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       mode: _ui.lessonMode.name,
       usedHints: signal.hasConfusion,
       usedBoard: signal.shouldTriggerBoard ||
-          fullReply.contains('[TAHTA]'),
+          fullReply.contains('[board_sync]'),
       successEstimate: signal.successEstimate,
     ));
 
@@ -512,7 +540,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     await _cogEngine.processInteraction(
       userMessage: text,
-      assistantReply: fullReply,
+      assistantReply: cleanReply,
       usedBoard: signal.shouldTriggerBoard,
       usedHints: signal.hasConfusion,
     );
@@ -563,7 +591,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     // Extract homework marker from AI reply
     final hwItem =
-        _continuitySvc.extractHomework(fullReply, topic);
+        _continuitySvc.extractHomework(cleanReply, topic);
     if (hwItem != null) {
       await _journalSvc.addHomework(hwItem);
     }
@@ -575,15 +603,96 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _ui.orbState = OrbVisualState.idle;
     });
 
-    // Board trigger
-    if ((fullReply.contains('[TAHTA]') || signal.shouldTriggerBoard) &&
-        mounted) {
+    // Board trigger from signal (board_sync tag handled by session events)
+    if (signal.shouldTriggerBoard && mounted) {
       setState(() {
         _showBoardBadge = true;
         _boardQuestion = text;
-        _boardReply = fullReply;
+        _boardReply = cleanReply;
       });
     }
+  }
+
+  // ── Session event handler ──────────────────────────────────────────────────
+
+  void _onSessionEvent(TeacherSessionEvent event) {
+    if (!mounted) return;
+    switch (event) {
+      case TeacherStateChanged(:final state):
+        setState(() => _ui.orbState = _mapTeacherState(state));
+
+      case SentenceStarted(:final sentence):
+        final dur = Duration(
+          milliseconds: HumanPacingEngine.fromIdentity(_identitySvc.identity)
+              .estimatedDurationMs(sentence.displayText),
+        );
+        setState(() {
+          // Deactivate previous active item
+          if (_subtitles.isNotEmpty && _subtitles.first.isActive) {
+            _subtitles[0] = _subtitles[0].copyWith(isActive: false);
+          }
+          _subtitles.insert(
+            0,
+            LiveSubtitleItem(
+              text: sentence.displayText,
+              isUser: false,
+              tag: sentence.primaryTag,
+              isActive: true,
+            ),
+          );
+          if (_subtitles.length > 8) _subtitles.removeLast();
+        });
+        _subtitleCtrl.startReveal(sentence, dur);
+
+      case SentenceCompleted():
+        setState(() {
+          if (_subtitles.isNotEmpty) {
+            _subtitles[0] = _subtitles[0].copyWith(isActive: false);
+          }
+        });
+        _subtitleCtrl.revealAll();
+
+      case BoardSyncTriggered():
+        setState(() => _showBoardBadge = true);
+
+      case SessionInterrupted(:final contextualReply):
+        setState(() {
+          _isStreaming = false;
+          _ui.orbState = OrbVisualState.idle;
+        });
+        _addSubtitle(contextualReply, isUser: false);
+
+      case VoiceCommandApplied(:final command):
+        if (command == VoiceCommand.switchToBoard && _showBoardBadge) {
+          _openBoard();
+        }
+
+      case SessionCompleted():
+        break;
+    }
+  }
+
+  OrbVisualState _mapTeacherState(TeacherLiveState s) => switch (s) {
+        TeacherLiveState.idle        => OrbVisualState.idle,
+        TeacherLiveState.listening   => OrbVisualState.listening,
+        TeacherLiveState.thinking    => OrbVisualState.thinking,
+        TeacherLiveState.explaining  => OrbVisualState.speaking,
+        TeacherLiveState.drawing     => OrbVisualState.teaching,
+        TeacherLiveState.waiting     => OrbVisualState.listening,
+        TeacherLiveState.encouraging => OrbVisualState.speaking,
+        TeacherLiveState.correcting  => OrbVisualState.speaking,
+      };
+
+  void _handleVoiceCommand(VoiceCommand cmd) {
+    final session = _activeSession;
+    if (session != null) {
+      if (cmd.isInterruption) {
+        session.interrupt(reason: cmd);
+      } else {
+        session.applyVoiceCommand(cmd);
+      }
+    }
+    _addSubtitle(cmd.acknowledgement, isUser: false);
   }
 
   OrbVisualState _orbStateForMode() => switch (_ui.mode) {
@@ -594,7 +703,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
         _                   => OrbVisualState.speaking,
       };
 
-  // ── Sentence splitter ──────────────────────────────────────────────────────
+  // ── Sentence splitter (voice engine path only) ─────────────────────────────
 
   static final _sentenceEnd = RegExp(r'(?<=[.!?…])\s+(?=\p{L})', unicode: true);
 
@@ -620,7 +729,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
   void _addSubtitle(String text, {required bool isUser}) {
     if (text.isEmpty) return;
     setState(() {
-      _subtitles.insert(0, SubtitleItem(text: text, isUser: isUser));
+      _subtitles.insert(0, LiveSubtitleItem(text: text, isUser: isUser));
       if (_subtitles.length > 8) _subtitles.removeLast();
     });
   }
@@ -638,6 +747,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
           currentTopic: topic, mode: _ui.lessonMode, level: _level) +
       _cogEngine.buildProfilePrompt() +
       _flowEngine.buildFlowPrompt() +
+      StreamingTeacherSession.buildPacingPromptBlock(_identitySvc.identity) +
+      SpeechTagParser.systemPromptBlock +
       (_imageCtx?.buildContextBlock() ?? '');
 
   // ── Whiteboard ────────────────────────────────────────────────────────────
@@ -828,7 +939,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
         _voiceEngine?.pause();
       }
     } else {
-      if (_isStreaming) {
+      if (_isStreaming && _activeSession != null) {
+        _activeSession!.interrupt();
+      } else if (_isStreaming) {
         setState(() { _streamCancelled = true; _ui.orbState = OrbVisualState.idle; });
       } else {
         setState(() => _showInput = !_showInput);
@@ -887,7 +1000,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
                                 bottom: 10,
                                 left: 16,
                                 right: 16,
-                                child: SubtitleOverlay(items: _subtitles),
+                                child: LiveSubtitleEngine(
+                                  items: _subtitles,
+                                  activeWordIndex: _subtitleCtrl.wordIndex,
+                                ),
                               ),
                             ],
                           ),
