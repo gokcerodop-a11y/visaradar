@@ -21,33 +21,39 @@ class NotificationCoordinator {
   final SchengenAlertScheduler _schengen = const SchengenAlertScheduler();
   final ReminderScheduler      _reminder = const ReminderScheduler();
 
+  /// Crash-safe: every failure mode is logged and swallowed. Notifications
+  /// are a non-essential side effect — they must never bring down the app.
   Future<void> reschedule() async {
-    final prefs         = _ref.read(notificationSettingsProvider);
-    final trips         = _ref.read(tripsProvider);
-    final schengen      = _ref.read(schengenResultProvider);
-    final locationState = _ref.read(locationProvider);
+    try {
+      final prefs         = _ref.read(notificationSettingsProvider);
+      final trips         = _ref.read(tripsProvider);
+      final schengen      = _ref.read(schengenResultProvider);
+      final locationState = _ref.read(locationProvider);
 
-    // Check if a suggestion was dismissed within the last 24 hours.
-    final service = _ref.read(borderCrossingPersistenceServiceProvider);
-    final dismissedAt = service.loadDismissedAt();
-    final hasDismissedRecently = dismissedAt != null &&
-        DateTime.now().millisecondsSinceEpoch - dismissedAt <
-            const Duration(hours: 24).inMilliseconds;
+      // Check if a suggestion was dismissed within the last 24 hours.
+      final service = _ref.read(borderCrossingPersistenceServiceProvider);
+      final dismissedAt = service.loadDismissedAt();
+      final hasDismissedRecently = dismissedAt != null &&
+          DateTime.now().millisecondsSinceEpoch - dismissedAt <
+              const Duration(hours: 24).inMilliseconds;
 
-    await _schengen.schedule(
-      result: schengen,
-      prefs:  prefs,
-      trips:  trips,
-    );
+      await _schengen.schedule(
+        result: schengen,
+        prefs:  prefs,
+        trips:  trips,
+      );
 
-    await _reminder.schedule(
-      prefs:                          prefs,
-      trips:                          trips,
-      locationStatus:                 locationState.permission,
-      hasDismissedSuggestionRecently: hasDismissedRecently,
-    );
+      await _reminder.schedule(
+        prefs:                          prefs,
+        trips:                          trips,
+        locationStatus:                 locationState.permission,
+        hasDismissedSuggestionRecently: hasDismissedRecently,
+      );
 
-    debugPrint('[NotificationCoordinator] Notifications rescheduled.');
+      debugPrint('[NotificationCoordinator] Notifications rescheduled.');
+    } catch (e, st) {
+      debugPrint('[NotificationCoordinator] reschedule failed: $e\n$st');
+    }
   }
 }
 

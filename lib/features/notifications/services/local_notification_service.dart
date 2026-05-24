@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,92 +22,109 @@ class LocalNotificationService {
   // ── Init ─────────────────────────────────────────────────────────────────
 
   /// Call once in [main] before [runApp].
+  /// Crash-safe: any plugin failure is logged and swallowed so app startup
+  /// is never blocked by notifications being unavailable.
   static Future<void> initialize() async {
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    try {
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // Do NOT auto-request on iOS — we ask explicitly via [requestPermission].
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+      // Do NOT auto-request on iOS — we ask explicitly via [requestPermission].
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
 
-    await _plugin.initialize(
-      const InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
-      ),
-    );
+      await _plugin.initialize(
+        const InitializationSettings(
+          android: androidSettings,
+          iOS: iosSettings,
+        ),
+      );
 
-    // Create Android notification channels.
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+      // Create Android notification channels.
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
-    await android?.createNotificationChannel(const AndroidNotificationChannel(
-      _schengenChannelId,
-      _schengenChannelName,
-      description: 'Reminders about your Schengen day allowance.',
-      importance: Importance.high,
-    ));
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _schengenChannelId,
+        _schengenChannelName,
+        description: 'Reminders about your Schengen day allowance.',
+        importance: Importance.high,
+      ));
 
-    await android?.createNotificationChannel(const AndroidNotificationChannel(
-      _remindersChannelId,
-      _remindersChannelName,
-      description: 'General travel reminders and trip log nudges.',
-      importance: Importance.defaultImportance,
-    ));
+      await android?.createNotificationChannel(const AndroidNotificationChannel(
+        _remindersChannelId,
+        _remindersChannelName,
+        description: 'General travel reminders and trip log nudges.',
+        importance: Importance.defaultImportance,
+      ));
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] initialize failed: $e\n$st');
+    }
   }
 
   // ── Permissions ──────────────────────────────────────────────────────────
 
   /// Request notification permission (iOS + Android 13+).
-  /// Returns true if permission was granted.
+  /// Returns true if permission was granted. Returns false on any failure.
   static Future<bool> requestPermission() async {
-    final ios = _plugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-    if (ios != null) {
-      final granted =
-          await ios.requestPermissions(alert: true, badge: true, sound: true);
-      return granted ?? false;
-    }
+    try {
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final granted = await ios.requestPermissions(
+            alert: true, badge: true, sound: true);
+        return granted ?? false;
+      }
 
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      final granted = await android.requestNotificationsPermission();
-      return granted ?? false;
-    }
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        final granted = await android.requestNotificationsPermission();
+        return granted ?? false;
+      }
 
-    return true;
+      return true;
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] requestPermission failed: $e\n$st');
+      return false;
+    }
   }
 
   /// Returns true if notification permission is currently granted.
+  /// Returns false on any failure rather than throwing.
   static Future<bool> checkPermission() async {
-    final ios = _plugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-    if (ios != null) {
-      final perms = await ios.checkPermissions();
-      return perms?.isEnabled ?? false;
-    }
+    try {
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final perms = await ios.checkPermissions();
+        return perms?.isEnabled ?? false;
+      }
 
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      return await android.areNotificationsEnabled() ?? true;
-    }
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? true;
+      }
 
-    return true;
+      return true;
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] checkPermission failed: $e\n$st');
+      return false;
+    }
   }
 
   // ── Fire ─────────────────────────────────────────────────────────────────
 
-  /// Show a notification immediately.
+  /// Show a notification immediately. Crash-safe.
   static Future<void> showNow({
     required int id,
     required String title,
@@ -114,15 +132,19 @@ class LocalNotificationService {
     String channelId   = _schengenChannelId,
     String channelName = _schengenChannelName,
   }) async {
-    await _plugin.show(
-      id,
-      title,
-      body,
-      _details(channelId, channelName, high: id < 2000),
-    );
+    try {
+      await _plugin.show(
+        id,
+        title,
+        body,
+        _details(channelId, channelName, high: id < 2000),
+      );
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] showNow($id) failed: $e\n$st');
+    }
   }
 
-  /// Schedule a notification for [scheduledAt] (local time).
+  /// Schedule a notification for [scheduledAt] (local time). Crash-safe.
   ///
   /// If [scheduledAt] is in the past the notification is silently dropped
   /// (the caller is responsible for always passing a future time).
@@ -136,27 +158,43 @@ class LocalNotificationService {
   }) async {
     if (!scheduledAt.isAfter(DateTime.now())) return;
 
-    final tzDate = tz.TZDateTime.from(scheduledAt.toUtc(), tz.UTC);
+    try {
+      final tzDate = tz.TZDateTime.from(scheduledAt.toUtc(), tz.UTC);
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzDate,
-      _details(channelId, channelName, high: id < 2000),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tzDate,
+        _details(channelId, channelName, high: id < 2000),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] scheduleAt($id) failed: $e\n$st');
+    }
   }
 
   // ── Cancel ───────────────────────────────────────────────────────────────
 
-  /// Cancel a single notification by ID.
-  static Future<void> cancel(int id) => _plugin.cancel(id);
+  /// Cancel a single notification by ID. Crash-safe.
+  static Future<void> cancel(int id) async {
+    try {
+      await _plugin.cancel(id);
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] cancel($id) failed: $e\n$st');
+    }
+  }
 
-  /// Cancel every notification VisaRadar has scheduled.
-  static Future<void> cancelAll() => _plugin.cancelAll();
+  /// Cancel every notification VisaRadar has scheduled. Crash-safe.
+  static Future<void> cancelAll() async {
+    try {
+      await _plugin.cancelAll();
+    } catch (e, st) {
+      debugPrint('[LocalNotificationService] cancelAll failed: $e\n$st');
+    }
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 

@@ -52,13 +52,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
     routes: [
-      // Splash — redirect based on onboarding state
+      // Splash — redirect based on onboarding state.
+      // Crash-safe: any read failure or corrupt-state inconsistency falls
+      // back to onboarding so a bad SharedPreferences entry can never
+      // leave the user stuck on a white screen.
       GoRoute(
         path: AppRoutes.splash,
         redirect: (context, state) {
-          return profileService.isOnboardingDone
-              ? '/main/radar'
-              : AppRoutes.onboarding;
+          try {
+            if (!profileService.isOnboardingDone) {
+              return AppRoutes.onboarding;
+            }
+            // Onboarding is marked done — verify the profile actually loaded.
+            // An empty profile (nationality == null) with the done flag set
+            // means the stored profile JSON is missing or corrupt; reset and
+            // restart onboarding so the user has a clean recovery path.
+            final profile = profileService.load();
+            if (profile.nationality == null) {
+              debugPrint(
+                  '[Router] Onboarding marked done but profile is empty — '
+                  'resetting to onboarding for recovery.');
+              // Fire and forget — by the time the user lands on onboarding the
+              // flag will be cleared, and completing it sets a fresh profile.
+              profileService.resetOnboarding();
+              return AppRoutes.onboarding;
+            }
+            return '/main/radar';
+          } catch (e, st) {
+            debugPrint('[Router] redirect failed, falling back to onboarding: '
+                '$e\n$st');
+            return AppRoutes.onboarding;
+          }
         },
       ),
 
