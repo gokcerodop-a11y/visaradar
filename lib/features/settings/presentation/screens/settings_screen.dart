@@ -38,6 +38,17 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             const SizedBox(height: 8),
 
+            // ── Brand hero ────────────────────────────────────────────────
+            // Informational landing card — no Premium, no trial, no prices.
+            // Mirrors the onboarding Welcome page so the Settings screen has
+            // a clear visual anchor when users return to it.
+            _HeroCard(
+              onTap: () => context.push(
+                '${AppRoutes.legalText}?title=About+VisaRadar&type=about',
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // ── Account ──────────────────────────────────────────────────
             _SettingsSection(
               title: 'Account',
@@ -167,6 +178,134 @@ class SettingsScreen extends ConsumerWidget {
       default:
         return 'Automatic';
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Brand hero card — informational only (no commerce / no subscription claims)
+// ---------------------------------------------------------------------------
+
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.brandTeal.withAlpha(50)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.surfaceCard,
+              AppColors.brandTeal.withAlpha(10),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandTeal.withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.brandTeal.withAlpha(60)),
+                  ),
+                  child: const Icon(Icons.radar,
+                      color: AppColors.brandTeal, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'VisaRadar',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Know exactly where you stand.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    color: AppColors.textMuted, size: 20),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 14),
+            const _HeroFeatureRow(
+              icon: Icons.timer_outlined,
+              label: 'Accurate 90/180-day Schengen calculator',
+            ),
+            const SizedBox(height: 10),
+            const _HeroFeatureRow(
+              icon: Icons.notifications_outlined,
+              label: 'Alerts before your allowance runs out',
+            ),
+            const SizedBox(height: 10),
+            const _HeroFeatureRow(
+              icon: Icons.lock_outline,
+              label: 'Your data stays on your device only',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroFeatureRow extends StatelessWidget {
+  const _HeroFeatureRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: AppColors.brandTeal.withAlpha(20),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppColors.brandTeal, size: 14),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
