@@ -41,12 +41,18 @@ import '../services/voice_command_detector.dart';
 import '../services/work_analysis_service.dart';
 import '../services/error_handler.dart';
 import '../services/app_logger.dart';
+import '../services/achievement_service.dart';
 import '../services/demo_service.dart';
+import '../services/haptics_service.dart';
+import '../services/session_recovery_service.dart';
+import '../services/streak_service.dart';
 import '../services/study_analytics_service.dart';
 import '../services/pedagogy_engine.dart';
 import '../services/silence_detector.dart';
+import '../core/feature_flags.dart';
 import 'diagnostics_screen.dart';
 import 'progress_dashboard_screen.dart';
+import '../widgets/achievement_toast.dart';
 import '../services/short_term_memory.dart';
 import '../services/working_memory.dart';
 import '../services/long_term_memory.dart';
@@ -102,6 +108,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _analyticsSvc = StudyAnalyticsService();
   final _pedagogyEngine = PedagogyEngine();
   final _silenceDetector = SilenceDetector();
+  final _streakSvc = StreakService();
+  final _achievementSvc = AchievementService();
+  final _recoverySvc = SessionRecoveryService();
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -246,6 +255,12 @@ class _AOSState extends State<AIOperatingSystemScreen>
       await _longTermMem.init(_storage);
       await _episodicMem.init(_storage);
       await _semanticMem.init(_storage);
+      // Retention services
+      await _streakSvc.init(_storage);
+      await _achievementSvc.init(_storage);
+      if (FeatureFlags.sessionRecovery) {
+        await _recoverySvc.init(_storage);
+      }
     } catch (e) {
       AppLogger.error('Init', 'Storage setup error', e);
     }
@@ -286,6 +301,37 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _ambientEngine.setMode(autoMode);
 
       setState(() => _loading = false);
+
+      // ── Streak check-in + achievements ────────────────────────────────────
+      final isNewDay = await _streakSvc.checkIn(_storage);
+      if (isNewDay && mounted) {
+        final newlyUnlocked = _achievementSvc.checkAndUnlock(
+          solvedCount: _profileSvc.profile.solvedQuestionCount,
+          currentStreak: _streakSvc.currentStreak,
+          isComebackStreak: _streakSvc.isComebackStreak,
+          examCampCompleted: false,
+          storage: _storage,
+        );
+        for (final achievement in newlyUnlocked) {
+          if (mounted && FeatureFlags.achievementToasts) {
+            await Future.delayed(const Duration(milliseconds: 800));
+            if (mounted) AchievementToast.show(context, achievement);
+          }
+        }
+      }
+
+      // ── Session recovery prompt ───────────────────────────────────────────
+      if (FeatureFlags.sessionRecovery && _recoverySvc.hasRecovery && mounted) {
+        final snap = _recoverySvc.pendingRecovery!;
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted && snap.lastTopic != null) {
+          _addSubtitle(
+            'Geçen seferki "${snap.lastTopic}" konusuna kaldığın yerden devam edelim mi?',
+            isUser: false,
+          );
+          await _recoverySvc.consume(_storage);
+        }
+      }
 
       await Future.delayed(const Duration(milliseconds: 400));
       if (!mounted) return;
@@ -681,6 +727,40 @@ class _AOSState extends State<AIOperatingSystemScreen>
       successEstimate: signal.successEstimate,
     ));
     _profileSvc.incrementSolvedCount();
+
+    // ── Achievement check on each interaction ─────────────────────────────
+    if (FeatureFlags.achievementToasts && mounted) {
+      final newAchievements = _achievementSvc.checkAndUnlock(
+        solvedCount: _profileSvc.profile.solvedQuestionCount,
+        currentStreak: _streakSvc.currentStreak,
+        isComebackStreak: _streakSvc.isComebackStreak,
+        examCampCompleted: false,
+        storage: _storage,
+      );
+      for (final achievement in newAchievements) {
+        if (mounted) {
+          AchievementToast.show(context, achievement);
+          await HapticsService.success();
+        }
+      }
+    }
+
+    // ── Session recovery snapshot ─────────────────────────────────────────
+    if (FeatureFlags.sessionRecovery) {
+      _recoverySvc.save(
+        SessionSnapshot(
+          lastTopic: topic != 'Genel' ? topic : null,
+          historyLength: _history.length,
+          lastSubtitle: cleanReply.length > 80
+              ? cleanReply.substring(0, 80)
+              : cleanReply,
+          emotionalState: _identitySvc.emotionalState.name,
+          lessonMode: _ui.lessonMode.name,
+          savedAt: DateTime.now(),
+        ),
+        _storage,
+      );
+    }
 
     // ── Pedagogy engine: record outcome + compute visual signals ───────────
     _pedagogyEngine.recordReceived(
@@ -1297,7 +1377,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
   }
 
   void _openDiagnostics() {
-    HapticFeedback.mediumImpact();
+    HapticsService.medium();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
@@ -1596,6 +1676,11 @@ class _AOSState extends State<AIOperatingSystemScreen>
               ),
             ],
           ),
+          // Streak badge (shown when streak ≥ 1 and feature enabled)
+          if (FeatureFlags.streakBanner && _streakSvc.currentStreak >= 1) ...[
+            const SizedBox(width: 8),
+            _StreakBadge(streak: _streakSvc.currentStreak),
+          ],
           const Spacer(),
           // Atmosphere mode badge
           AtmosphereModeBadge(
@@ -2283,6 +2368,41 @@ class _OfflineBanner extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Streak badge ───────────────────────────────────────────────────────────────
+
+class _StreakBadge extends StatelessWidget {
+  final int streak;
+  const _StreakBadge({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A0E00),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+            color: const Color(0xFFFBBF24).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🔥', style: TextStyle(fontSize: 11)),
+          const SizedBox(width: 3),
+          Text(
+            '$streak',
+            style: const TextStyle(
+              color: Color(0xFFFBBF24),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

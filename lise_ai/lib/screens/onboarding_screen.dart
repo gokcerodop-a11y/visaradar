@@ -40,6 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   StudentLevel? _selectedLevel;
   String? _selectedExam;
   int _selectedStyle = -1; // -1 = nothing selected yet
+  int _selectedGoalMinutes = 30;
 
   // Orb pulse animation
   late AnimationController _orbController;
@@ -49,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late AnimationController _pageAnimController;
   late Animation<double> _pageAnim;
 
-  static const int _totalPages = 5;
+  static const int _totalPages = 6;
 
   static const List<String> _examOptions = [
     'TYT',
@@ -149,6 +150,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return _selectedExam != null;
       case 3:
         return _selectedStyle >= 0;
+      case 4:
+        return true;
       default:
         return true;
     }
@@ -166,6 +169,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       await widget.storage.saveSetting(
           'teacher_style', _selectedStyle.toString());
     }
+    await widget.storage.saveSetting('daily_goal_minutes', _selectedGoalMinutes.toString());
     widget.onComplete();
   }
 
@@ -195,7 +199,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       _buildLevelPage(),
                       _buildExamPage(),
                       _buildStylePage(),
-                      _buildPermissionsPage(),
+                      _buildStudyGoalPage(),   // page index 4
+                      _buildPermissionsPage(), // page index 5
                     ],
                   ),
                 ),
@@ -365,7 +370,136 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ── Page 5: Permissions & privacy ────────────────────────────────────────
+  // ── Page 5: Study goal ────────────────────────────────────────────────────
+
+  Widget _buildStudyGoalPage() {
+    const goals = [15, 30, 45, 60];
+    const goalLabels = {
+      15: 'Hızlı Başlangıç',
+      30: 'Dengeli Tempo',
+      45: 'Ciddi Hazırlık',
+      60: 'Tam Odak',
+    };
+    const goalDescs = {
+      15: '15 dakika / gün',
+      30: '30 dakika / gün',
+      45: '45 dakika / gün',
+      60: '1 saat / gün',
+    };
+
+    return _OnboardingPage(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          const _PageHeader(
+            title: 'Günlük hedefin ne?',
+            subtitle: 'Günlük çalışma hedefinle seni hatırlatmalı yapay öğretmenin sana eşlik edecek.',
+          ),
+          const SizedBox(height: 28),
+          ...goals.map((g) {
+            final selected = _selectedGoalMinutes == g;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedGoalMinutes = g),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: selected ? _kAccent.withOpacity(0.15) : _kCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected ? _kAccent : _kCardBorder,
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? _kAccent.withOpacity(0.22)
+                              : _kCardBorder.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$g',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: selected ? _kAccent : _kSubText,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              goalLabels[g]!,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: selected ? _kText : _kText.withOpacity(0.85),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              goalDescs[g]!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _kSubText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (selected)
+                        Icon(Icons.check_circle_rounded,
+                            color: _kAccent, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _kAccentDim,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: _kAccent, size: 14),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'İstediğin zaman ayarlardan değiştirebilirsin.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _kSubText,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Page 6: Permissions & privacy ────────────────────────────────────────
 
   Widget _buildPermissionsPage() {
     return _OnboardingPage(
@@ -374,8 +508,65 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
+            // Cinematic motivational header
+            Center(
+              child: Column(
+                children: [
+                  AnimatedBuilder(
+                    animation: _orbPulse,
+                    builder: (_, child) => Transform.scale(
+                      scale: 0.9 + _orbPulse.value * 0.1,
+                      child: child,
+                    ),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const RadialGradient(
+                          colors: [Color(0xFF9D8FFB), Color(0xFF3A2E8F)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _kAccent.withOpacity(0.4),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text('✦',
+                            style: TextStyle(
+                                fontSize: 28, color: Colors.white)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Harika seçimler!',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: _kText,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Yapay zeka öğretmenin hazır.\nSadece bir adım kaldı.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: _kSubText,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
             _PageHeader(
-              title: 'Neredeyse hazırsın!',
+              title: 'Son adım',
               subtitle: 'LiseAI\'ın tüm özelliklerinden faydalanmak için.',
             ),
             const SizedBox(height: 24),
