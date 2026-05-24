@@ -8,9 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import '../models/image_context_model.dart';
 import '../models/lesson_mode.dart';
 import '../models/student_profile.dart';
 import '../services/anthropic_service.dart';
+import '../services/board_redraw_service.dart';
 import '../services/cognitive_profile_engine.dart';
 import '../services/learning_graph_engine.dart';
 import '../services/lesson_flow_engine.dart';
@@ -21,11 +23,13 @@ import '../services/speech_service.dart';
 import '../services/storage_service.dart';
 import '../services/teacher_engine.dart';
 import '../services/ui_state_engine.dart';
+import '../services/visual_reasoning_engine.dart';
 import '../widgets/ambient_layer.dart';
 import '../widgets/lesson_board_page.dart';
 import '../widgets/orb_renderer.dart';
 import '../widgets/pdf_page_picker.dart';
 import '../widgets/subtitle_overlay.dart';
+import '../widgets/visual_overlay.dart';
 
 // ── AIOperatingSystemScreen ───────────────────────────────────────────────────
 
@@ -47,6 +51,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _cogEngine = CognitiveProfileEngine();
   final _flowEngine = StructuredLessonFlowEngine();
   AnthropicService? _anthropic;
+  VisualReasoningEngine? _visualEngine;
+  BoardRedrawService? _boardRedrawSvc;
 
   // ── UI state engine ───────────────────────────────────────────────────────
   final _ui = UIStateEngine();
@@ -85,6 +91,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
   Uint8List? _pendingImage;
   bool _isDragging = false;
 
+  // ── Visual reasoning session state ────────────────────────────────────────
+  ImageContext? _imageCtx;
+  bool _isAnalyzingImage = false;
+
   // ── Whiteboard ────────────────────────────────────────────────────────────
   String? _boardQuestion;
   String? _boardReply;
@@ -120,6 +130,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
     final apiKey = dotenv.env['ANTHROPIC_API_KEY'] ?? '';
     if (apiKey.isNotEmpty && apiKey != 'your_api_key_here') {
       _anthropic = AnthropicService(apiKey);
+      _visualEngine = VisualReasoningEngine(_anthropic!);
+      _boardRedrawSvc = BoardRedrawService(_anthropic!);
     }
 
     await _storage.init();
@@ -351,21 +363,32 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     _addSubtitle(text.isNotEmpty ? text : '(Dosya)', isUser: true);
 
+    // Visual reference detection: enrich text when student refers to image
+    String effectiveText = text;
+    if (_imageCtx != null && _visualEngine != null && text.isNotEmpty) {
+      effectiveText = _visualEngine!.buildVisualPrompt(_imageCtx!, text);
+      if (effectiveText != text) {
+        // Update last discussed element in session memory
+        _imageCtx!.addDiscussion(text);
+      }
+    }
+
     // Build history entry
     if (_pendingPdfPages.isNotEmpty) {
       _history.add({
         'role': 'user',
         'content': AnthropicService.buildMultiImageContent(
-            _pendingPdfPages, text: text),
+            _pendingPdfPages, text: effectiveText),
       });
     } else if (_pendingImage != null) {
+      final mime = _imageCtx?.mimeType ?? 'image/jpeg';
       _history.add({
         'role': 'user',
         'content': AnthropicService.buildImageContent(
-            _pendingImage!, 'image/jpeg', text: text),
+            _pendingImage!, mime, text: effectiveText),
       });
     } else {
-      _history.add({'role': 'user', 'content': text});
+      _history.add({'role': 'user', 'content': effectiveText});
     }
 
     setState(() {
@@ -534,7 +557,8 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _graphEngine.buildContextPrompt(
           currentTopic: topic, mode: _ui.lessonMode, level: _level) +
       _cogEngine.buildProfilePrompt() +
-      _flowEngine.buildFlowPrompt();
+      _flowEngine.buildFlowPrompt() +
+      (_imageCtx?.buildContextBlock() ?? '');
 
   // ── Whiteboard ────────────────────────────────────────────────────────────
 
@@ -597,11 +621,14 @@ class _AOSState extends State<AIOperatingSystemScreen>
     final result = await FilePicker.platform.pickFiles(
         type: FileType.image, withData: true);
     if (result != null && result.files.single.bytes != null) {
+      final bytes = result.files.single.bytes!;
+      final mime = _mimeFromPath(result.files.single.path ?? '');
       setState(() {
-        _pendingImage = result.files.single.bytes;
+        _pendingImage = bytes;
         _pendingPdfPages = [];
         _showInput = true;
       });
+      await _analyzeImage(bytes, mime);
     }
   }
 
@@ -612,17 +639,101 @@ class _AOSState extends State<AIOperatingSystemScreen>
           p.endsWith('.jpeg') ||
           p.endsWith('.png') ||
           p.endsWith('.webp')) {
-        final bytes = await file.readAsBytes();
+        final bytes = Uint8List.fromList(await file.readAsBytes());
+        final mime = _mimeFromPath(p);
         setState(() {
-          _pendingImage = Uint8List.fromList(bytes);
+          _pendingImage = bytes;
           _pendingPdfPages = [];
           _isDragging = false;
           _showInput = true;
         });
+        await _analyzeImage(bytes, mime);
         return;
       }
     }
     setState(() => _isDragging = false);
+  }
+
+  static String _mimeFromPath(String path) {
+    if (path.endsWith('.png')) return 'image/png';
+    if (path.endsWith('.webp')) return 'image/webp';
+    if (path.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
+
+  // ── Visual analysis pipeline ───────────────────────────────────────────────
+
+  Future<void> _analyzeImage(Uint8List bytes, String mime) async {
+    if (_visualEngine == null) return;
+
+    setState(() {
+      _isAnalyzingImage = true;
+      _imageCtx = ImageContext(imageBytes: bytes, mimeType: mime);
+    });
+
+    final result = await _visualEngine!.analyzeImage(bytes, mime);
+
+    if (!mounted) return;
+    setState(() {
+      _isAnalyzingImage = false;
+      _imageCtx!.analysisResult = result;
+    });
+
+    // Auto-switch mode based on visual content type
+    _autoSwitchModeForVisual(result);
+
+    // Announce to student
+    final hint = result.topicHint ?? result.subject.name;
+    _addSubtitle(
+      '${result.modeLabel}: $hint tespit edildi. '
+      '"${result.teachingSuggestion ?? "Görseli inceliyorum…"}"',
+      isUser: false,
+    );
+  }
+
+  void _autoSwitchModeForVisual(ImageAnalysisResult result) {
+    final newMode = switch (result.suggestedMode) {
+      VisualMode.solutionMode  => UIMode.soruCoz,
+      VisualMode.teachingMode  => UIMode.ogretmen,
+      VisualMode.errorAnalysis => UIMode.ogretmen, // stay in teacher mode, badge shows error
+    };
+    if (_ui.mode != newMode && !_ui.mode.isVoiceMode) {
+      _setMode(newMode);
+    }
+  }
+
+  // ── Visual board redraw ───────────────────────────────────────────────────
+
+  Future<void> _openVisualBoard() async {
+    final ctx = _imageCtx;
+    if (ctx == null || _boardRedrawSvc == null) {
+      await _openBoard();
+      return;
+    }
+
+    setState(() => _ui.orbState = OrbVisualState.thinking);
+    final lesson = await _boardRedrawSvc!.generateFromImage(ctx);
+    if (!mounted) return;
+    setState(() => _ui.orbState = OrbVisualState.idle);
+
+    if (lesson != null && lesson.steps.isNotEmpty) {
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => LessonBoardPage(lesson: lesson),
+          transitionsBuilder: (_, anim, __, child) => SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+          transitionDuration: const Duration(milliseconds: 480),
+        ),
+      );
+    } else {
+      await _openBoard();
+    }
   }
 
   // ── Orb interaction ───────────────────────────────────────────────────────
@@ -702,11 +813,24 @@ class _AOSState extends State<AIOperatingSystemScreen>
                           ),
                         ),
 
+                        // Visual analyzing indicator
+                        if (_isAnalyzingImage)
+                          const VisualAnalyzingBadge(),
+
+                        // Visual mode badge (auto-detected from image)
+                        if (!_isAnalyzingImage &&
+                            _imageCtx?.analysisResult != null)
+                          VisualModeBadge(
+                            result: _imageCtx!.analysisResult!,
+                            onDismiss: () =>
+                                setState(() => _imageCtx = null),
+                          ),
+
                         // Board badge
                         if (_showBoardBadge) _buildBoardBadge(),
 
-                        // Pending attachments
-                        if (_pendingPdfPages.isNotEmpty || _pendingImage != null)
+                        // Pending attachments (PDF only — images handled by overlay)
+                        if (_pendingPdfPages.isNotEmpty)
                           _buildAttachmentPreview(),
 
                         // Text input (collapsible)
@@ -722,6 +846,28 @@ class _AOSState extends State<AIOperatingSystemScreen>
                       ],
                     ),
                   ),
+
+                  // ── Visual overlay (draggable image thumbnail) ───────────
+                  if (_imageCtx != null && _imageCtx!.isVisible)
+                    VisualOverlay(
+                      ctx: _imageCtx!,
+                      onDismiss: () => setState(() {
+                        _imageCtx!.isVisible = false;
+                      }),
+                      onOpenBoard: _openVisualBoard,
+                      onCompareModeChanged: (v) => setState(() {
+                        _imageCtx!.isCompareMode = v;
+                        if (v) {
+                          _imageCtx!.aiCorrectedDescription =
+                              _imageCtx!.analysisResult?.teachingSuggestion ??
+                                  'AI analizi hazırlanıyor…';
+                        }
+                      }),
+                      onSpotlightModeChanged: (v) =>
+                          setState(() => _imageCtx!.isSpotlightMode = v),
+                      onPositionChanged: (pos) =>
+                          _imageCtx!.overlayPosition = pos,
+                    ),
 
                   // ── Drag overlay ─────────────────────────────────────────
                   if (_isDragging)
@@ -895,7 +1041,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: GestureDetector(
-        onTap: _openBoard,
+        onTap: _imageCtx != null ? _openVisualBoard : _openBoard,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
@@ -938,14 +1084,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
   // ── Attachment preview ────────────────────────────────────────────────────
 
   Widget _buildAttachmentPreview() {
-    final label = _pendingPdfPages.isNotEmpty
-        ? '${_pendingPdfName ?? "PDF"} · ${_pendingPdfPages.length} sayfa'
-        : 'Görsel hazır';
-    final icon = _pendingPdfPages.isNotEmpty
-        ? Icons.picture_as_pdf_rounded
-        : Icons.image_rounded;
-    final thumb = _pendingImage ??
-        (_pendingPdfPages.isNotEmpty ? _pendingPdfPages.first : null);
+    final label = '${_pendingPdfName ?? "PDF"} · ${_pendingPdfPages.length} sayfa';
+    const icon = Icons.picture_as_pdf_rounded;
+    final thumb = _pendingPdfPages.isNotEmpty ? _pendingPdfPages.first : null;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -975,7 +1116,6 @@ class _AOSState extends State<AIOperatingSystemScreen>
             GestureDetector(
               onTap: () => setState(() {
                 _pendingPdfPages = [];
-                _pendingImage = null;
                 _pendingPdfName = null;
               }),
               child: const Icon(Icons.close_rounded,
@@ -1120,11 +1260,21 @@ class _AOSState extends State<AIOperatingSystemScreen>
             onTap: _pickPdf,
             tooltip: 'PDF',
           ),
-          // Image
+          // Image (active when image context loaded)
           _BottomBtn(
-            icon: Icons.image_outlined,
-            onTap: _pickImage,
-            tooltip: 'Görsel',
+            icon: _imageCtx != null
+                ? Icons.image_rounded
+                : Icons.image_outlined,
+            active: _imageCtx != null && _imageCtx!.isVisible,
+            color: _imageCtx?.analysisResult?.modeColor,
+            onTap: () {
+              if (_imageCtx != null) {
+                setState(() => _imageCtx!.isVisible = !_imageCtx!.isVisible);
+              } else {
+                _pickImage();
+              }
+            },
+            tooltip: _imageCtx != null ? 'Görseli gizle/göster' : 'Görsel yükle',
           ),
         ],
       ),

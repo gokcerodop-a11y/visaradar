@@ -322,6 +322,49 @@ KURALLAR:
 - SADECE JSON döndür
 ''';
 
+  /// Exposed for BoardRedrawService: prompt fragment for lesson JSON format.
+  static const String lessonJsonInstructions =
+      'Sonucu adım adım Canlı Ders JSON\'u olarak oluştur. '
+      'SADECE geçerli JSON döndür — açıklama veya markdown kullanma.';
+
+  /// Generate a lesson timeline from an already-built history (supports vision).
+  Future<LessonTimeline?> generateLessonFromHistory(
+      List<Map<String, dynamic>> history) async {
+    final response = await _client.post(
+      Uri.parse(_baseUrl),
+      headers: {
+        'x-api-key': _apiKey,
+        'anthropic-version': _apiVersion,
+        'content-type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': _model,
+        'max_tokens': 2000,
+        'system': _lessonSystemPrompt,
+        'messages': history
+            .map((e) => {'role': e['role'], 'content': e['content']})
+            .toList(),
+      }),
+    );
+
+    if (response.statusCode != 200) return null;
+
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final content = (body['content'] as List).first as Map<String, dynamic>;
+      var raw = (content['text'] as String).trim();
+      if (raw.startsWith('```')) {
+        raw = raw.replaceFirst(RegExp(r'^```[a-z]*\n?'), '');
+        raw = raw.replaceFirst(RegExp(r'\n?```$'), '');
+      }
+      final json = jsonDecode(raw.trim()) as Map<String, dynamic>;
+      return LessonTimeline.fromJson(json);
+    } catch (e) {
+      debugPrint('[Lesson] generateLessonFromHistory parse error: $e');
+      return null;
+    }
+  }
+
   /// Generates a synchronized lesson timeline with steps and whiteboard elements.
   Future<LessonTimeline?> generateLesson(
       String userQuestion, String assistantReply) async {
