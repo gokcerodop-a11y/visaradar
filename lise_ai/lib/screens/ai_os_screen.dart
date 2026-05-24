@@ -1223,6 +1223,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       onDragDone: _handleDrop,
       child: Scaffold(
         backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: true,
         body: _loading
             ? _buildLoading()
             : Stack(

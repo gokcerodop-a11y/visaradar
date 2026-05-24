@@ -71,7 +71,7 @@ class LessonTransitionService {
     TransitionType.examWarning: [
       'Bu ÖSYM\'de çok çıkıyor — dikkat.',
       'TYT\'de bu tip soru sık geliyor.',
-      'Sınav garantisi — bu kısmı ezberle.',
+      'Sınavlarda sık çıkan konu — bu kısmı iyi çalış.',
       'Geçen yıl YKS\'de tam bu çıktı.',
     ],
     TransitionType.deepDive: [

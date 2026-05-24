@@ -230,7 +230,7 @@ class TeacherIdentity {
       checkIns: ['Ayak uyduruyor musun?', 'Hızlı gidiyorum, dur bir an'],
       encouragements: ['Bravo! Tam istediğim bu', 'Şampiyonlar böyle düşünür'],
       corrections: ['Yanlış değil, sadece eksik', 'Rakibin de aynı hatayı yapıyor — fark bu'],
-      examTips: ['YKS\'de bu soruyu 45 saniyede çözmen lazım', 'Net garantisi bu formül'],
+      examTips: ['YKS\'de bu soruyu 45 saniyede çözmeye çalış', 'Bu formül sınavlarda sık çıkar'],
     ),
   );
 
@@ -296,7 +296,7 @@ class TeacherIdentity {
       checkIns: ['Ha? Oturdu mu bu?', 'Tamam mı ya?'],
       encouragements: ['Vay be, iyi yakaladın!', 'Benden daha iyi yapıyorsun'],
       corrections: ['Eyvah, küçük bir şey kaçtı', 'Klasik tuzak — ben de düşerdim'],
-      examTips: ['ÖSYM bu soruyu hep sorar, garanti', 'Bu formülü tatovela yapsan iyi olur'],
+      examTips: ['ÖSYM bu soruyu sık sorar', 'Bu formülü çok iyi öğren'],
     ),
   );
 
@@ -318,7 +318,7 @@ class TeacherIdentity {
       checkIns: ['Doğru mu?', 'Emin misin?'],
       encouragements: ['Kabul edilebilir', 'İlerleme var'],
       corrections: ['Hatalı. Tekrar.', 'Bu kabul edilemez — düzelt'],
-      examTips: ['Sınavda bu hata öldürür', 'Net garantisi bu adıma bağlı'],
+      examTips: ['Sınavda bu hatadan kaçın', 'Bu adım doğruysa puan alırsın'],
     ),
   );
 }

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Lise Ai</string>
+	<string>Lise AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sesli soru sormak ve AI öğretmenle sesli konuşmak için mikrofon erişimi gerekiyor.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Söylediklerinizi metne çevirerek AI öğretmeninize iletmek için konuşma tanıma gerekiyor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ödev, soru veya sınav fotoğrafı yüklemek için fotoğraf kütüphanesi erişimi gerekiyor.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ders notlarını fotoğraf olarak kaydetmek için fotoğraf kütüphanesi erişimi gerekiyor.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ödev veya sınav sayfasını fotoğraflamak için kamera erişimi gerekiyor.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
