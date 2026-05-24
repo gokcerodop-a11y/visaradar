@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/country_info/presentation/screens/country_info_screen.dart';
 import '../../features/diagnostics/presentation/screens/diagnostics_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
-import '../../features/profile/presentation/providers/profile_provider.dart';
 import '../../features/radar/presentation/screens/radar_screen.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/settings/presentation/screens/edit_profile_screen.dart';
 import '../../features/settings/presentation/screens/language_settings_screen.dart';
 import '../../features/settings/presentation/screens/legal_screen.dart';
@@ -46,44 +46,17 @@ abstract class AppRoutes {
 // ---------------------------------------------------------------------------
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final profileService = ref.read(profileServiceProvider);
-
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
     routes: [
-      // Splash — redirect based on onboarding state.
-      // Crash-safe: any read failure or corrupt-state inconsistency falls
-      // back to onboarding so a bad SharedPreferences entry can never
-      // leave the user stuck on a white screen.
+      // Splash — animated bilingual welcome shown on every cold launch.
+      // The splash screen itself reads profile state and navigates onward,
+      // so corrupt-state recovery lives in SplashScreen._route (mirrors
+      // the previous synchronous redirect logic).
       GoRoute(
         path: AppRoutes.splash,
-        redirect: (context, state) {
-          try {
-            if (!profileService.isOnboardingDone) {
-              return AppRoutes.onboarding;
-            }
-            // Onboarding is marked done — verify the profile actually loaded.
-            // An empty profile (nationality == null) with the done flag set
-            // means the stored profile JSON is missing or corrupt; reset and
-            // restart onboarding so the user has a clean recovery path.
-            final profile = profileService.load();
-            if (profile.nationality == null) {
-              debugPrint(
-                  '[Router] Onboarding marked done but profile is empty — '
-                  'resetting to onboarding for recovery.');
-              // Fire and forget — by the time the user lands on onboarding the
-              // flag will be cleared, and completing it sets a fresh profile.
-              profileService.resetOnboarding();
-              return AppRoutes.onboarding;
-            }
-            return '/main/radar';
-          } catch (e, st) {
-            debugPrint('[Router] redirect failed, falling back to onboarding: '
-                '$e\n$st');
-            return AppRoutes.onboarding;
-          }
-        },
+        builder: (context, state) => const SplashScreen(),
       ),
 
       // Onboarding

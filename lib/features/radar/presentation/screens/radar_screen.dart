@@ -60,8 +60,6 @@ class RadarScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                   ],
                   const _TravelSummaryCard(),
-                  const SizedBox(height: 12),
-                  const _TripCtaBlock(),
                 ]),
               ),
             ),
@@ -686,92 +684,6 @@ class _RowDivider extends StatelessWidget {
         color: AppColors.divider,
         height: 1,
         thickness: 1,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Trip CTA block — two action buttons
-// ---------------------------------------------------------------------------
-
-class _TripCtaBlock extends ConsumerWidget {
-  const _TripCtaBlock();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasTrips = ref.watch(tripsProvider).isNotEmpty;
-    final isTr = ref.watch(isTurkishProvider);
-
-    return Row(
-      children: [
-        Expanded(
-          child: _CtaButton(
-            icon: Icons.add_rounded,
-            label: hasTrips
-                ? (isTr ? 'Seyahat Ekle' : 'Add Trip')
-                : (isTr ? 'İlk Seyahati Ekle' : 'Log First Trip'),
-            isPrimary: true,
-            onTap: () => context.push('/trips/add'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _CtaButton(
-            icon: Icons.list_alt_outlined,
-            label: isTr ? 'Seyahatlerim' : 'My Trips',
-            isPrimary: false,
-            onTap: () => context.go('/main/trips'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CtaButton extends StatelessWidget {
-  const _CtaButton({
-    required this.icon,
-    required this.label,
-    required this.isPrimary,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isPrimary;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fgColor =
-        isPrimary ? AppColors.brandNavy : AppColors.textSecondary;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isPrimary ? AppColors.brandTeal : AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(12),
-          border: isPrimary
-              ? null
-              : Border.all(color: AppColors.divider, width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: fgColor),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: AppTextStyles.labelLarge.copyWith(
-                color: fgColor,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
