@@ -3,7 +3,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'VisaRadar';
-  static const String appVersion = '0.1.0';
+  static const String appVersion = '1.0.0';
 
   // Legal URLs — set to non-empty strings once the pages are live.
   // When empty, the app falls back to showing the in-app legal screen.
