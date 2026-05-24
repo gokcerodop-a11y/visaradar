@@ -41,9 +41,11 @@ import '../services/voice_command_detector.dart';
 import '../services/work_analysis_service.dart';
 import '../services/error_handler.dart';
 import '../services/app_logger.dart';
+import '../services/demo_service.dart';
 import '../services/study_analytics_service.dart';
 import '../services/pedagogy_engine.dart';
 import '../services/silence_detector.dart';
+import 'diagnostics_screen.dart';
 import 'progress_dashboard_screen.dart';
 import '../services/short_term_memory.dart';
 import '../services/working_memory.dart';
@@ -516,7 +518,36 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _voiceEngine?.sendText(text);
       return;
     }
-    if (_anthropic == null || _isStreaming) return;
+    if (_isStreaming) return;
+
+    // ── Demo mode: no API key — stream a hardcoded reply token by token ──────
+    if (_anthropic == null) {
+      if (text.isEmpty) return;
+      _pedagogyEngine.recordSent();
+      _silenceDetector.disarm();
+      _addSubtitle(text, isUser: true);
+      setState(() { _isStreaming = true; _ui.orbState = OrbVisualState.thinking; });
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      setState(() => _ui.orbState = OrbVisualState.speaking);
+      final reply = DemoService.getReplyFor(text);
+      // Stream token by token (~20ms per word) to exercise subtitle engine
+      final words = reply.split(' ');
+      final buf = StringBuffer();
+      for (final word in words) {
+        buf.write('$word ');
+        if (mounted) _addSubtitle(buf.toString().trim(), isUser: false);
+        await Future<void>.delayed(const Duration(milliseconds: 18));
+        if (!mounted) return;
+      }
+      _history.add({'role': 'user', 'content': text});
+      _history.add({'role': 'assistant', 'content': reply});
+      _pedagogyEngine.recordReceived(successEstimate: 0.75, hadConfusion: false);
+      if (mounted) {
+        setState(() { _isStreaming = false; _ui.orbState = OrbVisualState.idle; });
+      }
+      return;
+    }
 
     // ── Pedagogy + silence: record send, cancel idle timers ────────────────
     _pedagogyEngine.recordSent();
@@ -1265,6 +1296,14 @@ class _AOSState extends State<AIOperatingSystemScreen>
     );
   }
 
+  void _openDiagnostics() {
+    HapticFeedback.mediumImpact();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+    );
+  }
+
   Future<void> _openSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -1388,6 +1427,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
                             ],
                           ),
                         ),
+
+                        // Demo scenario cards (shown when no API key)
+                        if (_anthropic == null && !_isStreaming)
+                          _buildDemoScenarios(),
 
                         // Session recap card
                         if (_showRecapCard)
@@ -1542,12 +1585,15 @@ class _AOSState extends State<AIOperatingSystemScreen>
                 ),
               ),
               const SizedBox(width: 6),
-              const Text('Lise AI',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3)),
+              GestureDetector(
+                onLongPress: _openDiagnostics,
+                child: const Text('Lise AI',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3)),
+              ),
             ],
           ),
           const Spacer(),
@@ -1726,6 +1772,82 @@ class _AOSState extends State<AIOperatingSystemScreen>
           ),
         ],
       ),
+    );
+  }
+
+  // ── Demo scenarios ────────────────────────────────────────────────────────
+
+  Widget _buildDemoScenarios() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Text(
+            'Demo Senaryoları',
+            style: TextStyle(
+                color: Color(0xFF4B5563),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5),
+          ),
+        ),
+        SizedBox(
+          height: 72,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: DemoService.scenarios.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final s = DemoService.scenarios[i];
+              return GestureDetector(
+                onTap: () => _sendText(s.studentMessage),
+                child: Container(
+                  width: 120,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0A12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFF7C6BF8).withValues(alpha: 0.22)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(s.icon,
+                          style: const TextStyle(fontSize: 18)),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.title,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            s.subtitle,
+                            style: const TextStyle(
+                                color: Color(0xFF4B5563), fontSize: 9),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
     );
   }
 
