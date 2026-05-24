@@ -21,6 +21,7 @@ import 'services/realtime_voice_engine.dart';
 import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
 import 'services/storage_service.dart';
+import 'screens/ai_os_screen.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
@@ -60,7 +61,7 @@ class LiseAIApp extends StatelessWidget {
         ),
         drawerTheme: const DrawerThemeData(backgroundColor: Color(0xFF111111)),
       ),
-      home: const ChatScreen(),
+      home: const AIOperatingSystemScreen(),
     );
   }
 }
