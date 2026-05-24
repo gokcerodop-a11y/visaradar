@@ -8,26 +8,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import '../models/cognitive_profile.dart';
 import '../models/image_context_model.dart';
 import '../models/lesson_mode.dart';
 import '../models/student_profile.dart';
+import '../models/teacher_identity.dart';
 import '../services/anthropic_service.dart';
 import '../services/board_redraw_service.dart';
 import '../services/cognitive_profile_engine.dart';
 import '../services/learning_graph_engine.dart';
+import '../services/learning_journal_service.dart';
 import '../services/lesson_flow_engine.dart';
 import '../services/pdf_service.dart';
 import '../services/profile_service.dart';
 import '../services/realtime_voice_engine.dart';
+import '../services/session_continuity_service.dart';
 import '../services/speech_service.dart';
 import '../services/storage_service.dart';
 import '../services/teacher_engine.dart';
+import '../services/teacher_identity_service.dart';
 import '../services/ui_state_engine.dart';
 import '../services/visual_reasoning_engine.dart';
 import '../widgets/ambient_layer.dart';
 import '../widgets/lesson_board_page.dart';
 import '../widgets/orb_renderer.dart';
 import '../widgets/pdf_page_picker.dart';
+import '../widgets/session_recap_card.dart';
 import '../widgets/subtitle_overlay.dart';
 import '../widgets/visual_overlay.dart';
 
@@ -50,6 +56,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
   final _graphEngine = LearningGraphEngine();
   final _cogEngine = CognitiveProfileEngine();
   final _flowEngine = StructuredLessonFlowEngine();
+  final _identitySvc = TeacherIdentityService();
+  final _continuitySvc = SessionContinuityService();
+  final _journalSvc = LearningJournalService();
   AnthropicService? _anthropic;
   VisualReasoningEngine? _visualEngine;
   BoardRedrawService? _boardRedrawSvc;
@@ -94,6 +103,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
   // ── Visual reasoning session state ────────────────────────────────────────
   ImageContext? _imageCtx;
   bool _isAnalyzingImage = false;
+
+  // ── Session recap card ────────────────────────────────────────────────────
+  bool _showRecapCard = false;
 
   // ── Whiteboard ────────────────────────────────────────────────────────────
   String? _boardQuestion;
@@ -140,6 +152,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
     await _graphEngine.init(_storage);
     await _cogEngine.init(_storage);
     await _flowEngine.init(_storage);
+    await _identitySvc.init(_storage);
+    await _continuitySvc.init(_storage);
+    await _journalSvc.init(_storage);
 
     // Restore saved mode/level
     final savedMode = _storage.loadSetting('ui_mode');
@@ -166,10 +181,31 @@ class _AOSState extends State<AIOperatingSystemScreen>
     if (mounted) {
       setState(() => _loading = false);
 
-      // Opening greeting subtitle
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        _addSubtitle('Merhaba! Bugün ne öğrenmek istiyorsun?', isUser: false);
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+
+      // Show return greeting or recap card
+      final returnGreeting =
+          _continuitySvc.getReturnGreeting(_identitySvc.identity);
+
+      if (_continuitySvc.data.hasReturnContent && !mounted) return;
+
+      if (returnGreeting != null) {
+        setState(() => _showRecapCard = true);
+        _addSubtitle(returnGreeting, isUser: false);
+      } else {
+        final teacher = _identitySvc.identity;
+        _addSubtitle(
+          '${teacher.phrases.openingHooks.first}! Bugün ne öğrenmek istiyorsun?',
+          isUser: false,
+        );
+      }
+
+      // Check pending homework
+      final hwCheck = _journalSvc.buildHomeworkCheckPrompt(_identitySvc.identity);
+      if (hwCheck != null && mounted) {
+        await Future.delayed(const Duration(milliseconds: 1200));
+        if (mounted) _addSubtitle(hwCheck, isUser: false);
       }
     }
   }
@@ -491,9 +527,50 @@ class _AOSState extends State<AIOperatingSystemScreen>
       graphEngine: _graphEngine,
     );
 
-    // Update motivation-adaptive UI
+    // ── Teacher identity: update emotional state ──────────────────────────
+    final cogProfile = _cogEngine.profile;
+    _identitySvc.computeEmotionalState(
+      frustrationStreak: _continuitySvc.data.frustrationStreak,
+      confidenceTrend: _continuitySvc.data.avgConfidence,
+      studentIsDistracted: text.trim().split(' ').length < 3,
+      studentIsAnxious: cogProfile.motivationState == MotivationState.anxious,
+      isAdvancedStudent: _level == StudentLevel.sinif12 ||
+          _level == StudentLevel.ayt,
+    );
+
+    // ── Session continuity ─────────────────────────────────────────────────
+    final isFrustrated =
+        cogProfile.motivationState == MotivationState.frustrated;
+    await _continuitySvc.recordInteraction(
+      topic: topic != 'Genel' ? topic : null,
+      successEstimate: signal.successEstimate,
+      hadFrustration: isFrustrated,
+    );
+
+    if (signal.successEstimate < 0.35 && topic != 'Genel') {
+      await _continuitySvc.recordMistake(topic);
+    }
+
+    // ── Learning journal ───────────────────────────────────────────────────
+    if (topic != 'Genel') {
+      await _journalSvc.recordInteraction(
+        topic: topic,
+        successEstimate: signal.successEstimate,
+        usedHints: signal.hasConfusion,
+        frustrationStreak: _continuitySvc.data.frustrationStreak,
+      );
+    }
+
+    // Extract homework marker from AI reply
+    final hwItem =
+        _continuitySvc.extractHomework(fullReply, topic);
+    if (hwItem != null) {
+      await _journalSvc.addHomework(hwItem);
+    }
+
+    // Update motivation-adaptive UI (orb color follows teacher emotional state)
     setState(() {
-      _ui.motivation = _cogEngine.profile.motivationState;
+      _ui.motivation = cogProfile.motivationState;
       _isStreaming = false;
       _ui.orbState = OrbVisualState.idle;
     });
@@ -552,6 +629,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
   String _buildSystemPrompt({String? topic}) =>
       AnthropicService.buildSystemPrompt(_ui.lessonMode, _level) +
+      _identitySvc.buildFullPrompt() +
+      _continuitySvc.buildContinuityPrompt() +
+      _journalSvc.buildPrompt() +
       _profileSvc.buildMemorySummary() +
       _teacherEngine.buildOrchestrationPrompt() +
       _graphEngine.buildContextPrompt(
@@ -813,6 +893,28 @@ class _AOSState extends State<AIOperatingSystemScreen>
                           ),
                         ),
 
+                        // Session recap card
+                        if (_showRecapCard)
+                          SessionRecapCard(
+                            teacher: _identitySvc.identity,
+                            teacherState: _identitySvc.emotionalState,
+                            continuity: _continuitySvc.data,
+                            journal: _journalSvc.journal,
+                            onContinue: () {
+                              setState(() => _showRecapCard = false);
+                              final unfinished =
+                                  _continuitySvc.data.unfinishedTopic;
+                              if (unfinished != null) {
+                                _inputCtrl.text =
+                                    '$unfinished konusuna devam edelim';
+                                _sendText(_inputCtrl.text);
+                                _inputCtrl.clear();
+                              }
+                            },
+                            onDismiss: () =>
+                                setState(() => _showRecapCard = false),
+                          ),
+
                         // Visual analyzing indicator
                         if (_isAnalyzingImage)
                           const VisualAnalyzingBadge(),
@@ -935,6 +1037,20 @@ class _AOSState extends State<AIOperatingSystemScreen>
             ],
           ),
           const Spacer(),
+          // Teacher mood indicator
+          TeacherMoodIndicator(
+            teacher: _identitySvc.identity,
+            state: _identitySvc.emotionalState,
+            onTap: () => PersonalityPickerSheet.show(
+              context,
+              current: _identitySvc.identity.personalityType,
+              onSelected: (type) async {
+                await _identitySvc.switchPersonality(type, _storage);
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
           // Level selector
           _LevelPill(
             level: _level,
