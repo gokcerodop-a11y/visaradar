@@ -88,7 +88,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
   VisualReasoningEngine? _visualEngine;
   BoardRedrawService? _boardRedrawSvc;
   WorkAnalysisService? _workAnalysisSvc;
-  MemorySummarizer? _memorySummarizer;
+  MemorySummarizer? _memorySummarizer; // used in _onSessionEnd for async summarization
 
   // ── Cognitive memory system ────────────────────────────────────────────────
   final _shortTermMem = ShortTermMemory();
@@ -128,7 +128,6 @@ class _AOSState extends State<AIOperatingSystemScreen>
   // ── Text streaming ────────────────────────────────────────────────────────
   bool _isStreaming = false;
   final _streamBuf = StringBuffer();
-  bool _streamCancelled = false;
 
   // ── Input ─────────────────────────────────────────────────────────────────
   final _inputCtrl = TextEditingController();
@@ -541,7 +540,6 @@ class _AOSState extends State<AIOperatingSystemScreen>
 
     setState(() {
       _isStreaming = true;
-      _streamCancelled = false;
       _streamBuf.clear();
       _ui.orbState = OrbVisualState.thinking;
     });
@@ -748,6 +746,26 @@ class _AOSState extends State<AIOperatingSystemScreen>
       _workingMem.resolveConcept(topic);
     }
 
+    // Async session summarization every 10 turns (background, non-blocking)
+    final summarizer = _memorySummarizer;
+    if (summarizer != null && _shortTermMem.recentTurns.length % 10 == 0 &&
+        _shortTermMem.recentTurns.length > 0) {
+      summarizer.summarizeSession(
+        _shortTermMem.recentTurns,
+        _longTermMem,
+        topic: topic != 'Genel' ? topic : null,
+      ).then((summary) {
+        if (!mounted) return;
+        // Surface unresolved concepts from summary into working memory
+        for (final concept in summary.unresolvedConcepts) {
+          _workingMem.addUnresolvedConcept(concept);
+        }
+        for (final concept in summary.resolvedConcepts) {
+          _workingMem.resolveConcept(concept);
+        }
+      });
+    }
+
     // Update motivation-adaptive UI (orb color follows teacher emotional state)
     setState(() {
       _ui.motivation = cogProfile.motivationState;
@@ -849,14 +867,6 @@ class _AOSState extends State<AIOperatingSystemScreen>
     }
     _addSubtitle(cmd.acknowledgement, isUser: false);
   }
-
-  OrbVisualState _orbStateForMode() => switch (_ui.mode) {
-        UIMode.ogretmen     => OrbVisualState.teaching,
-        UIMode.soruCoz      => OrbVisualState.solving,
-        UIMode.sesliDers    => OrbVisualState.speaking,
-        UIMode.canliKonusma => OrbVisualState.speaking,
-        _                   => OrbVisualState.speaking,
-      };
 
   // ── Sentence splitter (voice engine path only) ─────────────────────────────
 
@@ -1118,7 +1128,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           imageCtx: ctx,
           analysisService: svc,
           initialMode: initialMode,
-          teacherName: teacher?.teacherName ?? 'Öğretmen',
+          teacherName: teacher.teacherName,
         ),
         transitionsBuilder: (_, anim, __, child) => SlideTransition(
           position: Tween<Offset>(
@@ -1147,7 +1157,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       if (_isStreaming && _activeSession != null) {
         _activeSession!.interrupt();
       } else if (_isStreaming) {
-        setState(() { _streamCancelled = true; _ui.orbState = OrbVisualState.idle; });
+        setState(() { _isStreaming = false; _ui.orbState = OrbVisualState.idle; });
       } else {
         setState(() => _showInput = !_showInput);
         if (_showInput) _inputFocus.requestFocus();

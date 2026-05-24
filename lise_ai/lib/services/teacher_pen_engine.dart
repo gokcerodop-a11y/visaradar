@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -89,7 +88,6 @@ class TeacherPenEngine extends ChangeNotifier {
   int _currentStrokeIndex = 0;
   int _currentPointIndex = 0;  // how far through current stroke
   Timer? _replayTimer;
-  final _rng = math.Random();
 
   List<PenStroke> get strokes => List.unmodifiable(_strokes);
   bool get isReplaying => _isReplaying;

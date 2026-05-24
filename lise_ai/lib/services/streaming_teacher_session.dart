@@ -78,7 +78,6 @@ class StreamingTeacherSession {
   final AnthropicService _anthropic;
   final TeacherVoiceService _voice;
   final TeacherIdentity _identity;
-  final LessonMode _lessonMode;
 
   late final HumanPacingEngine _pacing;
 
@@ -114,8 +113,7 @@ class StreamingTeacherSession {
     double emotionalSpeedModifier = 1.0,
   })  : _anthropic = anthropic,
         _voice = voice,
-        _identity = identity,
-        _lessonMode = lessonMode {
+        _identity = identity {
     _voiceAvailable = voice.isAvailable;
     _pacing = HumanPacingEngine.fromIdentity(
       identity,

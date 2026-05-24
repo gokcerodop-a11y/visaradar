@@ -1,7 +1,6 @@
 import '../models/cognitive_profile.dart';
 import '../models/lesson_flow.dart';
 import '../models/lesson_mode.dart';
-import '../models/student_profile.dart';
 import '../services/learning_graph_engine.dart';
 import '../services/storage_service.dart';
 import '../services/teacher_engine.dart';

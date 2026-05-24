@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../models/lesson_flow.dart';
 import '../models/lesson_mode.dart';
 import '../models/student_profile.dart';
 import '../services/anthropic_service.dart';

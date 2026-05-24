@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/lesson_mode.dart';
-import '../services/anthropic_service.dart';
 import '../services/realtime_voice_engine.dart';
 import 'lesson_board_page.dart';
 
