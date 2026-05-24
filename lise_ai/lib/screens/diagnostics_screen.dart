@@ -10,8 +10,14 @@ import '../services/ai_cost_tracker.dart';
 class DiagnosticsScreen extends StatefulWidget {
   final TelemetryService? telemetrySvc;
   final AICostTracker? costTracker;
+  final VoidCallback? onOpenSimLab;
 
-  const DiagnosticsScreen({super.key, this.telemetrySvc, this.costTracker});
+  const DiagnosticsScreen({
+    super.key,
+    this.telemetrySvc,
+    this.costTracker,
+    this.onOpenSimLab,
+  });
 
   @override
   State<DiagnosticsScreen> createState() => _DiagnosticsScreenState();
@@ -160,6 +166,37 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         ],
 
         const SizedBox(height: 24),
+        // ── Simulation Lab entry ────────────────────────────────────────────
+        if (widget.onOpenSimLab != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onOpenSimLab!();
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7C6BF8), Color(0xFF9B8BFB)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.science_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('Simülasyon Laboratuvarı →',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14)),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 16),
         const Text(
           'Bu ekran yalnızca geliştirici modunda görünür.\n'
           'App Store dağıtımında erişilemez.',

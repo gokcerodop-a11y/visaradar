@@ -53,6 +53,7 @@ import '../services/telemetry_service.dart';
 import '../services/ai_cost_tracker.dart';
 import '../services/crash_reporter.dart';
 import '../services/pedagogy_engine.dart';
+import 'simulation_lab_screen.dart';
 import '../services/silence_detector.dart';
 import '../core/feature_flags.dart';
 import 'diagnostics_screen.dart';
@@ -1432,6 +1433,21 @@ class _AOSState extends State<AIOperatingSystemScreen>
       context,
       MaterialPageRoute(
         builder: (_) => DiagnosticsScreen(
+          telemetrySvc: _telemetrySvc,
+          costTracker: _costTracker,
+          onOpenSimLab: _openSimulationLab,
+        ),
+      ),
+    );
+  }
+
+  void _openSimulationLab() {
+    HapticsService.heavy();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SimulationLabScreen(
+          storage: _storage,
           telemetrySvc: _telemetrySvc,
           costTracker: _costTracker,
         ),
