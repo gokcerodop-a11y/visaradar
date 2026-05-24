@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/travel_entry.dart';
@@ -16,33 +17,41 @@ class TripsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trips = ref.watch(tripsProvider);
+    final isTr = ref.watch(isTurkishProvider);
 
     // Sort: most recent entry date first
     final sorted = [...trips]
       ..sort((a, b) => b.entryDate.compareTo(a.entryDate));
 
+    final tripsLabel = isTr ? 'Seyahatler' : 'Trips';
+
     return Scaffold(
       appBar: AppBar(
         title: sorted.isEmpty
-            ? const Text('Trips')
-            : Text('Trips (${sorted.length})'),
+            ? Text(tripsLabel)
+            : Text('$tripsLabel (${sorted.length})'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
-            tooltip: 'Add trip',
+            tooltip: isTr ? 'Seyahat ekle' : 'Add trip',
             onPressed: () => context.push('/trips/add'),
           ),
         ],
       ),
       body: sorted.isEmpty
-          ? _EmptyState(onAdd: () => context.push('/trips/add'))
+          ? _EmptyState(
+              isTr: isTr,
+              onAdd: () => context.push('/trips/add'),
+            )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               itemCount: sorted.length,
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (ctx, i) => _TripCard(
                 entry: sorted[i],
-                onDelete: () => ref.read(tripsProvider.notifier).delete(sorted[i].id),
+                isTr: isTr,
+                onDelete: () =>
+                    ref.read(tripsProvider.notifier).delete(sorted[i].id),
                 onEdit: () => context.push('/trips/edit/${sorted[i].id}'),
               ),
             ),
@@ -55,7 +64,8 @@ class TripsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAdd});
+  const _EmptyState({required this.isTr, required this.onAdd});
+  final bool isTr;
   final VoidCallback onAdd;
 
   @override
@@ -78,13 +88,15 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'No trips yet',
+              isTr ? 'Henüz seyahat yok' : 'No trips yet',
               style: AppTextStyles.headlineMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
             Text(
-              'Log your border crossings to track Schengen days and stay compliant.',
+              isTr
+                  ? 'Schengen günlerini takip etmek için sınır geçişlerinizi kaydedin.'
+                  : 'Log your border crossings to track Schengen days and stay compliant.',
               style: AppTextStyles.bodyMedium
                   .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
@@ -93,7 +105,9 @@ class _EmptyState extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add your first trip'),
+              label: Text(
+                isTr ? 'İlk seyahatinizi ekleyin' : 'Add your first trip',
+              ),
             ),
           ],
         ),
@@ -109,19 +123,22 @@ class _EmptyState extends StatelessWidget {
 class _TripCard extends StatelessWidget {
   const _TripCard({
     required this.entry,
+    required this.isTr,
     required this.onDelete,
     required this.onEdit,
   });
 
   final TravelEntry entry;
+  final bool isTr;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final entryStr = _dateFmt.format(entry.entryDate.toLocal());
-    final exitStr =
-        entry.exitDate != null ? _dateFmt.format(entry.exitDate!.toLocal()) : 'Ongoing';
+    final exitStr = entry.exitDate != null
+        ? _dateFmt.format(entry.exitDate!.toLocal())
+        : (isTr ? 'Devam ediyor' : 'Ongoing');
     final days = entry.daysSpent;
 
     return Dismissible(
@@ -197,7 +214,7 @@ class _TripCard extends StatelessWidget {
                                   color: AppColors.brandTeal.withAlpha(60)),
                             ),
                             child: Text(
-                              'Ongoing',
+                              isTr ? 'Devam ediyor' : 'Ongoing',
                               style: AppTextStyles.caption
                                   .copyWith(color: AppColors.brandTeal),
                             ),
@@ -221,7 +238,7 @@ class _TripCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       entry.isOngoing
-                          ? 'From $entryStr'
+                          ? (isTr ? '$entryStr tarihinden beri' : 'From $entryStr')
                           : '$entryStr → $exitStr',
                       style: AppTextStyles.bodySmall
                           .copyWith(color: AppColors.textSecondary),
@@ -256,8 +273,12 @@ class _TripCard extends StatelessWidget {
                   ),
                   Text(
                     entry.isOngoing
-                        ? (days == 1 ? 'day so far' : 'days so far')
-                        : (days == 1 ? 'day' : 'days'),
+                        ? (isTr
+                            ? (days == 1 ? 'gün şu ana kadar' : 'gün şu ana kadar')
+                            : (days == 1 ? 'day so far' : 'days so far'))
+                        : (isTr
+                            ? (days == 1 ? 'gün' : 'gün')
+                            : (days == 1 ? 'day' : 'days')),
                     style: AppTextStyles.caption,
                   ),
                 ],
@@ -274,21 +295,23 @@ class _TripCard extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
-        title: const Text('Delete trip?'),
+        title: Text(isTr ? 'Seyahati sil?' : 'Delete trip?'),
         content: Text(
-          'This will remove the trip to ${entry.countryLabel ?? entry.country}.',
+          isTr
+              ? '${entry.countryLabel ?? entry.country} seyahati silinecek.'
+              : 'This will remove the trip to ${entry.countryLabel ?? entry.country}.',
           style: AppTextStyles.bodyMedium
               .copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(isTr ? 'Vazgeç' : 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
-              'Delete',
+              isTr ? 'Sil' : 'Delete',
               style: TextStyle(color: AppColors.danger),
             ),
           ),

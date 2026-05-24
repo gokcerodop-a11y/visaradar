@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/country_code_badge.dart';
@@ -16,6 +17,7 @@ class CountryInfoScreen extends ConsumerWidget {
     final profile = ref.watch(activeCountryProfileProvider);
     final countryCode = ref.watch(activeCountryCodeProvider);
     final countryName = ref.watch(activeCountryNameProvider);
+    final isTr = ref.watch(isTurkishProvider);
 
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
@@ -23,7 +25,7 @@ class CountryInfoScreen extends ConsumerWidget {
         backgroundColor: AppColors.brandNavy,
         elevation: 0,
         title: Text(
-          countryName ?? 'Country',
+          countryName ?? (isTr ? 'Ülke' : 'Country'),
           style: AppTextStyles.titleLarge,
         ),
         actions: [
@@ -41,13 +43,14 @@ class CountryInfoScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: profile != null
-            ? _CountryBody(profile: profile)
+            ? _CountryBody(profile: profile, isTr: isTr)
             : countryCode != null
                 ? _ComingSoonBody(
                     countryCode: countryCode,
                     countryName: countryName,
+                    isTr: isTr,
                   )
-                : const _EmptyState(),
+                : _EmptyState(isTr: isTr),
       ),
     );
   }
@@ -58,9 +61,10 @@ class CountryInfoScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _CountryBody extends StatelessWidget {
-  const _CountryBody({required this.profile});
+  const _CountryBody({required this.profile, required this.isTr});
 
   final CountryProfile profile;
+  final bool isTr;
 
   @override
   Widget build(BuildContext context) {
@@ -69,43 +73,43 @@ class _CountryBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeaderCard(profile: profile),
+          _HeaderCard(profile: profile, isTr: isTr),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.badge_outlined,
-            title: 'Entry & Stay',
+            title: isTr ? 'Giriş ve Kalış' : 'Entry & Stay',
             bullets: profile.entryNotes,
           ),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.directions_car_outlined,
-            title: 'Transport & Border',
+            title: isTr ? 'Ulaşım ve Sınır' : 'Transport & Border',
             bullets: profile.transportNotes,
           ),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.payments_outlined,
-            title: 'Money & Payments',
+            title: isTr ? 'Para ve Ödeme' : 'Money & Payments',
             bullets: profile.moneyNotes,
           ),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.signal_cellular_alt_outlined,
-            title: 'Connectivity',
+            title: isTr ? 'Bağlantı' : 'Connectivity',
             bullets: profile.connectivityNotes,
           ),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.local_hospital_outlined,
-            title: 'Safety & Emergency',
+            title: isTr ? 'Güvenlik ve Acil Durum' : 'Safety & Emergency',
             bullets: profile.safetyNotes,
           ),
           const SizedBox(height: 12),
-          _WeatherCard(),
+          _WeatherCard(isTr: isTr),
           const SizedBox(height: 12),
           _BulletCard(
             icon: Icons.lightbulb_outline,
-            title: 'Traveler Tips',
+            title: isTr ? 'Seyahat İpuçları' : 'Traveler Tips',
             bullets: profile.localTips,
           ),
         ],
@@ -119,9 +123,10 @@ class _CountryBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.profile});
+  const _HeaderCard({required this.profile, required this.isTr});
 
   final CountryProfile profile;
+  final bool isTr;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +160,9 @@ class _HeaderCard extends StatelessWidget {
                       ? Icons.verified_outlined
                       : Icons.remove_circle_outline,
                   label: 'Schengen',
-                  value: profile.isSchengen ? 'Member' : 'Non-member',
+                  value: profile.isSchengen
+                      ? (isTr ? 'Üye' : 'Member')
+                      : (isTr ? 'Üye değil' : 'Non-member'),
                   valueColor: profile.isSchengen
                       ? AppColors.brandTeal
                       : AppColors.textSecondary,
@@ -165,7 +172,7 @@ class _HeaderCard extends StatelessWidget {
               Expanded(
                 child: _StatChip(
                   icon: Icons.attach_money_outlined,
-                  label: 'Currency',
+                  label: isTr ? 'Para birimi' : 'Currency',
                   value: profile.currencyDisplay,
                 ),
               ),
@@ -320,6 +327,10 @@ class _BulletRow extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _WeatherCard extends StatelessWidget {
+  const _WeatherCard({required this.isTr});
+
+  final bool isTr;
+
   @override
   Widget build(BuildContext context) {
     return _Card(
@@ -332,20 +343,28 @@ class _WeatherCard extends StatelessWidget {
                   color: AppColors.brandTeal, size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child:
-                    Text('Weather & Air Quality', style: AppTextStyles.titleLarge),
+                child: Text(
+                  isTr ? 'Hava ve Hava Kalitesi' : 'Weather & Air Quality',
+                  style: AppTextStyles.titleLarge,
+                ),
               ),
-              _ComingSoonBadge(),
+              const _ComingSoonBadge(),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _WeatherPlaceholder(label: 'Temperature')),
+              Expanded(
+                  child: _WeatherPlaceholder(
+                      label: isTr ? 'Sıcaklık' : 'Temperature')),
               const SizedBox(width: 8),
-              Expanded(child: _WeatherPlaceholder(label: 'UV Index')),
+              Expanded(
+                  child: _WeatherPlaceholder(
+                      label: isTr ? 'UV İndeksi' : 'UV Index')),
               const SizedBox(width: 8),
-              Expanded(child: _WeatherPlaceholder(label: 'Air Quality')),
+              Expanded(
+                  child: _WeatherPlaceholder(
+                      label: isTr ? 'Hava Kalitesi' : 'Air Quality')),
             ],
           ),
         ],
@@ -393,9 +412,12 @@ class _WeatherPlaceholder extends StatelessWidget {
 // Coming-soon badge (inline pill)
 // ---------------------------------------------------------------------------
 
-class _ComingSoonBadge extends StatelessWidget {
+class _ComingSoonBadge extends ConsumerWidget {
+  const _ComingSoonBadge();
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isTr = ref.watch(isTurkishProvider);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -403,7 +425,7 @@ class _ComingSoonBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        'Coming soon',
+        isTr ? 'Yakında' : 'Coming soon',
         style: AppTextStyles.caption.copyWith(color: AppColors.brandTeal),
       ),
     );
@@ -417,15 +439,34 @@ class _ComingSoonBadge extends StatelessWidget {
 class _ComingSoonBody extends StatelessWidget {
   const _ComingSoonBody({
     required this.countryCode,
+    required this.isTr,
     this.countryName,
   });
 
   final String countryCode;
   final String? countryName;
+  final bool isTr;
 
   @override
   Widget build(BuildContext context) {
     final displayName = countryName ?? countryCode;
+    final sectionTitles = isTr
+        ? const [
+            'Giriş ve Kalış',
+            'Ulaşım ve Sınır',
+            'Para ve Ödeme',
+            'Bağlantı',
+            'Güvenlik ve Acil Durum',
+            'Seyahat İpuçları',
+          ]
+        : const [
+            'Entry & Stay',
+            'Transport & Border',
+            'Money & Payments',
+            'Connectivity',
+            'Safety & Emergency',
+            'Traveler Tips',
+          ];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
@@ -486,13 +527,18 @@ class _ComingSoonBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'More destinations coming soon',
+                        isTr
+                            ? 'Daha fazla destinasyon yakında'
+                            : 'More destinations coming soon',
                         style: AppTextStyles.labelLarge,
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        'Detailed info for $displayName is being prepared. '
-                        'New country packs are added with each update.',
+                        isTr
+                            ? '$displayName için ayrıntılı bilgi hazırlanıyor. '
+                                'Her güncellemeyle yeni ülke paketleri ekleniyor.'
+                            : 'Detailed info for $displayName is being prepared. '
+                                'New country packs are added with each update.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.5,
@@ -506,14 +552,7 @@ class _ComingSoonBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // Skeleton cards to show what's coming
-          ...const [
-            'Entry & Stay',
-            'Transport & Border',
-            'Money & Payments',
-            'Connectivity',
-            'Safety & Emergency',
-            'Traveler Tips',
-          ].map(
+          ...sectionTitles.map(
             (title) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _Card(
@@ -537,7 +576,7 @@ class _ComingSoonBody extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Soon',
+                        isTr ? 'Yakında' : 'Soon',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textMuted,
                         ),
@@ -559,7 +598,9 @@ class _ComingSoonBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({required this.isTr});
+
+  final bool isTr;
 
   @override
   Widget build(BuildContext context) {
@@ -585,13 +626,15 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'No country selected',
+              isTr ? 'Ülke seçilmedi' : 'No country selected',
               style: AppTextStyles.headlineMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
             Text(
-              'Log a trip to see entry rules, transport tips, emergency contacts, and local insights for your destination.',
+              isTr
+                  ? 'Giriş kuralları, ulaşım ipuçları, acil durum iletişimleri ve yerel bilgileri görmek için bir seyahat ekleyin.'
+                  : 'Log a trip to see entry rules, transport tips, emergency contacts, and local insights for your destination.',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
                 height: 1.5,
@@ -617,7 +660,7 @@ class _EmptyState extends StatelessWidget {
                         color: AppColors.brandTeal, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Log a trip',
+                      isTr ? 'Seyahat ekle' : 'Log a trip',
                       style: AppTextStyles.labelLarge.copyWith(
                         color: AppColors.brandTeal,
                       ),

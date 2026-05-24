@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/localization/locale.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isTr = ref.watch(isTurkishProvider);
+
     return Scaffold(
       body: shell,
       bottomNavigationBar: NavigationBar(
@@ -17,26 +21,26 @@ class MainShell extends StatelessWidget {
           index,
           initialLocation: index == shell.currentIndex,
         ),
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.radar_outlined),
-            selectedIcon: Icon(Icons.radar),
+            icon: const Icon(Icons.radar_outlined),
+            selectedIcon: const Icon(Icons.radar),
             label: 'Radar',
           ),
           NavigationDestination(
-            icon: Icon(Icons.flight_outlined),
-            selectedIcon: Icon(Icons.flight),
-            label: 'Trips',
+            icon: const Icon(Icons.flight_outlined),
+            selectedIcon: const Icon(Icons.flight),
+            label: isTr ? 'Seyahatler' : 'Trips',
           ),
           NavigationDestination(
-            icon: Icon(Icons.public_outlined),
-            selectedIcon: Icon(Icons.public),
-            label: 'Country',
+            icon: const Icon(Icons.public_outlined),
+            selectedIcon: const Icon(Icons.public),
+            label: isTr ? 'Ülke' : 'Country',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: isTr ? 'Ayarlar' : 'Settings',
           ),
         ],
       ),

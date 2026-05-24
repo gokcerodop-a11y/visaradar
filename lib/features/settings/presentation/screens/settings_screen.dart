@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -16,20 +17,21 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
+    final isTr = ref.watch(isTurkishProvider);
 
     final nationalityLabel = profile.nationalityLabel;
-    final passportLabel = _passportLabel(profile.passportType);
+    final passportLabel = _passportLabel(profile.passportType, isTr);
     final profileSubtitle = nationalityLabel != null
         ? '$nationalityLabel · $passportLabel'
         : passportLabel;
 
-    final langLabel = _langLabel(profile.preferredLocale);
+    final langLabel = _langLabel(profile.preferredLocale, isTr);
 
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
       appBar: AppBar(
         backgroundColor: AppColors.brandNavy,
-        title: const Text('Settings'),
+        title: Text(isTr ? 'Ayarlar' : 'Settings'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -39,10 +41,8 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // ── Brand hero ────────────────────────────────────────────────
-            // Informational landing card — no Premium, no trial, no prices.
-            // Mirrors the onboarding Welcome page so the Settings screen has
-            // a clear visual anchor when users return to it.
             _HeroCard(
+              isTr: isTr,
               onTap: () => context.push(
                 '${AppRoutes.legalText}?title=About+VisaRadar&type=about',
               ),
@@ -51,11 +51,11 @@ class SettingsScreen extends ConsumerWidget {
 
             // ── Account ──────────────────────────────────────────────────
             _SettingsSection(
-              title: 'Account',
+              title: isTr ? 'Hesap' : 'Account',
               items: [
                 _SettingsTile(
                   icon: Icons.person_outline,
-                  title: 'Travel Profile',
+                  title: isTr ? 'Seyahat Profili' : 'Travel Profile',
                   value: profileSubtitle,
                   onTap: () => context.push(AppRoutes.editProfile),
                 ),
@@ -65,17 +65,17 @@ class SettingsScreen extends ConsumerWidget {
 
             // ── Preferences ───────────────────────────────────────────────
             _SettingsSection(
-              title: 'Preferences',
+              title: isTr ? 'Tercihler' : 'Preferences',
               items: [
                 _SettingsTile(
                   icon: Icons.language,
-                  title: 'Language',
+                  title: isTr ? 'Dil' : 'Language',
                   value: langLabel,
                   onTap: () => context.push(AppRoutes.languageSettings),
                 ),
                 _SettingsTile(
                   icon: Icons.notifications_outlined,
-                  title: 'Notifications',
+                  title: isTr ? 'Bildirimler' : 'Notifications',
                   onTap: () => context.push(AppRoutes.notificationSettings),
                 ),
               ],
@@ -84,11 +84,11 @@ class SettingsScreen extends ConsumerWidget {
 
             // ── Privacy & Legal ───────────────────────────────────────────
             _SettingsSection(
-              title: 'Privacy & Legal',
+              title: isTr ? 'Gizlilik ve Yasal' : 'Privacy & Legal',
               items: [
                 _SettingsTile(
                   icon: Icons.privacy_tip_outlined,
-                  title: 'Privacy Policy',
+                  title: isTr ? 'Gizlilik Politikası' : 'Privacy Policy',
                   onTap: () => _openLegal(
                     context,
                     url: AppConstants.privacyPolicyUrl,
@@ -98,7 +98,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 _SettingsTile(
                   icon: Icons.description_outlined,
-                  title: 'Terms of Service',
+                  title: isTr ? 'Kullanım Şartları' : 'Terms of Service',
                   onTap: () => _openLegal(
                     context,
                     url: AppConstants.termsUrl,
@@ -108,7 +108,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 _SettingsTile(
                   icon: Icons.info_outline,
-                  title: 'About VisaRadar',
+                  title: isTr ? 'VisaRadar Hakkında' : 'About VisaRadar',
                   value: 'v${AppConstants.appVersion}',
                   onTap: () => context.push(
                     '${AppRoutes.legalText}?title=About+VisaRadar&type=about',
@@ -120,11 +120,11 @@ class SettingsScreen extends ConsumerWidget {
 
             // ── Help & Diagnostics ────────────────────────────────────────
             _SettingsSection(
-              title: 'Help & Diagnostics',
+              title: isTr ? 'Yardım ve Tanılama' : 'Help & Diagnostics',
               items: [
                 _SettingsTile(
                   icon: Icons.health_and_safety_outlined,
-                  title: 'Diagnostics',
+                  title: isTr ? 'Tanılama' : 'Diagnostics',
                   onTap: () => context.push(AppRoutes.diagnostics),
                 ),
               ],
@@ -136,9 +136,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  /// Open a legal document.
-  /// If [url] is non-empty and launchable, opens it in the system browser.
-  /// Otherwise falls back to the in-app legal screen at [fallback].
   Future<void> _openLegal(
     BuildContext context, {
     required String url,
@@ -154,29 +151,29 @@ class SettingsScreen extends ConsumerWidget {
     if (context.mounted) context.push(fallback);
   }
 
-  String _passportLabel(PassportType type) {
+  String _passportLabel(PassportType type, bool isTr) {
     switch (type) {
       case PassportType.ordinary:
-        return 'Ordinary';
+        return isTr ? 'Umuma mahsus' : 'Ordinary';
       case PassportType.euEeaSwiss:
-        return 'EU/EEA/Swiss';
+        return isTr ? 'AB/AEA/İsviçre' : 'EU/EEA/Swiss';
       case PassportType.diplomatic:
-        return 'Diplomatic';
+        return isTr ? 'Diplomatik' : 'Diplomatic';
       case PassportType.serviceOfficial:
-        return 'Service/Official';
+        return isTr ? 'Hizmet/Hususi' : 'Service/Official';
       case PassportType.special:
-        return 'Special';
+        return isTr ? 'Özel' : 'Special';
     }
   }
 
-  String _langLabel(String? locale) {
+  String _langLabel(String? locale, bool isTr) {
     switch (locale) {
       case 'en':
         return 'English';
       case 'tr':
         return 'Türkçe';
       default:
-        return 'Automatic';
+        return isTr ? 'Otomatik' : 'Automatic';
     }
   }
 }
@@ -186,8 +183,9 @@ class SettingsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.onTap});
+  const _HeroCard({required this.isTr, required this.onTap});
 
+  final bool isTr;
   final VoidCallback onTap;
 
   @override
@@ -239,7 +237,9 @@ class _HeroCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Know exactly where you stand.',
+                        isTr
+                            ? 'Nerede olduğunuzu tam olarak bilin.'
+                            : 'Know exactly where you stand.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -254,19 +254,25 @@ class _HeroCard extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1, color: AppColors.divider),
             const SizedBox(height: 14),
-            const _HeroFeatureRow(
+            _HeroFeatureRow(
               icon: Icons.timer_outlined,
-              label: 'Accurate 90/180-day Schengen calculator',
+              label: isTr
+                  ? '90/180 günlük Schengen hesaplayıcı'
+                  : 'Accurate 90/180-day Schengen calculator',
             ),
             const SizedBox(height: 10),
-            const _HeroFeatureRow(
+            _HeroFeatureRow(
               icon: Icons.notifications_outlined,
-              label: 'Alerts before your allowance runs out',
+              label: isTr
+                  ? 'Süreniz bitmeden önce uyarılar'
+                  : 'Alerts before your allowance runs out',
             ),
             const SizedBox(height: 10),
-            const _HeroFeatureRow(
+            _HeroFeatureRow(
               icon: Icons.lock_outline,
-              label: 'Your data stays on your device only',
+              label: isTr
+                  ? 'Verileriniz yalnızca cihazınızda kalır'
+                  : 'Your data stays on your device only',
             ),
           ],
         ),

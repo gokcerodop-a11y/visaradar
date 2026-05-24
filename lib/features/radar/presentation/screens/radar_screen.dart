@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -128,20 +129,26 @@ class _LocationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final locState = ref.watch(locationProvider);
     final notifier = ref.read(locationProvider.notifier);
+    final isTr = ref.watch(isTurkishProvider);
 
     // ── No permission ───────────────────────────────────────────────────────
     if (!locState.hasPermission) {
-      final ctaLabel =
-          locState.permissionDeniedForever ? 'Open Settings' : 'Enable';
+      final ctaLabel = locState.permissionDeniedForever
+          ? (isTr ? 'Ayarları Aç' : 'Open Settings')
+          : (isTr ? 'Aç' : 'Enable');
       return _LocationRow(
         iconData: Icons.location_off_outlined,
         iconColor: AppColors.textMuted,
         iconBg: AppColors.textMuted.withAlpha(28),
-        label: 'LOCATION',
-        title: 'Not detecting',
+        label: isTr ? 'KONUM' : 'LOCATION',
+        title: isTr ? 'Algılanmıyor' : 'Not detecting',
         subtitle: locState.permissionDeniedForever
-            ? 'Allow location in Settings to auto-detect'
-            : 'Enable to auto-detect your country',
+            ? (isTr
+                ? "Otomatik algılama için Ayarlar'dan konuma izin verin"
+                : 'Allow location in Settings to auto-detect')
+            : (isTr
+                ? 'Ülkenizi otomatik algılamak için açın'
+                : 'Enable to auto-detect your country'),
         action: _LocationAction(
           label: ctaLabel,
           color: AppColors.brandTeal,
@@ -158,9 +165,11 @@ class _LocationCard extends ConsumerWidget {
         iconData: Icons.my_location,
         iconColor: AppColors.brandTeal,
         iconBg: AppColors.brandTeal.withAlpha(20),
-        label: 'LOCATION',
-        title: 'Detecting…',
-        subtitle: 'Looking for your current country',
+        label: isTr ? 'KONUM' : 'LOCATION',
+        title: isTr ? 'Algılanıyor…' : 'Detecting…',
+        subtitle: isTr
+            ? 'Bulunduğunuz ülke aranıyor'
+            : 'Looking for your current country',
         trailing: SizedBox(
           width: 20,
           height: 20,
@@ -179,12 +188,14 @@ class _LocationCard extends ConsumerWidget {
         iconData: Icons.location_on,
         iconColor: AppColors.brandTeal,
         iconBg: AppColors.brandTeal.withAlpha(20),
-        label: 'CURRENT LOCATION',
+        label: isTr ? 'GÜNCEL KONUM' : 'CURRENT LOCATION',
         title: country.name ?? country.isoCode,
-        subtitle: 'Auto-detected · ${country.isoCode}',
+        subtitle: isTr
+            ? 'Otomatik algılandı · ${country.isoCode}'
+            : 'Auto-detected · ${country.isoCode}',
         subtitleColor: AppColors.brandTeal,
         action: _LocationAction(
-          label: 'Refresh',
+          label: isTr ? 'Yenile' : 'Refresh',
           color: AppColors.textSecondary,
           onTap: notifier.refreshDetection,
         ),
@@ -196,11 +207,13 @@ class _LocationCard extends ConsumerWidget {
       iconData: Icons.gps_not_fixed,
       iconColor: AppColors.brandTeal,
       iconBg: AppColors.brandTeal.withAlpha(20),
-      label: 'LOCATION',
-      title: 'Location active',
-      subtitle: 'Tap Detect to find your country',
+      label: isTr ? 'KONUM' : 'LOCATION',
+      title: isTr ? 'Konum aktif' : 'Location active',
+      subtitle: isTr
+          ? 'Algılamak için dokunun'
+          : 'Tap Detect to find your country',
       action: _LocationAction(
-        label: 'Detect',
+        label: isTr ? 'Algıla' : 'Detect',
         color: AppColors.brandTeal,
         onTap: notifier.refreshDetection,
       ),
@@ -324,18 +337,22 @@ class _SchengenCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(schengenResultProvider);
+    final isTr = ref.watch(isTurkishProvider);
 
     final usedDays = result.daysUsed;
     final remainingDays = result.daysRemaining;
     final progress = (usedDays / 90).clamp(0.0, 1.0);
 
-    final (riskColor, riskLabel) = _riskStyle(result.riskLevel);
+    final (riskColor, riskLabel) = _riskStyle(result.riskLevel, isTr);
 
-    String resetText = 'No upcoming reset';
+    String resetText = isTr ? 'Yaklaşan sıfırlama yok' : 'No upcoming reset';
     if (result.nextResetDate != null) {
-      resetText = 'Resets ${_dateFmt.format(result.nextResetDate!.toLocal())}';
+      final d = _dateFmt.format(result.nextResetDate!.toLocal());
+      resetText = isTr ? '$d tarihinde sıfırlanır' : 'Resets $d';
     } else if (usedDays > 0) {
-      resetText = '${remainingDays}d remaining in window';
+      resetText = isTr
+          ? 'Pencerede $remainingDays gün kaldı'
+          : '${remainingDays}d remaining in window';
     }
 
     return _DashCard(
@@ -347,7 +364,7 @@ class _SchengenCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'SCHENGEN STATUS',
+                isTr ? 'SCHENGEN DURUMU' : 'SCHENGEN STATUS',
                 style: AppTextStyles.caption.copyWith(
                   letterSpacing: 0.8,
                   color: AppColors.textMuted,
@@ -375,7 +392,7 @@ class _SchengenCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'days used',
+                        isTr ? 'gün kullanıldı' : 'days used',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textMuted,
                         ),
@@ -402,7 +419,7 @@ class _SchengenCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'days left',
+                        isTr ? 'gün kaldı' : 'days left',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textMuted,
                         ),
@@ -432,7 +449,10 @@ class _SchengenCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('90/180-day rolling window', style: AppTextStyles.caption),
+              Text(
+                isTr ? '90/180 günlük pencere' : '90/180-day rolling window',
+                style: AppTextStyles.caption,
+              ),
               Text(resetText, style: AppTextStyles.caption),
             ],
           ),
@@ -441,16 +461,16 @@ class _SchengenCard extends ConsumerWidget {
     );
   }
 
-  (Color, String) _riskStyle(SchengenRisk risk) {
+  (Color, String) _riskStyle(SchengenRisk risk, bool isTr) {
     switch (risk) {
       case SchengenRisk.safe:
-        return (AppColors.riskSafe, 'Safe');
+        return (AppColors.riskSafe, isTr ? 'Güvenli' : 'Safe');
       case SchengenRisk.warning:
-        return (AppColors.riskWarning, 'Warning');
+        return (AppColors.riskWarning, isTr ? 'Uyarı' : 'Warning');
       case SchengenRisk.critical:
-        return (AppColors.riskCritical, 'Critical');
+        return (AppColors.riskCritical, isTr ? 'Kritik' : 'Critical');
       case SchengenRisk.over:
-        return (AppColors.riskCritical, 'Over limit');
+        return (AppColors.riskCritical, isTr ? 'Limit aşıldı' : 'Over limit');
     }
   }
 }
@@ -465,6 +485,7 @@ class _AlertsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(schengenResultProvider);
+    final isTr = ref.watch(isTurkishProvider);
 
     final IconData icon;
     final String title;
@@ -473,24 +494,29 @@ class _AlertsCard extends ConsumerWidget {
 
     if (result.riskLevel == SchengenRisk.over) {
       icon = Icons.warning_rounded;
-      title = 'Schengen limit exceeded';
-      subtitle = 'You have used more than 90 days in the rolling window.';
+      title = isTr ? 'Schengen limiti aşıldı' : 'Schengen limit exceeded';
+      subtitle = isTr
+          ? 'Pencerede 90 günden fazla kullandınız.'
+          : 'You have used more than 90 days in the rolling window.';
       iconColor = AppColors.danger;
     } else if (result.riskLevel == SchengenRisk.critical) {
       icon = Icons.warning_amber_rounded;
-      title = 'Plan your exit soon';
-      subtitle =
-          'Only ${result.daysRemaining} Schengen days remaining — act now.';
+      title = isTr ? 'Çıkışınızı planlayın' : 'Plan your exit soon';
+      subtitle = isTr
+          ? 'Yalnızca ${result.daysRemaining} Schengen günü kaldı — şimdi harekete geçin.'
+          : 'Only ${result.daysRemaining} Schengen days remaining — act now.';
       iconColor = AppColors.danger;
     } else if (result.riskLevel == SchengenRisk.warning) {
       icon = Icons.info_outline_rounded;
-      title = 'Schengen days running low';
-      subtitle = '${result.daysRemaining} days remaining — stay aware.';
+      title = isTr ? 'Schengen günleri azalıyor' : 'Schengen days running low';
+      subtitle = isTr
+          ? '${result.daysRemaining} gün kaldı — dikkatli olun.'
+          : '${result.daysRemaining} days remaining — stay aware.';
       iconColor = AppColors.warning;
     } else {
       icon = Icons.check_circle_outline_rounded;
-      title = 'All clear';
-      subtitle = 'No active travel alerts';
+      title = isTr ? 'Sorun yok' : 'All clear';
+      subtitle = isTr ? 'Aktif seyahat uyarısı yok' : 'No active travel alerts';
       iconColor = AppColors.riskSafe;
     }
 
@@ -542,13 +568,14 @@ class _TravelSummaryCard extends ConsumerWidget {
     final latest = ref.watch(latestTripProvider);
     final schengenCount = ref.watch(schengenCountriesVisitedProvider);
     final hasTrips = ref.watch(tripsProvider).isNotEmpty;
+    final isTr = ref.watch(isTurkishProvider);
 
     return _DashCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'TRAVEL SUMMARY',
+            isTr ? 'SEYAHAT ÖZETİ' : 'TRAVEL SUMMARY',
             style: AppTextStyles.caption.copyWith(
               letterSpacing: 0.8,
               color: AppColors.textMuted,
@@ -568,7 +595,9 @@ class _TravelSummaryCard extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Add a trip to see your travel stats',
+                      isTr
+                          ? 'İstatistiklerinizi görmek için seyahat ekleyin'
+                          : 'Add a trip to see your travel stats',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textMuted,
                       ),
@@ -580,15 +609,17 @@ class _TravelSummaryCard extends ConsumerWidget {
           else ...[
             _SummaryRow(
               icon: Icons.calendar_today_outlined,
-              label: 'Current stay',
-              value: ongoing != null ? '${ongoing.daysSpent}d' : '—',
+              label: isTr ? 'Şu anki kalış' : 'Current stay',
+              value: ongoing != null
+                  ? (isTr ? '${ongoing.daysSpent}g' : '${ongoing.daysSpent}d')
+                  : '—',
               valueColor:
                   ongoing != null ? AppColors.brandTeal : AppColors.textMuted,
             ),
             const _RowDivider(),
             _SummaryRow(
               icon: Icons.flight_land_outlined,
-              label: 'Last entry',
+              label: isTr ? 'Son giriş' : 'Last entry',
               value: latest != null
                   ? _dateFmt.format(latest.entryDate.toLocal())
                   : '—',
@@ -596,7 +627,7 @@ class _TravelSummaryCard extends ConsumerWidget {
             const _RowDivider(),
             _SummaryRow(
               icon: Icons.flag_outlined,
-              label: 'Schengen countries',
+              label: isTr ? 'Schengen ülkeleri' : 'Schengen countries',
               value: '$schengenCount',
             ),
           ],
@@ -670,13 +701,16 @@ class _TripCtaBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasTrips = ref.watch(tripsProvider).isNotEmpty;
+    final isTr = ref.watch(isTurkishProvider);
 
     return Row(
       children: [
         Expanded(
           child: _CtaButton(
             icon: Icons.add_rounded,
-            label: hasTrips ? 'Add Trip' : 'Log First Trip',
+            label: hasTrips
+                ? (isTr ? 'Seyahat Ekle' : 'Add Trip')
+                : (isTr ? 'İlk Seyahati Ekle' : 'Log First Trip'),
             isPrimary: true,
             onTap: () => context.push('/trips/add'),
           ),
@@ -685,7 +719,7 @@ class _TripCtaBlock extends ConsumerWidget {
         Expanded(
           child: _CtaButton(
             icon: Icons.list_alt_outlined,
-            label: 'My Trips',
+            label: isTr ? 'Seyahatlerim' : 'My Trips',
             isPrimary: false,
             onTap: () => context.go('/main/trips'),
           ),
