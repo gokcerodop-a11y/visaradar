@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/lesson_flow.dart';
 import 'models/lesson_mode.dart';
@@ -26,6 +27,7 @@ import 'screens/ai_os_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/crash_reporter.dart';
+import 'core/supabase_config.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
 import 'widgets/lesson_board_page.dart';
@@ -46,6 +48,14 @@ Future<void> main() async {
     try {
       await dotenv.load(fileName: '.env');
     } catch (_) {}
+
+    // Initialize Supabase if credentials were supplied at compile time.
+    if (SupabaseConfig.isConfigured) {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey,
+      );
+    }
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(

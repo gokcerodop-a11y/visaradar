@@ -1,31 +1,39 @@
 // supabase_sync_adapter.dart
-// Supabase sync adapter — PLACEHOLDER (no SDK connected yet).
+// Real Supabase sync adapter using PostgREST.
+// Requires: SUPABASE_URL and SUPABASE_ANON_KEY via --dart-define.
 //
-// Uses Supabase PostgREST to store records in a generic `user_data` table:
+// SQL schema (run once in Supabase SQL editor):
+//
+//   -- Generic key-value store for all collections
 //   CREATE TABLE user_data (
-//     id          text PRIMARY KEY,
+//     id          text PRIMARY KEY,          -- '{collection}_{id}'
 //     user_id     uuid REFERENCES auth.users NOT NULL,
 //     collection  text NOT NULL,
 //     payload     jsonb NOT NULL,
 //     updated_at  timestamptz DEFAULT now()
 //   );
 //   CREATE INDEX ON user_data (user_id, collection);
+//   ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+//   CREATE POLICY "Users own their data"
+//     ON user_data FOR ALL USING (auth.uid() = user_id);
 //
-// To activate:
-//   1. Add `supabase_flutter: ^2.x.x` to pubspec.yaml
-//   2. Run the SQL above in the Supabase SQL editor
-//   3. Uncomment all TODO blocks below
+//   -- Predefined collections used by this adapter:
+//   --   'profiles'             — student profile snapshot
+//   --   'conversation_history' — per-conversation turn list
+//   --   'student_progress'     — mastery/topic progress
 
-// ignore_for_file: unused_import
-// import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/supabase_config.dart';
 import 'backend_adapters.dart';
 
 class SupabaseSyncAdapter implements SyncAdapter {
-  // ignore: unused_field
   static const _table = 'user_data';
+  SupabaseClient get _client => Supabase.instance.client;
 
-  // TODO: SupabaseClient get _client => Supabase.instance.client;
+  String _compositeId(String collection, String id) => '${collection}_$id';
+
+  // ── Push (upsert) ─────────────────────────────────────────────────────────
 
   @override
   Future<AdapterResult<void>> push({
@@ -33,65 +41,126 @@ class SupabaseSyncAdapter implements SyncAdapter {
     required String id,
     required Map<String, dynamic> data,
   }) async {
-    // TODO:
-    // await _client.from(_table).upsert({
-    //   'id': '${collection}_$id',
-    //   'user_id': _client.auth.currentUser!.id,
-    //   'collection': collection,
-    //   'payload': data,
-    //   'updated_at': DateTime.now().toIso8601String(),
-    // });
-    // return const AdapterResult.success(null);
-    return const AdapterResult.failure('Supabase SDK henüz bağlı değil');
+    if (!SupabaseConfig.isConfigured) {
+      return const AdapterResult.failure('Supabase yapılandırılmamış');
+    }
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return const AdapterResult.failure('Oturum açılmamış');
+
+    try {
+      await _client.from(_table).upsert({
+        'id': _compositeId(collection, id),
+        'user_id': userId,
+        'collection': collection,
+        'payload': data,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'id');
+      return const AdapterResult.success(null);
+    } on PostgrestException catch (e) {
+      return AdapterResult.failure(e.message);
+    } catch (e) {
+      return AdapterResult.failure(e.toString());
+    }
   }
+
+  // ── Pull (single record) ──────────────────────────────────────────────────
 
   @override
   Future<AdapterResult<Map<String, dynamic>>> pull({
     required String collection,
     required String id,
   }) async {
-    // TODO:
-    // final response = await _client
-    //     .from(_table)
-    //     .select('payload')
-    //     .eq('id', '${collection}_$id')
-    //     .maybeSingle();
-    // if (response == null) return AdapterResult.failure('Kayıt bulunamadı');
-    // return AdapterResult.success(response['payload'] as Map<String, dynamic>);
-    return const AdapterResult.failure('Supabase SDK henüz bağlı değil');
+    if (!SupabaseConfig.isConfigured) {
+      return const AdapterResult.failure('Supabase yapılandırılmamış');
+    }
+    try {
+      final response = await _client
+          .from(_table)
+          .select('payload')
+          .eq('id', _compositeId(collection, id))
+          .maybeSingle();
+
+      if (response == null) {
+        return AdapterResult.failure('Kayıt bulunamadı: $collection/$id');
+      }
+      return AdapterResult.success(response['payload'] as Map<String, dynamic>);
+    } on PostgrestException catch (e) {
+      return AdapterResult.failure(e.message);
+    } catch (e) {
+      return AdapterResult.failure(e.toString());
+    }
   }
+
+  // ── Pull all (collection) ─────────────────────────────────────────────────
 
   @override
   Future<AdapterResult<List<Map<String, dynamic>>>> pullAll({
     required String collection,
     required String userId,
   }) async {
-    // TODO:
-    // final rows = await _client
-    //     .from(_table)
-    //     .select('payload')
-    //     .eq('user_id', userId)
-    //     .eq('collection', collection);
-    // final list = rows.map<Map<String,dynamic>>((r) =>
-    //     r['payload'] as Map<String, dynamic>).toList();
-    // return AdapterResult.success(list);
-    return const AdapterResult.failure('Supabase SDK henüz bağlı değil');
+    if (!SupabaseConfig.isConfigured) {
+      return const AdapterResult.failure('Supabase yapılandırılmamış');
+    }
+    try {
+      final rows = await _client
+          .from(_table)
+          .select('payload')
+          .eq('user_id', userId)
+          .eq('collection', collection)
+          .order('updated_at', ascending: false);
+
+      final list = rows
+          .map<Map<String, dynamic>>((r) => r['payload'] as Map<String, dynamic>)
+          .toList();
+      return AdapterResult.success(list);
+    } on PostgrestException catch (e) {
+      return AdapterResult.failure(e.message);
+    } catch (e) {
+      return AdapterResult.failure(e.toString());
+    }
   }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
 
   @override
   Future<AdapterResult<void>> delete({
     required String collection,
     required String id,
   }) async {
-    // TODO:
-    // await _client.from(_table).delete().eq('id', '${collection}_$id');
-    // return const AdapterResult.success(null);
-    return const AdapterResult.failure('Supabase SDK henüz bağlı değil');
+    if (!SupabaseConfig.isConfigured) {
+      return const AdapterResult.failure('Supabase yapılandırılmamış');
+    }
+    try {
+      await _client
+          .from(_table)
+          .delete()
+          .eq('id', _compositeId(collection, id));
+      return const AdapterResult.success(null);
+    } on PostgrestException catch (e) {
+      return AdapterResult.failure(e.message);
+    } catch (e) {
+      return AdapterResult.failure(e.toString());
+    }
   }
+
+  // ── Sync all (flush pending local queue) ──────────────────────────────────
+  // Called by SupabaseSyncService.flush() — iterates the queue, not all records.
+  // Returns number of records synced successfully.
 
   @override
   Future<AdapterResult<int>> syncAll(String userId) async {
-    // TODO: iterate all collections and call push/pull per record.
-    return const AdapterResult.failure('Supabase SDK henüz bağlı değil');
+    if (!SupabaseConfig.isConfigured) {
+      return const AdapterResult.failure('Supabase yapılandırılmamış');
+    }
+    // Actual queue flushing is handled by SupabaseSyncService which holds
+    // the persisted queue. This method just verifies connectivity.
+    try {
+      await _client.from(_table).select('id').eq('user_id', userId).limit(1);
+      return const AdapterResult.success(0);
+    } on PostgrestException catch (e) {
+      return AdapterResult.failure(e.message);
+    } catch (e) {
+      return AdapterResult.failure(e.toString());
+    }
   }
 }

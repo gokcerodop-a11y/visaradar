@@ -6,6 +6,7 @@ import '../services/scenario_runner.dart';
 import '../services/telemetry_service.dart';
 import '../services/ai_cost_tracker.dart';
 import '../services/backend_provider_service.dart';
+import '../services/supabase_sync_service.dart';
 import '../services/storage_service.dart';
 import '../core/backend_provider.dart';
 
@@ -16,6 +17,7 @@ class DiagnosticsScreen extends StatefulWidget {
   final AICostTracker? costTracker;
   final VoidCallback? onOpenSimLab;
   final StorageService? storage;
+  final SupabaseSyncService? syncSvc;
 
   const DiagnosticsScreen({
     super.key,
@@ -23,6 +25,7 @@ class DiagnosticsScreen extends StatefulWidget {
     this.costTracker,
     this.onOpenSimLab,
     this.storage,
+    this.syncSvc,
   });
 
   @override
@@ -234,6 +237,91 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           color: Color(0xFFF87171), fontSize: 10, height: 1.4),
                     ),
                   ],
+                ],
+              ],
+            );
+          },
+        ),
+
+        // ── Supabase sync section ──────────────────────────────────────────
+        const SizedBox(height: 16),
+        const _SectionLabel(label: 'SUPABASE SYNC'),
+        const SizedBox(height: 8),
+        ListenableBuilder(
+          listenable: SupabaseSyncService.instance,
+          builder: (_, __) {
+            final svc = SupabaseSyncService.instance;
+            final (statusColor, statusIcon) = switch (svc.status) {
+              SyncStatus.synced    => (const Color(0xFF4ADE80), '✅'),
+              SyncStatus.syncing   => (const Color(0xFF60A5FA), '🔄'),
+              SyncStatus.offline   => (const Color(0xFFFBBF24), '⚠️'),
+              SyncStatus.conflict  => (const Color(0xFFF87171), '❌'),
+              SyncStatus.localOnly => (const Color(0xFF6B7280), '📦'),
+            };
+            return Column(
+              children: [
+                _MetricCard(
+                  icon: statusIcon,
+                  label: 'Senkronizasyon Durumu',
+                  value: svc.status.label,
+                  sub: svc.lastError ?? 'Hata yok',
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  icon: '👤',
+                  label: 'Kullanıcı ID',
+                  value: svc.currentUserId != null
+                      ? '${svc.currentUserId!.substring(0, 8)}…'
+                      : 'Oturum yok',
+                  sub: svc.currentUserId ?? 'Supabase yapılandırılmamış',
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '⚡',
+                        label: 'Gecikme',
+                        value: svc.lastLatencyMs > 0
+                            ? '${svc.lastLatencyMs}ms'
+                            : 'Ölçülmedi',
+                        sub: 'Son istek süresi',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _MetricCard(
+                        icon: '🗃️',
+                        label: 'Kuyruk',
+                        value: '${svc.pendingCount} işlem',
+                        sub: 'Bekleyen sync',
+                      ),
+                    ),
+                  ],
+                ),
+                if (svc.pendingCount > 0) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => svc.flush(),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        'Kuyruğu Temizle (${svc.pendingCount})',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ],
             );

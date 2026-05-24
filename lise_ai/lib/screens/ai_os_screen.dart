@@ -53,6 +53,7 @@ import '../services/telemetry_service.dart';
 import '../services/ai_cost_tracker.dart';
 import '../services/crash_reporter.dart';
 import '../services/backend_provider_service.dart';
+import '../services/supabase_sync_service.dart';
 import '../services/pedagogy_engine.dart';
 import 'simulation_lab_screen.dart';
 import '../services/silence_detector.dart';
@@ -73,6 +74,7 @@ import 'settings_screen.dart';
 import '../main.dart' show connectivityService;
 import '../widgets/ambient_layer.dart';
 import '../widgets/atmosphere_layer.dart';
+import '../widgets/sync_status_badge.dart';
 import '../widgets/exam_camp_overlay.dart';
 import '../widgets/lesson_board_page.dart';
 import '../widgets/live_subtitle_engine.dart';
@@ -278,6 +280,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
       await _telemetrySvc.init(_storage);
       await _costTracker.init(_storage);
       await BackendProviderService.instance.init(_storage);
+      await SupabaseSyncService.instance.init(_storage);
     } catch (e) {
       AppLogger.error('Init', 'Storage setup error', e);
     }
@@ -1439,6 +1442,7 @@ class _AOSState extends State<AIOperatingSystemScreen>
           costTracker: _costTracker,
           onOpenSimLab: _openSimulationLab,
           storage: _storage,
+          syncSvc: SupabaseSyncService.instance,
         ),
       ),
     );
@@ -1760,6 +1764,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
             _StreakBadge(streak: _streakSvc.currentStreak),
           ],
           const Spacer(),
+          // Sync status badge (only visible when Supabase is configured or queue has items)
+          const SyncStatusBadge(),
+          const SizedBox(width: 6),
           // Atmosphere mode badge
           AtmosphereModeBadge(
             mode: _ambientEngine.mode,
