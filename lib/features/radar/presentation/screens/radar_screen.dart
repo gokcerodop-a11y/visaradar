@@ -8,7 +8,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../border_crossing/presentation/providers/border_crossing_provider.dart';
 import '../../../border_crossing/presentation/widgets/crossing_suggestion_card.dart';
-import '../../../location/domain/models/location_state.dart';
 import '../../../location/presentation/providers/location_provider.dart';
 import '../../../profile/domain/models/user_profile.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';

@@ -59,7 +59,7 @@ class LegalScreen extends StatelessWidget {
             Text(
               type == 'about'
                   ? 'Version ${AppConstants.appVersion}'
-                  : 'Last updated: March 2026',
+                  : 'Last updated: May 2026',
               style: AppTextStyles.caption
                   .copyWith(color: AppColors.textSecondary),
             ),
@@ -88,7 +88,7 @@ class LegalScreen extends StatelessWidget {
             _LegalSection(
               heading: 'Contact',
               body:
-                  'For privacy concerns or legal enquiries, contact: contact@visaradar.app\n\nFull legal documents will be published at visaradar.app before public launch.',
+                  'For privacy or legal enquiries, please use the support contact provided on the App Store listing.',
             ),
             // Link row — shown when a live URL is configured.
             if (webUrl != null) ...[
