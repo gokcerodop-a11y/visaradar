@@ -45,6 +45,10 @@ dependencies:
   pdfx: ^2.6.0
   supabase_flutter: ^2.8.4
 
+  # OmniCore packages (workspace path deps).
+  omnicore_foundation:
+    path: ../packages/omnicore_foundation
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
