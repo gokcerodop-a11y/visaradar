@@ -1,0 +1,22 @@
+name: omnicore_session
+description: >-
+  Session continuity + cold-start recovery for the OmniCore AI Engine.
+  Persists topic context, frustration streak, confidence trend, used
+  analogies, and an opaque session snapshot via KeyValueStorage. Reusable
+  across LiseAI, Personal AI, and future verticals.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  omnicore_foundation:
+    path: ../omnicore_foundation
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

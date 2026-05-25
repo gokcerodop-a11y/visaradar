@@ -50,6 +50,8 @@ dependencies:
     path: ../packages/omnicore_foundation
   omnicore_memory:
     path: ../packages/omnicore_memory
+  omnicore_session:
+    path: ../packages/omnicore_session
 
 dev_dependencies:
   flutter_test:

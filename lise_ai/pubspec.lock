@@ -510,6 +510,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  omnicore_session:
+    dependency: "direct main"
+    description:
+      path: "../packages/omnicore_session"
+      relative: true
+    source: path
+    version: "0.1.0"
   package_config:
     dependency: transitive
     description:
