@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:omnicore_foundation/omnicore_foundation.dart' show AssistantTone;
+
 // ── Personality type ──────────────────────────────────────────────────────────
 
 enum TeacherPersonalityType {
@@ -77,6 +79,29 @@ extension TeacherEmotionalStateExt on TeacherEmotionalState {
         TeacherEmotionalState.corrective    => 0.75,
         TeacherEmotionalState.challengeMode => 1.4,
       };
+}
+
+// ── OmniCore tone adapter ─────────────────────────────────────────────────────
+//
+// Phase 4B: exposes LiseAI's TeacherEmotionalState as an AssistantTone so
+// ShortTermMemory (in OmniCore) can hold tone state without depending on
+// LiseAI domain types.
+
+extension TeacherEmotionalStateTone on TeacherEmotionalState {
+  /// AssistantTone view of this LiseAI emotional state.
+  /// Used by OmniCore-side memory layers.
+  AssistantTone get tone => _TeacherEmotionalAssistantTone(this);
+}
+
+class _TeacherEmotionalAssistantTone implements AssistantTone {
+  final TeacherEmotionalState _e;
+  const _TeacherEmotionalAssistantTone(this._e);
+
+  @override
+  String get label => _e.label;
+
+  @override
+  String get kind => _e.name;
 }
 
 // ── Signature phrases ─────────────────────────────────────────────────────────

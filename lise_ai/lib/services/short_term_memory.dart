@@ -1,6 +1,7 @@
 import 'dart:collection';
-import '../models/teacher_identity.dart'; // TeacherEmotionalState
-import 'attention_engine.dart'; // PacingAdjustment
+
+import 'package:omnicore_foundation/omnicore_foundation.dart'
+    show AssistantPacingHint, AssistantTone;
 
 // ── ShortTermTurn ─────────────────────────────────────────────────────────────
 
@@ -31,8 +32,12 @@ class ShortTermMemory {
   String? currentConfusion;       // detected confusion phrase or topic
   String? activeProblem;          // current question being worked on
   String? boardStateDescription;  // last thing shown on board
-  TeacherEmotionalState? recentEmotionalState;
-  PacingAdjustment? currentPacing;
+  // Phase 4B: typed as OmniCore-side interfaces so this class no longer
+  // depends on LiseAI's TeacherEmotionalState / PacingAdjustment enums.
+  // Callers pass `state.tone` / `adjustment.hint` (extensions on the
+  // LiseAI enums) at assignment time.
+  AssistantTone? recentEmotionalState;
+  AssistantPacingHint? currentPacing;
 
   static const List<String> _confusionPhrases = [
     'anlamadım', 'bilmiyorum', 'karıştı', 'anlayamadım',
@@ -79,8 +84,8 @@ class ShortTermMemory {
       sb.writeln('- Son öğretmen tonu: ${recentEmotionalState!.label}');
       hasContent = true;
     }
-    if (currentPacing != null && currentPacing != PacingAdjustment.none) {
-      sb.writeln('- Tempo ayarı: ${currentPacing!.name}');
+    if (currentPacing != null && !currentPacing!.isNoOp) {
+      sb.writeln('- Tempo ayarı: ${currentPacing!.kind}');
       hasContent = true;
     }
 

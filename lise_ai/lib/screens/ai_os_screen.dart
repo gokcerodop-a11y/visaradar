@@ -970,8 +970,10 @@ class _AOSState extends State<AIOperatingSystemScreen>
       timestamp: DateTime.now(),
       topic: topic != 'Genel' ? topic : null,
     ));
-    _shortTermMem.recentEmotionalState = _identitySvc.emotionalState;
-    _shortTermMem.currentPacing = _attentionEngine.currentSignal.adjustment;
+    // Phase 4B: pass OmniCore-side adapters instead of the LiseAI enums.
+    _shortTermMem.recentEmotionalState = _identitySvc.emotionalState.tone;
+    _shortTermMem.currentPacing =
+        _attentionEngine.currentSignal.adjustment.hint;
 
     // Long-term: update mastery and record mistakes
     if (topic != 'Genel') {

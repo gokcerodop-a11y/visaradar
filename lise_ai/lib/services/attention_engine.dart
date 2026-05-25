@@ -15,6 +15,9 @@
 //   - Wearable HRV (heart rate variability → stress peaks)
 //   - Apple Vision Pro spatial attention zones
 
+import 'package:omnicore_foundation/omnicore_foundation.dart'
+    show AssistantPacingHint;
+
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
 enum AttentionLevel {
@@ -65,6 +68,28 @@ extension PacingAdjustmentExt on PacingAdjustment {
           'Küçük bir test soralım — ne kadar yerleşti görelim.',
         PacingAdjustment.none => null,
       };
+}
+
+// ── OmniCore pacing-hint adapter ──────────────────────────────────────────────
+//
+// Phase 4B: exposes LiseAI's PacingAdjustment as an AssistantPacingHint so
+// ShortTermMemory (in OmniCore) can hold pacing state without depending on
+// LiseAI domain types.
+
+extension PacingHintAdapter on PacingAdjustment {
+  /// AssistantPacingHint view of this LiseAI pacing adjustment.
+  AssistantPacingHint get hint => _PacingHintAdapter(this);
+}
+
+class _PacingHintAdapter implements AssistantPacingHint {
+  final PacingAdjustment _p;
+  const _PacingHintAdapter(this._p);
+
+  @override
+  String get kind => _p.name;
+
+  @override
+  bool get isNoOp => _p == PacingAdjustment.none;
 }
 
 // ── AttentionSignal ───────────────────────────────────────────────────────────

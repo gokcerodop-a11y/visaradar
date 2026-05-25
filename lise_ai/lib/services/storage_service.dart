@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:omnicore_foundation/omnicore_foundation.dart' show KeyValueStorage;
 
 // ── Plain data classes (no code-gen needed) ───────────────────────────────────
 
@@ -90,12 +91,13 @@ class StoredConversation {
 
 // ── Storage service ────────────────────────────────────────────────────────────
 
-class StorageService {
+class StorageService implements KeyValueStorage {
   static const _boxName = 'lise_ai_v1';
   static const _indexKey = 'index';
 
   late Box _box;
 
+  @override
   Future<void> init() async {
     await Hive.initFlutter();
     _box = await Hive.openBox(_boxName);
@@ -164,10 +166,18 @@ class StorageService {
   String generateId() => DateTime.now().millisecondsSinceEpoch.toString();
 
   // ── App settings (mode, level) ────────────────────────────────────────────
+  // Implements KeyValueStorage so memory + session services in
+  // omnicore_memory / omnicore_session can depend on the abstract
+  // interface instead of this concrete LiseAI service.
 
+  @override
   Future<void> saveSetting(String key, String value) =>
       _box.put('setting_$key', value);
 
+  @override
   String? loadSetting(String key) =>
       _box.get('setting_$key') as String?;
+
+  @override
+  Future<void> deleteSetting(String key) => _box.delete('setting_$key');
 }
