@@ -22,12 +22,12 @@ import 'services/profile_service.dart';
 import 'services/realtime_voice_engine.dart';
 import 'services/speech_service.dart';
 import 'services/teacher_engine.dart';
-import 'services/storage_service.dart';
 import 'screens/ai_os_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'services/connectivity_service.dart';
-import 'services/crash_reporter.dart';
-import 'services/runtime_stability_monitor.dart';
+// Phase 2C: consolidate foundation-layer imports via the OmniCore barrel.
+// Re-exports connectivity_service, crash_reporter, runtime_stability_monitor
+// (and the other future-foundation services) from their current locations.
+import 'omnicore/foundation.dart';
 import 'core/supabase_config.dart';
 import 'widgets/analytics_panel.dart';
 import 'widgets/math_markdown.dart';
