@@ -13,6 +13,7 @@ import '../models/image_context_model.dart';
 import '../models/lesson_mode.dart';
 import '../models/student_profile.dart';
 import '../models/teacher_identity.dart';
+import '../omnicore/provider.dart';
 import '../services/anthropic_service.dart';
 import '../services/board_redraw_service.dart';
 import '../services/cognitive_profile_engine.dart';
@@ -244,7 +245,13 @@ class _AOSState extends State<AIOperatingSystemScreen>
         _visualEngine = VisualReasoningEngine(_anthropic!);
         _boardRedrawSvc = BoardRedrawService(_anthropic!);
         _workAnalysisSvc = WorkAnalysisService(_anthropic!);
-        _memorySummarizer = MemorySummarizer(_anthropic!);
+        // Phase 2B proof point: route memory summarization through the
+        // provider-agnostic AIProvider interface instead of the concrete
+        // AnthropicService. Other Claude callers above stay unchanged for
+        // now — they will migrate one at a time in later phases.
+        _memorySummarizer = MemorySummarizer(
+          ClaudeProvider(_anthropic!, hasKey: true),
+        );
       }
     } catch (e) {
       AppLogger.error('Init', 'API setup error', e);

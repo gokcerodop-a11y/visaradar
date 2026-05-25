@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'anthropic_service.dart';
+import '../omnicore/provider.dart';
 import 'episodic_memory.dart';
 import 'long_term_memory.dart';
 import 'short_term_memory.dart';
@@ -69,7 +69,9 @@ class SessionSummary {
 // - Cross-session pattern detection
 
 class MemorySummarizer {
-  final AnthropicService _anthropic;
+  // Provider-agnostic LLM dependency. Phase 2B proof point — first
+  // production caller to consume AIProvider instead of AnthropicService.
+  final AIProvider _ai;
 
   static const _systemPrompt = '''
 Sen bir Türk lise öğrencisiyle çalışan yapay zeka öğretmeninin bellek özetleme asistanısın.
@@ -77,7 +79,7 @@ Oturum verilerini kısa, yapılandırılmış JSON formatına dönüştür.
 Sadece JSON döndür — açıklama ekleme.
 ''';
 
-  MemorySummarizer(this._anthropic);
+  MemorySummarizer(this._ai);
 
   // ── Session summarization ─────────────────────────────────────────────────
 
@@ -115,17 +117,10 @@ JSON format:
 
 Sadece JSON.''';
 
-      final history = [
-        {
-          'role': 'user',
-          'content': [
-            {'type': 'text', 'text': prompt}
-          ],
-        }
-      ];
+      final history = [AIMessage.user(prompt)];
 
       final buf = StringBuffer();
-      await for (final token in _anthropic.streamMessage(
+      await for (final token in _ai.streamMessage(
         history,
         systemPrompt: _systemPrompt,
         maxTokens: 512,
@@ -177,17 +172,10 @@ $descriptions
 
 Özet:''';
 
-      final history = [
-        {
-          'role': 'user',
-          'content': [
-            {'type': 'text', 'text': prompt}
-          ],
-        }
-      ];
+      final history = [AIMessage.user(prompt)];
 
       final buf = StringBuffer();
-      await for (final token in _anthropic.streamMessage(
+      await for (final token in _ai.streamMessage(
         history,
         systemPrompt: _systemPrompt,
         maxTokens: 256,
