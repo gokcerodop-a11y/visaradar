@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
-import '../models/learning_journal.dart';
-import '../models/teacher_identity.dart';
 import 'storage_service.dart';
 
 // ── Session continuity data ───────────────────────────────────────────────────
@@ -195,53 +193,11 @@ class SessionContinuityService {
     await _save();
   }
 
-  // ── Journal integration ────────────────────────────────────────────────────
-
-  /// Extract and save homework from AI reply.
-  /// Looks for `[ÖDEV: description]` or `[HOMEWORK: description]` markers.
-  HomeworkItem? extractHomework(String aiReply, String currentTopic) {
-    final pattern = RegExp(r'\[ÖDEV:\s*(.+?)\]|\[HOMEWORK:\s*(.+?)\]');
-    final match = pattern.firstMatch(aiReply);
-    if (match == null) return null;
-
-    final desc = (match.group(1) ?? match.group(2) ?? '').trim();
-    if (desc.isEmpty) return null;
-
-    return HomeworkItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      topic: currentTopic,
-      description: desc,
-      assignedAt: DateTime.now(),
-    );
-  }
-
-  // ── Greetings & context ────────────────────────────────────────────────────
-
-  /// Returns the return greeting for the teacher to use.
-  String? getReturnGreeting(TeacherIdentity teacher) {
-    if (!_data.hasReturnContent) return null;
-
-    final diff = DateTime.now().difference(_data.lastSessionDate!);
-    final timeStr = diff.inMinutes < 60
-        ? 'az önce'
-        : diff.inHours < 24
-            ? '${diff.inHours} saat önce'
-            : '${diff.inDays} gün önce';
-
-    final lastTopic =
-        _data.lastTopics.isNotEmpty ? _data.lastTopics.first : null;
-    final unfinished = _data.unfinishedTopic;
-
-    if (unfinished != null) {
-      return '${teacher.teacherName}: $timeStr "$unfinished" konusunda kalmıştık. '
-          'Devam edelim mi?';
-    }
-    if (lastTopic != null) {
-      return '${teacher.teacherName}: Geçen seferden devam ediyoruz. '
-          'En son "$lastTopic" üzerinde çalışmıştık.';
-    }
-    return null;
-  }
+  // Note (Phase 4C): extractHomework moved to LearningJournalService.
+  // getReturnGreeting moved to return_greeting_builder.dart. Both lived
+  // here historically but coupled this service to LiseAI domain types
+  // (HomeworkItem, TeacherIdentity). Now SessionContinuityService is
+  // domain-agnostic — it only persists and queries SessionContinuityData.
 
   // ── Prompt block ───────────────────────────────────────────────────────────
 

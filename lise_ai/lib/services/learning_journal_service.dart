@@ -98,6 +98,36 @@ class LearningJournalService {
     await _save();
   }
 
+  // ── Homework extraction from AI replies ────────────────────────────────────
+  //
+  // Moved here in Phase 4C from SessionContinuityService. Lives next to the
+  // rest of the homework-tracking surface (HomeworkItem, addHomework,
+  // markHomeworkDone). Pure parsing function — no instance state needed.
+
+  /// Extract a homework item from an AI reply.
+  ///
+  /// Looks for `[ÖDEV: description]` or `[HOMEWORK: description]` markers
+  /// the assistant emits when it wants to assign homework. Returns `null`
+  /// when no marker is present.
+  static HomeworkItem? extractHomeworkFromReply(
+    String aiReply,
+    String currentTopic,
+  ) {
+    final pattern = RegExp(r'\[ÖDEV:\s*(.+?)\]|\[HOMEWORK:\s*(.+?)\]');
+    final match = pattern.firstMatch(aiReply);
+    if (match == null) return null;
+
+    final desc = (match.group(1) ?? match.group(2) ?? '').trim();
+    if (desc.isEmpty) return null;
+
+    return HomeworkItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      topic: currentTopic,
+      description: desc,
+      assignedAt: DateTime.now(),
+    );
+  }
+
   // ── Homework homework check ────────────────────────────────────────────────
 
   /// Natural language homework check prompt for teacher to use.

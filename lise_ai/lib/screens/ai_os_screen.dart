@@ -19,6 +19,7 @@ import '../services/board_redraw_service.dart';
 import '../services/cognitive_profile_engine.dart';
 import '../services/learning_graph_engine.dart';
 import '../services/learning_journal_service.dart';
+import '../services/return_greeting_builder.dart';
 import '../services/lesson_flow_engine.dart';
 import '../services/pdf_service.dart';
 import '../services/profile_service.dart';
@@ -368,8 +369,11 @@ class _AOSState extends State<AIOperatingSystemScreen>
       if (!mounted) return;
 
       // Show return greeting or recap card
-      final returnGreeting =
-          _continuitySvc.getReturnGreeting(_identitySvc.identity);
+      // Phase 4C: greeting builder lives in its own file now.
+      final returnGreeting = buildReturnGreeting(
+        _continuitySvc.data,
+        _identitySvc.identity,
+      );
 
       if (_continuitySvc.data.hasReturnContent && !mounted) return;
 
@@ -933,8 +937,9 @@ class _AOSState extends State<AIOperatingSystemScreen>
     }
 
     // Extract homework marker from AI reply
+    // Phase 4C: parser moved to LearningJournalService.
     final hwItem =
-        _continuitySvc.extractHomework(cleanReply, topic);
+        LearningJournalService.extractHomeworkFromReply(cleanReply, topic);
     if (hwItem != null) {
       await _journalSvc.addHomework(hwItem);
     }
