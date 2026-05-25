@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Claude Code local tool state (per-user, not source)
+.claude/
+
 # IntelliJ related
 *.iml
 *.ipr
