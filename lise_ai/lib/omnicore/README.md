@@ -8,6 +8,24 @@ will be moved to `packages/omnicore_*/` in a later phase.
 
 ## Current contents
 
+### Barrels (Phase 2)
+
+| Barrel | Future package | Re-exports |
+|---|---|---|
+| `foundation.dart` | `omnicore_foundation` | api_client, app_logger, app_version_service, connectivity_service, crash_reporter, error_handler, haptics_service, runtime_stability_monitor, runtime_validation_service, storage_service |
+| `memory.dart` | `omnicore_memory` | 5 memory layers + 3 orchestrators |
+| `session.dart` | `omnicore_session` | session_continuity_service, session_recovery_service |
+| `streaming.dart` | `omnicore_streaming` | streaming_teacher_session |
+| `voice.dart` | `omnicore_voice` | speech_service, teacher_voice_service, voice_command_detector, voice_playback_queue, silence_detector |
+| `vision.dart` | `omnicore_vision` | visual_reasoning_engine, pdf_service, image_context_model |
+| `sync.dart` | `omnicore_sync` | supabase_sync_service, sync_queue, sync_repository, backend_provider_service, auth_service, adapters |
+| `observability.dart` | `omnicore_observability` | telemetry_service, release_validator, runtime monitors, scenario_runner, stress_test_runner, crash_reporter |
+| `cost.dart` | `omnicore_cost` | ai_cost_tracker |
+| `provider.dart` | `omnicore_provider` | AIProvider + ClaudeProvider + OpenAI/Gemini stubs |
+
+Some files (crash_reporter, runtime_stability_monitor) appear in two
+barrels temporarily; Phase 6 chooses a canonical location for each.
+
 ### `provider/`
 Provider-agnostic LLM interface plus three implementations:
 
