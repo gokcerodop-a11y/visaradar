@@ -1,0 +1,30 @@
+name: omnicore_workspace
+
+# Phase 1 scope: only the OmniCore packages.
+# LiseAI (lise_ai/) and VisaRadar (./) are NOT yet under melos management;
+# they will be added in Phase 3 when they start depending on these packages.
+packages:
+  - packages/*
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+
+scripts:
+  analyze:
+    description: Run dart analyze on all OmniCore packages.
+    run: dart analyze
+    exec:
+      concurrency: 4
+
+  test:
+    description: Run flutter test on all OmniCore packages.
+    run: flutter test
+    exec:
+      concurrency: 2
+
+  format-check:
+    description: Verify all packages are formatted.
+    run: dart format --output=none --set-exit-if-changed .
+    exec:
+      concurrency: 4

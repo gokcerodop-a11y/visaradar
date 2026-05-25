@@ -1,0 +1,19 @@
+name: omnicore_foundation
+description: >-
+  Foundation utilities of the OmniCore AI Engine — logging, connectivity,
+  crash reporting, HTTP retry policies, runtime health monitoring. Reusable
+  across all OmniCore-powered apps (LiseAI, VisaRadar, future verticals).
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

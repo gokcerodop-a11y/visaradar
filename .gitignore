@@ -15,6 +15,11 @@ migrate_working_dir/
 # Claude Code local tool state (per-user, not source)
 .claude/
 
+# OmniCore packages: lock files for libraries (not apps)
+packages/*/pubspec.lock
+packages/*/.dart_tool/
+
+
 # IntelliJ related
 *.iml
 *.ipr
