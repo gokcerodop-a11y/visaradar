@@ -48,6 +48,8 @@ dependencies:
   # OmniCore packages (workspace path deps).
   omnicore_foundation:
     path: ../packages/omnicore_foundation
+  omnicore_memory:
+    path: ../packages/omnicore_memory
 
 dev_dependencies:
   flutter_test:

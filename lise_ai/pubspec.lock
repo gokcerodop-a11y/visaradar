@@ -503,6 +503,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  omnicore_memory:
+    dependency: "direct main"
+    description:
+      path: "../packages/omnicore_memory"
+      relative: true
+    source: path
+    version: "0.1.0"
   package_config:
     dependency: transitive
     description:

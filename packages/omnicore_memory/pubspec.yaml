@@ -1,0 +1,22 @@
+name: omnicore_memory
+description: >-
+  Five-layer cognitive memory for the OmniCore AI Engine —
+  working / short-term / long-term / episodic / semantic — plus their
+  retrieval engine, summarizer, and system-prompt assembly layer.
+  Provider- and vertical-agnostic; persists via KeyValueStorage.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  omnicore_foundation:
+    path: ../omnicore_foundation
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
