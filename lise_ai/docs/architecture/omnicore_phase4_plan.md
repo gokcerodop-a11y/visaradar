@@ -83,14 +83,16 @@ Used in `buildContextBlock()` (line 79):
 sb.writeln('- Son öğretmen tonu: ${recentEmotionalState!.label}');
 ```
 
-**Decoupling approach**: introduce a minimal `AssistantTone` interface in
-`omnicore_foundation` (or memory package — see §3.1). The interface exposes
-only what the memory layer actually reads — a label string.
+**Decoupling approach**: introduce an `AssistantTone` interface in
+`omnicore_foundation` (per §8.1). Two-axis design — label for humans,
+kind for machines — so agentic / automation layers can branch on a
+stable identifier across locales:
 
 ```dart
 // in OmniCore
 abstract class AssistantTone {
-  String get label;
+  String get label;   // human-readable, may be localized
+  String get kind;    // stable machine identifier (locale-independent)
 }
 ```
 
@@ -105,6 +107,7 @@ class _TeacherEmotionalAssistantTone implements AssistantTone {
   final TeacherEmotionalState _e;
   const _TeacherEmotionalAssistantTone(this._e);
   @override String get label => _e.label;
+  @override String get kind => _e.name;
 }
 ```
 
@@ -136,7 +139,7 @@ The memory layer reads only:
 ```dart
 // in OmniCore
 abstract class AssistantPacingHint {
-  String get name;
+  String get kind;      // stable machine identifier
   bool get isNoOp;
 }
 ```
@@ -149,7 +152,7 @@ extension PacingHintAdapter on PacingAdjustment {
 class _PacingHintAdapter implements AssistantPacingHint {
   final PacingAdjustment _p;
   const _PacingHintAdapter(this._p);
-  @override String get name => _p.name;
+  @override String get kind => _p.name;          // enum.name → stable id
   @override bool get isNoOp => _p == PacingAdjustment.none;
 }
 ```
@@ -286,7 +289,7 @@ sites.
    - Update the `buildContextBlock()` reads:
      - `recentEmotionalState!.label` stays as `recentEmotionalState!.label` (interface has same method).
      - `currentPacing != PacingAdjustment.none` becomes `!currentPacing!.isNoOp`.
-     - `currentPacing!.name` stays.
+     - `currentPacing!.name` becomes `currentPacing!.kind`.
    - Drop the now-unused imports of `teacher_identity.dart` and `attention_engine.dart`.
    - Import the new interfaces from `omnicore_foundation`.
 5. `lib/screens/ai_os_screen.dart`:

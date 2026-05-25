@@ -27,7 +27,7 @@ export 'src/key_value_storage.dart';
 // ── Package identity ─────────────────────────────────────────────────────────
 
 /// Package identity. Bumped when public API changes.
-const omniCoreFoundationVersion = '0.4.0';
+const omniCoreFoundationVersion = '0.4.1';
 
 /// Human-readable package name.
 const omniCoreFoundationName = 'omnicore_foundation';
