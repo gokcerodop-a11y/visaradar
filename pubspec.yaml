@@ -1,7 +1,7 @@
 name: visaradar
 description: "VisaRadar – premium global visa and stay tracking app."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
   sdk: ^3.11.3
@@ -36,7 +36,14 @@ dependencies:
 
   # Networking
   dio: ^5.7.0
+  http: ^1.2.2
   connectivity_plus: ^6.1.1
+
+  # In-app purchase (StoreKit 2)
+  in_app_purchase: ^3.2.0
+
+  # Document scanner (Premium — camera/gallery capture)
+  image_picker: ^1.1.2
 
   # Storage
   shared_preferences: ^2.3.3

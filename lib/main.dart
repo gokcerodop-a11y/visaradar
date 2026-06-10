@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
 import 'app.dart';
+import 'core/localization/locale.dart';
 import 'features/notifications/services/local_notification_service.dart';
 import 'features/profile/presentation/providers/profile_provider.dart';
 
@@ -75,6 +76,15 @@ Future<void> _bootstrap() async {
   if (prefs == null) {
     runApp(const _StartupErrorApp());
     return;
+  }
+
+  // Seed the global locale from the device language before the first frame
+  // (VisaRadarApp refines it from the saved profile preference on build).
+  L.code = deviceLanguageCode();
+
+  // Record first-run date once — drives the "lifetime offer after 3 days" rule.
+  if (prefs.getString('install_date_v1') == null) {
+    await prefs.setString('install_date_v1', DateTime.now().toIso8601String());
   }
 
   runApp(

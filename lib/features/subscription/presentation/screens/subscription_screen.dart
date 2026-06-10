@@ -165,7 +165,7 @@ class _FeaturesSection extends StatelessWidget {
       subtitle: 'Visa requirements, rules, and entry guidance per country.',
     ),
     (
-      icon: Icons.auto_awesome_outlined,
+      icon: Icons.bolt_outlined,
       title: 'Smart Travel Tools',
       subtitle: 'Upcoming: alerts, route planning, and more.',
     ),

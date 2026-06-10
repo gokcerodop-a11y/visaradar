@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/country_names.dart';
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/country_code_badge.dart';
@@ -53,7 +55,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        title: Text(L.t('Edit Profile', 'Profili Düzenle')),
         actions: [
           _saving
               ? const Padding(
@@ -70,7 +72,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               : TextButton(
                   onPressed: _save,
                   child: Text(
-                    'Save',
+                    L.t('Save', 'Kaydet'),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.brandTeal,
                       fontWeight: FontWeight.w600,
@@ -82,7 +84,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _SectionLabel(label: 'Nationality'),
+          _SectionLabel(label: L.t('Nationality', 'Uyruk')),
           _NationalityTile(
             label: _nationalityLabel,
             code: _nationality,
@@ -93,120 +95,133 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 }),
           ),
           const SizedBox(height: 20),
-          _SectionLabel(label: 'Passport Type'),
+          _SectionLabel(label: L.t('Passport Type', 'Pasaport türü')),
           _OptionGroup<PassportType>(
-            options: const [
+            options: [
               _Option(
                 value: PassportType.ordinary,
                 icon: Icons.book_outlined,
-                title: 'Ordinary passport',
-                subtitle: 'Standard passport issued to citizens',
+                title: L.t('Ordinary passport', 'Umuma mahsus pasaport'),
+                subtitle: L.t('Standard passport issued to citizens',
+                    'Vatandaşlara verilen standart pasaport'),
               ),
               _Option(
                 value: PassportType.euEeaSwiss,
                 icon: Icons.flag_outlined,
-                title: 'EU / EEA / Swiss passport',
-                subtitle: 'Free movement within the Schengen area',
+                title: L.t('EU / EEA / Swiss passport',
+                    'AB / AEA / İsviçre pasaportu'),
+                subtitle: L.t('Free movement within the Schengen area',
+                    'Schengen alanında serbest dolaşım'),
               ),
               _Option(
                 value: PassportType.diplomatic,
                 icon: Icons.shield_outlined,
-                title: 'Diplomatic passport',
-                subtitle: 'Issued to diplomatic personnel',
+                title: L.t('Diplomatic passport', 'Diplomatik pasaport'),
+                subtitle: L.t('Issued to diplomatic personnel',
+                    'Diplomatik personele verilir'),
               ),
               _Option(
                 value: PassportType.serviceOfficial,
                 icon: Icons.badge_outlined,
-                title: 'Service / official passport',
-                subtitle: 'Issued for official government travel',
+                title: L.t('Service / official passport',
+                    'Hizmet / resmi pasaport'),
+                subtitle: L.t('Issued for official government travel',
+                    'Resmi devlet seyahati için verilir'),
               ),
               _Option(
                 value: PassportType.special,
                 icon: Icons.star_border_outlined,
-                title: 'Special passport',
-                subtitle: 'Other special-category passport',
+                title: L.t('Special passport', 'Hususi pasaport'),
+                subtitle: L.t('Other special-category passport',
+                    'Diğer özel kategori pasaport'),
               ),
             ],
             selected: _passportType,
             onChanged: (v) => setState(() => _passportType = v),
           ),
           const SizedBox(height: 20),
-          _SectionLabel(label: 'Residence Status'),
+          _SectionLabel(label: L.t('Residence Status', 'İkamet durumu')),
           _OptionGroup<ResidenceStatus>(
-            options: const [
+            options: [
               _Option(
                 value: ResidenceStatus.none,
                 icon: Icons.person_outline,
-                title: 'No residence permit',
-                subtitle: 'Visiting on a tourist or short-stay visa',
+                title: L.t('No residence permit', 'İkamet izni yok'),
+                subtitle: L.t('Visiting on a tourist or short-stay visa',
+                    'Turist veya kısa süreli vize ile ziyaret'),
               ),
               _Option(
                 value: ResidenceStatus.euSchengenResident,
                 icon: Icons.home_outlined,
-                title: 'EU / Schengen residence permit',
-                subtitle: 'Long-stay visa or permit in a Schengen country',
+                title: L.t('EU / Schengen residence permit',
+                    'AB / Schengen ikamet izni'),
+                subtitle: L.t('Long-stay visa or permit in a Schengen country',
+                    'Schengen ülkesinde uzun süreli vize veya izin'),
               ),
               _Option(
                 value: ResidenceStatus.otherResidenceStatus,
                 icon: Icons.location_city_outlined,
-                title: 'Other residence status',
-                subtitle: 'Permit outside the EU / Schengen area',
+                title: L.t('Other residence status', 'Diğer ikamet durumu'),
+                subtitle: L.t('Permit outside the EU / Schengen area',
+                    'AB / Schengen dışı izin'),
               ),
             ],
             selected: _residenceStatus,
             onChanged: (v) => setState(() => _residenceStatus = v),
           ),
           const SizedBox(height: 20),
-          _SectionLabel(label: 'Travel Method'),
+          _SectionLabel(label: L.t('Travel Method', 'Seyahat yöntemi')),
           _OptionGroup<TravelMode>(
-            options: const [
+            options: [
               _Option(
                 value: TravelMode.plane,
                 icon: Icons.flight_outlined,
-                title: 'Plane',
-                subtitle: 'Air travel',
+                title: L.t('Plane', 'Uçak'),
+                subtitle: L.t('Air travel', 'Hava yolu'),
               ),
               _Option(
                 value: TravelMode.car,
                 icon: Icons.directions_car_outlined,
-                title: 'Car',
-                subtitle: 'Driving across borders',
+                title: L.t('Car', 'Araba'),
+                subtitle: L.t('Driving across borders', 'Sınırlardan araçla geçiş'),
               ),
               _Option(
                 value: TravelMode.train,
                 icon: Icons.train_outlined,
-                title: 'Train',
-                subtitle: 'Rail travel',
+                title: L.t('Train', 'Tren'),
+                subtitle: L.t('Rail travel', 'Tren yolu'),
               ),
               _Option(
                 value: TravelMode.bus,
                 icon: Icons.directions_bus_outlined,
-                title: 'Bus',
-                subtitle: 'Coach or intercity bus',
+                title: L.t('Bus', 'Otobüs'),
+                subtitle: L.t('Coach or intercity bus', 'Şehirlerarası otobüs'),
               ),
               _Option(
                 value: TravelMode.ferry,
                 icon: Icons.directions_boat_outlined,
-                title: 'Ferry',
-                subtitle: 'Sea crossing',
+                title: L.t('Ferry', 'Feribot'),
+                subtitle: L.t('Sea crossing', 'Deniz geçişi'),
               ),
               _Option(
                 value: TravelMode.camperCaravan,
                 icon: Icons.rv_hookup_outlined,
-                title: 'Camper / caravan',
-                subtitle: 'Motorhome or caravan travel',
+                title: L.t('Camper / caravan', 'Karavan'),
+                subtitle: L.t('Motorhome or caravan travel',
+                    'Motokaravan veya karavan ile seyahat'),
               ),
               _Option(
                 value: TravelMode.motorcycle,
                 icon: Icons.two_wheeler_outlined,
-                title: 'Motorcycle',
-                subtitle: 'Motorbike travel',
+                title: L.t('Motorcycle', 'Motosiklet'),
+                subtitle: L.t('Motorbike travel', 'Motosiklet ile seyahat'),
               ),
               _Option(
                 value: TravelMode.onFoot,
                 icon: Icons.directions_walk_outlined,
-                title: 'On foot',
-                subtitle: 'Hiking or walking across borders',
+                title: L.t('On foot', 'Yürüyerek'),
+                subtitle: L.t('Hiking or walking across borders',
+                    'Sınırlardan yürüyerek geçiş'),
               ),
             ],
             selected: _travelMode,
@@ -258,7 +273,9 @@ class _NationalityTile extends StatelessWidget {
             ? CountryCodeBadge(code: code!)
             : const Icon(Icons.language, color: AppColors.textSecondary),
         title: Text(
-          label ?? 'Select nationality',
+          label != null
+              ? countryNameLocalized(code, label!)
+              : L.t('Select nationality', 'Uyruk seçin'),
           style: AppTextStyles.bodyMedium.copyWith(
             color: label != null ? AppColors.textPrimary : AppColors.textMuted,
           ),
@@ -330,9 +347,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 autofocus: true,
                 onChanged: (v) => setState(() => _query = v),
                 style: AppTextStyles.bodyMedium,
-                decoration: const InputDecoration(
-                  hintText: 'Search nationality…',
-                  prefixIcon: Icon(Icons.search, size: 20),
+                decoration: InputDecoration(
+                  hintText: L.t('Search nationality…', 'Uyruk ara…'),
+                  prefixIcon: const Icon(Icons.search, size: 20),
                 ),
               ),
             ),
@@ -345,7 +362,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   final c = _filtered[i];
                   return ListTile(
                     leading: CountryCodeBadge(code: c.code),
-                    title: Text(c.name, style: AppTextStyles.bodyMedium),
+                    title: Text(countryNameLocalized(c.code, c.name),
+                        style: AppTextStyles.bodyMedium),
                     onTap: () {
                       Navigator.of(ctx).pop();
                       widget.onSelect(c.code, c.name);

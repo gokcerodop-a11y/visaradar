@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>VisaRadar</string>
+	<string>VisaRadar Travel</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -59,12 +59,20 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>VisaRadar uses your current location to detect which country you are in so it can show the right Schengen and visa information for that country.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>VisaRadar uses the camera so you can scan your passport, visa or residence permit and automatically read key dates.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>VisaRadar lets you pick a photo of your travel document from your library to scan it for key dates.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 </dict>
 </plist>

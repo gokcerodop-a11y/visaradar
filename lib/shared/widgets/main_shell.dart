@@ -22,25 +22,25 @@ class MainShell extends ConsumerWidget {
           initialLocation: index == shell.currentIndex,
         ),
         destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.radar_outlined),
-            selectedIcon: const Icon(Icons.radar),
+          const NavigationDestination(
+            icon: Icon(Icons.radar_outlined),
+            selectedIcon: Icon(Icons.radar),
             label: 'Radar',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.flight_outlined),
-            selectedIcon: const Icon(Icons.flight),
-            label: isTr ? 'Seyahatler' : 'Trips',
           ),
           NavigationDestination(
             icon: const Icon(Icons.public_outlined),
             selectedIcon: const Icon(Icons.public),
-            label: isTr ? 'Ülke' : 'Country',
+            label: isTr ? 'Ülkeler' : 'Countries',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: isTr ? 'Ayarlar' : 'Settings',
+            icon: const Icon(Icons.bolt_outlined),
+            selectedIcon: const Icon(Icons.bolt),
+            label: isTr ? 'Asistan' : 'Assistant',
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: isTr ? 'Profil' : 'Profile',
           ),
         ],
       ),

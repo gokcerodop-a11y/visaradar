@@ -1,0 +1,37 @@
+name = "visaradar-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APPLE_BUNDLE_ID = "com.visaradar.visaradar"
+APPLE_ENV = "production"
+# AI Assistant uses Claude Opus 4.8 per the product spec (priced accordingly).
+CLAUDE_MODEL = "claude-opus-4-8"
+CHAT_MODEL = "claude-opus-4-8"
+DAILY_LIMIT_CHAT = "40"
+DAILY_LIMIT_VISION = "10"
+DAILY_LIMIT_QUESTIONS = "10"
+MONTHLY_CAP_CHAT = "600"
+MONTHLY_CAP_VISION = "120"
+MONTHLY_CAP_QUESTIONS = "120"
+TRIAL_CAP_FACTOR = "0.5"
+# Daily finance Telegram report
+APP_LABEL = "VisaRadar Travel"
+USD_TRY = "43"
+APPLE_COMMISSION = "0.15"
+
+[triggers]
+# 00:03 TR (21:03 UTC) — after kanunlar (00:01) and refakat (00:02).
+crons = ["3 21 * * *"]
+
+[[kv_namespaces]]
+binding = "USAGE"
+id = "66766db6a77a4071a04dbe81b18b781c"
+
+[[kv_namespaces]]
+binding = "RECEIPTS"
+id = "51d2a6ed99914a4aba089b70fdb6fcf4"
+
+[observability]
+enabled = true

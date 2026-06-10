@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../features/location/domain/models/location_state.dart';
@@ -22,7 +23,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
     final notifPerm = ref.watch(notificationPermissionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: Text(L.t('Notifications', 'Bildirimler'))),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
@@ -30,14 +31,18 @@ class NotificationSettingsScreen extends ConsumerWidget {
           _NoticeCard(
             icon:  Icons.notifications_active_outlined,
             color: AppColors.brandTeal,
-            title: 'Stay ahead of your limits',
-            body:  'VisaRadar will remind you before your Schengen allowance '
-                   'runs out, so you never overstay by accident.',
+            title: L.t('Stay ahead of your limits', 'Limitlerinin önünde ol'),
+            body:  L.t(
+              'VisaRadar will remind you before your Schengen allowance '
+                  'runs out, so you never overstay by accident.',
+              'VisaRadar, Schengen hakkın dolmadan önce seni uyarır; '
+                  'böylece yanlışlıkla fazla kalmazsın.',
+            ),
           ),
           const SizedBox(height: 20),
 
           // ── Device permissions ───────────────────────────────────────────
-          _SectionHeader(title: 'Device permissions'),
+          _SectionHeader(title: L.t('Device permissions', 'Cihaz izinleri')),
           const SizedBox(height: 8),
           Card(
             child: Column(
@@ -45,11 +50,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 notifPerm.when(
                   data: (granted) => _PermissionTile(
                     icon:    Icons.notifications_outlined,
-                    label:   'Notifications',
+                    label:   L.t('Notifications', 'Bildirimler'),
                     granted: granted,
                     hint:    granted
-                        ? 'VisaRadar can send you alerts.'
-                        : 'Allow notifications so VisaRadar can remind you.',
+                        ? L.t('VisaRadar can send you alerts.',
+                            'VisaRadar sana uyarı gönderebilir.')
+                        : L.t('Allow notifications so VisaRadar can remind you.',
+                            'VisaRadar seni hatırlatabilmesi için bildirimlere izin ver.'),
                     onTap: granted
                         ? null
                         : () async {
@@ -64,11 +71,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 const Divider(height: 0, indent: 52),
                 _PermissionTile(
                   icon:    Icons.location_on_outlined,
-                  label:   'Location access',
+                  label:   L.t('Location access', 'Konum erişimi'),
                   granted: locPerm == LocationPermissionStatus.granted,
                   hint:    locPerm == LocationPermissionStatus.granted
-                      ? 'Automatic border detection is active.'
-                      : 'Location is off — border detection is limited.',
+                      ? L.t('Automatic border detection is active.',
+                          'Otomatik sınır algılama aktif.')
+                      : L.t('Location is off — border detection is limited.',
+                          'Konum kapalı — sınır algılama sınırlı.'),
                   onTap: locPerm == LocationPermissionStatus.granted
                       ? null
                       : () => ref.read(locationProvider.notifier).requestPermission(),
@@ -79,10 +88,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // ── Schengen alerts ──────────────────────────────────────────────
-          _SectionHeader(title: 'Schengen alerts'),
+          _SectionHeader(title: L.t('Schengen alerts', 'Schengen uyarıları')),
           const SizedBox(height: 4),
           Text(
-            'Get a heads-up before your 90-day allowance runs out.',
+            L.t('Get a heads-up before your 90-day allowance runs out.',
+                '90 günlük hakkın dolmadan önce haberin olsun.'),
             style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
@@ -92,8 +102,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.schedule_outlined,
                   color:     AppColors.info,
-                  title:     '30 days remaining',
-                  subtitle:  'Early notice with time to plan ahead.',
+                  title:     L.t('30 days remaining', '30 gün kaldı'),
+                  subtitle:  L.t('Early notice with time to plan ahead.',
+                      'Planlamak için erkenden haber.'),
                   value:     prefs.schengenAlert30,
                   onChanged: notifier.setSchengenAlert30,
                 ),
@@ -101,8 +112,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.warning_amber_outlined,
                   color:     AppColors.warning,
-                  title:     '15 days remaining',
-                  subtitle:  'Time to think about your travel plans.',
+                  title:     L.t('15 days remaining', '15 gün kaldı'),
+                  subtitle:  L.t('Time to think about your travel plans.',
+                      'Seyahat planlarını düşünme zamanı.'),
                   value:     prefs.schengenAlert15,
                   onChanged: notifier.setSchengenAlert15,
                 ),
@@ -110,8 +122,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.warning_amber_outlined,
                   color:     AppColors.warning,
-                  title:     '7 days remaining',
-                  subtitle:  'Start planning your exit or next steps.',
+                  title:     L.t('7 days remaining', '7 gün kaldı'),
+                  subtitle:  L.t('Start planning your exit or next steps.',
+                      'Çıkışını ya da sonraki adımlarını planlamaya başla.'),
                   value:     prefs.schengenAlert7,
                   onChanged: notifier.setSchengenAlert7,
                 ),
@@ -119,8 +132,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.dangerous_outlined,
                   color:     AppColors.danger,
-                  title:     '3 days remaining',
-                  subtitle:  'Urgent — arrange your stay or exit.',
+                  title:     L.t('3 days remaining', '3 gün kaldı'),
+                  subtitle:  L.t('Urgent — arrange your stay or exit.',
+                      'Acil — kalışını ya da çıkışını ayarla.'),
                   value:     prefs.schengenAlert3,
                   onChanged: notifier.setSchengenAlert3,
                 ),
@@ -128,8 +142,9 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.dangerous_outlined,
                   color:     AppColors.danger,
-                  title:     '1 day remaining',
-                  subtitle:  'Final warning before your limit.',
+                  title:     L.t('1 day remaining', '1 gün kaldı'),
+                  subtitle:  L.t('Final warning before your limit.',
+                      'Limitine ulaşmadan önceki son uyarı.'),
                   value:     prefs.schengenAlert1,
                   onChanged: notifier.setSchengenAlert1,
                 ),
@@ -139,10 +154,11 @@ class NotificationSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // ── Travel reminders ─────────────────────────────────────────────
-          _SectionHeader(title: 'Travel reminders'),
+          _SectionHeader(title: L.t('Travel reminders', 'Seyahat hatırlatmaları')),
           const SizedBox(height: 4),
           Text(
-            'Nudges to keep your trip log accurate.',
+            L.t('Nudges to keep your trip log accurate.',
+                'Seyahat kaydını doğru tutman için küçük hatırlatmalar.'),
             style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
@@ -152,8 +168,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.flight_outlined,
                   color:     AppColors.brandTeal,
-                  title:     'Open trip reminder',
-                  subtitle:  'Nudge to close a trip when you have an entry with no exit date logged.',
+                  title:     L.t('Open trip reminder', 'Açık seyahat hatırlatması'),
+                  subtitle:  L.t(
+                      'Nudge to close a trip when you have an entry with no exit date logged.',
+                      'Çıkış tarihi kaydedilmemiş bir girişin olduğunda seyahati kapatman için hatırlatma.'),
                   value:     prefs.ongoingStayReminder,
                   onChanged: notifier.setOngoingStayReminder,
                 ),
@@ -161,8 +179,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.flag_outlined,
                   color:     AppColors.brandTeal,
-                  title:     'Border crossing review',
-                  subtitle:  'Nudge to review your trips after dismissing a crossing suggestion.',
+                  title:     L.t('Border crossing review', 'Sınır geçişi incelemesi'),
+                  subtitle:  L.t(
+                      'Nudge to review your trips after dismissing a crossing suggestion.',
+                      'Bir geçiş önerisini reddettikten sonra seyahatlerini gözden geçirmen için hatırlatma.'),
                   value:     prefs.dismissedCrossingReminder,
                   onChanged: notifier.setDismissedCrossingReminder,
                 ),
@@ -170,8 +190,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 _NotifTile(
                   icon:      Icons.location_off_outlined,
                   color:     AppColors.textSecondary,
-                  title:     'Location inactive',
-                  subtitle:  'Alert when location access is off and you have active trips.',
+                  title:     L.t('Location inactive', 'Konum kapalı'),
+                  subtitle:  L.t(
+                      'Alert when location access is off and you have active trips.',
+                      'Konum erişimi kapalıyken ve aktif seyahatlerin varken uyar.'),
                   value:     prefs.locationInactiveReminder,
                   onChanged: notifier.setLocationInactiveReminder,
                 ),
@@ -182,7 +204,7 @@ class NotificationSettingsScreen extends ConsumerWidget {
 
           // ── Debug tools (only in debug builds) ───────────────────────────
           if (kDebugMode) ...[
-            _SectionHeader(title: 'Developer tools'),
+            _SectionHeader(title: L.t('Developer tools', 'Geliştirici araçları')),
             const SizedBox(height: 8),
             Card(
               child: Column(
@@ -190,14 +212,16 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   _ActionTile(
                     icon:     Icons.science_outlined,
                     color:    AppColors.info,
-                    title:    'Send test notification',
-                    subtitle: 'Fires an immediate test notification.',
-                    label:    'Send',
+                    title:    L.t('Send test notification', 'Test bildirimi gönder'),
+                    subtitle: L.t('Fires an immediate test notification.',
+                        'Hemen bir test bildirimi gönderir.'),
+                    label:    L.t('Send', 'Gönder'),
                     onTap: () async {
                       await LocalNotificationService.showNow(
                         id:    AppConstants.notifIdDebugTest,
-                        title: 'VisaRadar test',
-                        body:  'Notifications are working correctly.',
+                        title: L.t('VisaRadar test', 'VisaRadar testi'),
+                        body:  L.t('Notifications are working correctly.',
+                            'Bildirimler doğru çalışıyor.'),
                       );
                     },
                   ),
@@ -205,9 +229,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   _ActionTile(
                     icon:     Icons.refresh_outlined,
                     color:    AppColors.info,
-                    title:    'Reschedule all',
-                    subtitle: 'Re-evaluate and rebuild the full notification schedule.',
-                    label:    'Run',
+                    title:    L.t('Reschedule all', 'Tümünü yeniden planla'),
+                    subtitle: L.t('Re-evaluate and rebuild the full notification schedule.',
+                        'Tüm bildirim planını yeniden değerlendirir ve oluşturur.'),
+                    label:    L.t('Run', 'Çalıştır'),
                     onTap: () {
                       ref.invalidate(notificationCoordinatorProvider);
                     },
@@ -216,9 +241,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   _ActionTile(
                     icon:     Icons.delete_outline,
                     color:    AppColors.danger,
-                    title:    'Cancel all notifications',
-                    subtitle: 'Clears every pending notification.',
-                    label:    'Clear',
+                    title:    L.t('Cancel all notifications', 'Tüm bildirimleri iptal et'),
+                    subtitle: L.t('Clears every pending notification.',
+                        'Bekleyen tüm bildirimleri temizler.'),
+                    label:    L.t('Clear', 'Temizle'),
                     onTap:    LocalNotificationService.cancelAll,
                   ),
                 ],
@@ -226,7 +252,8 @@ class NotificationSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Debug tools are only visible in development builds.',
+              L.t('Debug tools are only visible in development builds.',
+                  'Hata ayıklama araçları yalnızca geliştirme sürümlerinde görünür.'),
               style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
@@ -235,8 +262,12 @@ class NotificationSettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Notification delivery requires permission. '
-              'You can also manage this in your device settings → VisaRadar.',
+              L.t(
+                'Notification delivery requires permission. '
+                    'You can also manage this in your device settings → VisaRadar.',
+                'Bildirim gönderimi izin gerektirir. '
+                    'Bunu cihaz ayarlarından da yönetebilirsin → VisaRadar.',
+              ),
               style: AppTextStyles.caption
                   .copyWith(color: AppColors.textSecondary),
             ),
@@ -341,7 +372,9 @@ class _PermissionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = granted ? AppColors.success : AppColors.warning;
-    final statusLabel = granted ? 'Allowed' : 'Not allowed';
+    final statusLabel = granted
+        ? L.t('Allowed', 'İzin verildi')
+        : L.t('Not allowed', 'İzin verilmedi');
 
     return ListTile(
       leading: Icon(icon, color: statusColor, size: 22),
@@ -352,7 +385,7 @@ class _PermissionTile extends StatelessWidget {
       trailing: onTap != null
           ? TextButton(
               onPressed: onTap,
-              child: const Text('Enable'),
+              child: Text(L.t('Enable', 'Etkinleştir')),
             )
           : _StatusBadge(label: statusLabel, color: statusColor),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -365,13 +398,13 @@ class _PermissionTileLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ListTile(
-      leading: SizedBox(
+    return ListTile(
+      leading: const SizedBox(
         width: 22,
         height: 22,
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      title: Text('Notifications'),
+      title: Text(L.t('Notifications', 'Bildirimler')),
     );
   }
 }

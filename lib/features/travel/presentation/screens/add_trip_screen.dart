@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/localization/country_names.dart';
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/country_code_badge.dart';
@@ -70,10 +72,15 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   // ---------------------------------------------------------------------------
 
   String? get _validationError {
-    if (_country == null) return 'Please select a country.';
-    if (_entryDate == null) return 'Please select an entry date.';
+    if (_country == null) {
+      return L.t('Please select a country.', 'Lütfen bir ülke seçin.');
+    }
+    if (_entryDate == null) {
+      return L.t('Please select an entry date.', 'Lütfen bir giriş tarihi seçin.');
+    }
     if (_exitDate != null && _exitDate!.isBefore(_entryDate!)) {
-      return 'Exit date cannot be before entry date.';
+      return L.t('Exit date cannot be before entry date.',
+          'Çıkış tarihi giriş tarihinden önce olamaz.');
     }
     return null;
   }
@@ -97,21 +104,26 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceCard,
-        title: const Text('Open trip already exists'),
+        title: Text(L.t('Open trip already exists',
+            'Zaten açık bir seyahat var')),
         content: Text(
-          'You already have an open trip with no exit date. '
-          'Are you sure you want to add another?',
+          L.t(
+            'You already have an open trip with no exit date. '
+            'Are you sure you want to add another?',
+            'Çıkış tarihi olmayan açık bir seyahatiniz zaten var. '
+            'Yine de bir tane daha eklemek istediğinize emin misiniz?',
+          ),
           style: AppTextStyles.bodyMedium
               .copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(L.t('Cancel', 'İptal')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Add anyway'),
+            child: Text(L.t('Add anyway', 'Yine de ekle')),
           ),
         ],
       ),
@@ -187,7 +199,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       initialDate: _entryDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
-      helpText: 'Entry date',
+      helpText: L.t('Entry date', 'Giriş tarihi'),
     );
     if (picked != null) {
       setState(() {
@@ -205,7 +217,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       initialDate: _exitDate ?? (_entryDate ?? DateTime.now()),
       firstDate: _entryDate ?? DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      helpText: 'Exit date',
+      helpText: L.t('Exit date', 'Çıkış tarihi'),
     );
     if (picked != null) {
       setState(() => _exitDate = picked);
@@ -222,7 +234,9 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditMode ? 'Edit Trip' : 'Add Trip'),
+        title: Text(_isEditMode
+            ? L.t('Edit Trip', 'Seyahati Düzenle')
+            : L.t('Add Trip', 'Seyahat Ekle')),
         actions: [
           _saving
               ? const Padding(
@@ -237,7 +251,9 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               : TextButton(
                   onPressed: canSave ? _save : null,
                   child: Text(
-                    _isEditMode ? 'Save' : 'Add',
+                    _isEditMode
+                        ? L.t('Save', 'Kaydet')
+                        : L.t('Add', 'Ekle'),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: canSave
                           ? AppColors.brandTeal
@@ -252,7 +268,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           // ── Country ──────────────────────────────────────────────────────
-          _SectionLabel('Country'),
+          _SectionLabel(L.t('Country', 'Ülke')),
           _PickerTile(
             leading: _country != null
                 ? CountryCodeBadge(
@@ -261,7 +277,9 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                     size: BadgeSize.small,
                   )
                 : const CountryCodeBadge(code: '  ', size: BadgeSize.small),
-            label: _country?.name ?? 'Select country',
+            label: _country != null
+                ? countryNameLocalized(_country!.code, _country!.name)
+                : L.t('Select country', 'Ülke seç'),
             hasValue: _country != null,
             onTap: _showCountryPicker,
             trailing: _country == null
@@ -287,7 +305,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
             const SizedBox(height: 8),
 
           // ── Dates ─────────────────────────────────────────────────────────
-          _SectionLabel('Dates'),
+          _SectionLabel(L.t('Dates', 'Tarihler')),
           Row(
             children: [
               Expanded(
@@ -296,7 +314,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                       size: 20, color: AppColors.textSecondary),
                   label: _entryDate != null
                       ? _dateFmt.format(_entryDate!)
-                      : 'Entry date',
+                      : L.t('Entry date', 'Giriş tarihi'),
                   hasValue: _entryDate != null,
                   onTap: _pickEntryDate,
                 ),
@@ -308,7 +326,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                       size: 20, color: AppColors.textSecondary),
                   label: _exitDate != null
                       ? _dateFmt.format(_exitDate!)
-                      : 'Exit date',
+                      : L.t('Exit date', 'Çıkış tarihi'),
                   hasValue: _exitDate != null,
                   onTap: _pickExitDate,
                   trailing: _exitDate != null
@@ -326,7 +344,8 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Leave exit date empty if you are still in the country.',
+                L.t('Leave exit date empty if you are still in the country.',
+                    'Hâlâ ülkedeyseniz çıkış tarihini boş bırakın.'),
                 style:
                     AppTextStyles.caption.copyWith(color: AppColors.textMuted),
               ),
@@ -334,15 +353,16 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
           const SizedBox(height: 20),
 
           // ── Note ──────────────────────────────────────────────────────────
-          _SectionLabel('Note (optional)'),
+          _SectionLabel(L.t('Note (optional)', 'Not (isteğe bağlı)')),
           TextField(
             controller: _noteController,
             style: AppTextStyles.bodyMedium,
             maxLines: 3,
             maxLength: 200,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              hintText: 'Add a note about this trip…',
+            decoration: InputDecoration(
+              hintText: L.t('Add a note about this trip…',
+                  'Bu seyahat hakkında not ekleyin…'),
               counterText: '',
             ),
           ),
@@ -407,8 +427,8 @@ class _SchengenStatusCard extends StatelessWidget {
                   children: [
                     Text(
                       isSchengen
-                          ? 'Schengen country'
-                          : 'Non-Schengen country',
+                          ? L.t('Schengen country', 'Schengen ülkesi')
+                          : L.t('Non-Schengen country', 'Schengen dışı ülke'),
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: statusColor,
                         fontWeight: FontWeight.w600,
@@ -416,8 +436,10 @@ class _SchengenStatusCard extends StatelessWidget {
                     ),
                     Text(
                       isSchengen
-                          ? 'Counts toward your 90/180-day allowance'
-                          : 'Does not affect your Schengen counter',
+                          ? L.t('Counts toward your 90/180-day allowance',
+                              '90/180 günlük hakkınıza dahil edilir')
+                          : L.t('Does not affect your Schengen counter',
+                              'Schengen sayacınızı etkilemez'),
                       style: AppTextStyles.caption
                           .copyWith(color: AppColors.textMuted),
                     ),
@@ -433,7 +455,7 @@ class _SchengenStatusCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'Override',
+                    L.t('Override', 'Değiştirildi'),
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.warning,
                       fontWeight: FontWeight.w600,
@@ -449,7 +471,10 @@ class _SchengenStatusCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
             child: Text(
-              showOverride ? 'Hide override' : 'Override Schengen status',
+              showOverride
+                  ? L.t('Hide override', 'Değişikliği gizle')
+                  : L.t('Override Schengen status',
+                      'Schengen durumunu değiştir'),
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textMuted,
                 decoration: TextDecoration.underline,
@@ -472,7 +497,7 @@ class _SchengenStatusCard extends StatelessWidget {
                 value: isSchengen,
                 onChanged: onOverrideChanged,
                 title: Text(
-                  'Schengen area',
+                  L.t('Schengen area', 'Schengen bölgesi'),
                   style: AppTextStyles.bodySmall,
                 ),
                 activeThumbColor: AppColors.brandTeal,
@@ -630,9 +655,10 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Select Country', style: AppTextStyles.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                  )),
+                  Text(L.t('Select Country', 'Ülke Seç'),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      )),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _searchController,
@@ -640,7 +666,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                     onChanged: (v) => setState(() => _query = v),
                     style: AppTextStyles.bodyMedium,
                     decoration: InputDecoration(
-                      hintText: 'Search country…',
+                      hintText: L.t('Search country…', 'Ülke ara…'),
                       prefixIcon: const Icon(Icons.search, size: 20),
                       suffixIcon: _query.isNotEmpty
                           ? GestureDetector(
@@ -660,7 +686,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               Expanded(
                 child: Center(
                   child: Text(
-                    'No countries found',
+                    L.t('No countries found', 'Ülke bulunamadı'),
                     style: AppTextStyles.bodyMedium
                         .copyWith(color: AppColors.textMuted),
                   ),
@@ -749,7 +775,7 @@ class _TripCountryRow extends StatelessWidget {
               // Country name
               Expanded(
                 child: Text(
-                  country.name,
+                  countryNameLocalized(country.code, country.name),
                   style: AppTextStyles.bodyMedium.copyWith(
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,

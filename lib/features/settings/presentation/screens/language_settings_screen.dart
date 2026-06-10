@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
@@ -20,7 +21,7 @@ class LanguageSettingsScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Language')),
+      appBar: AppBar(title: Text(L.t('Language', 'Dil'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -28,8 +29,8 @@ class LanguageSettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _LangTile(
-                  label: 'Automatic',
-                  subtitle: 'Follow system language',
+                  label: L.t('Automatic', 'Otomatik'),
+                  subtitle: L.t('Follow system language', 'Sistem dilini izle'),
                   icon: Icons.language,
                   isSelected: current == null,
                   onTap: () => select(null),
@@ -45,7 +46,7 @@ class LanguageSettingsScreen extends ConsumerWidget {
                 const Divider(height: 0, indent: 52),
                 _LangTile(
                   label: 'Türkçe',
-                  subtitle: 'Turkish',
+                  subtitle: L.t('Turkish', 'Türkçe'),
                   icon: Icons.translate,
                   isSelected: current == 'tr',
                   onTap: () => select('tr'),
@@ -57,7 +58,8 @@ class LanguageSettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'More languages will be added in future updates.',
+              L.t('More languages will be added in future updates.',
+                  'Gelecek güncellemelerde daha fazla dil eklenecek.'),
               style: AppTextStyles.caption
                   .copyWith(color: AppColors.textSecondary),
             ),

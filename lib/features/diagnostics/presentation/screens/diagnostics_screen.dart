@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../location/domain/models/location_state.dart';
@@ -55,12 +56,12 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
       backgroundColor: AppColors.brandNavy,
       appBar: AppBar(
         backgroundColor: AppColors.brandNavy,
-        title: const Text('Diagnostics'),
+        title: Text(L.t('Diagnostics', 'Tanılama')),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: L.t('Refresh', 'Yenile'),
             onPressed: _loading ? null : _refresh,
           ),
         ],
@@ -71,34 +72,40 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
           children: [
             const SizedBox(height: 12),
             Text(
-              'Read-only snapshot of the running build. Share these values when '
-              'reporting a TestFlight or App Store issue.',
+              L.t(
+                'Read-only snapshot of the running build. Share these values when '
+                    'reporting a TestFlight or App Store issue.',
+                'Çalışan derlemenin salt-okunur özeti. TestFlight veya App Store '
+                    'sorunu bildirirken bu değerleri paylaşın.',
+              ),
               style: AppTextStyles.bodySmall
                   .copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 20),
 
-            _Section(title: 'Build', items: [
-              _Row('Version', AppConstants.appVersion),
-              _Row('Build mode', _buildMode()),
-              _Row('Bundle ID', 'com.visaradar.visaradar'),
-              _Row('Platform', _platform()),
+            _Section(title: L.t('Build', 'Derleme'), items: [
+              _Row(L.t('Version', 'Sürüm'), AppConstants.appVersion),
+              _Row(L.t('Build mode', 'Derleme modu'), _buildMode()),
+              _Row(L.t('Bundle ID', 'Paket Kimliği'), 'com.visaradar.visaradar'),
+              _Row(L.t('Platform', 'Platform'), _platform()),
             ]),
             const SizedBox(height: 16),
 
-            _Section(title: 'Permissions', items: [
+            _Section(title: L.t('Permissions', 'İzinler'), items: [
               _Row(
-                'Location',
+                L.t('Location', 'Konum'),
                 _formatLocationPermission(loc.permission),
                 accent: _accentForLocationPermission(loc.permission),
               ),
               _Row(
-                'Notifications',
+                L.t('Notifications', 'Bildirimler'),
                 _loading
-                    ? 'Checking…'
+                    ? L.t('Checking…', 'Denetleniyor…')
                     : (_notificationsAllowed == null
-                        ? 'Unknown'
-                        : (_notificationsAllowed! ? 'Allowed' : 'Not allowed')),
+                        ? L.t('Unknown', 'Bilinmiyor')
+                        : (_notificationsAllowed!
+                            ? L.t('Allowed', 'İzin verildi')
+                            : L.t('Not allowed', 'İzin verilmedi'))),
                 accent: _loading
                     ? null
                     : (_notificationsAllowed == true
@@ -108,43 +115,57 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
             ]),
             const SizedBox(height: 16),
 
-            _Section(title: 'Runtime', items: [
+            _Section(title: L.t('Runtime', 'Çalışma zamanı'), items: [
               _Row(
-                'Connectivity',
-                _loading ? 'Checking…' : _formatConnectivity(_connectivity),
+                L.t('Connectivity', 'Bağlantı'),
+                _loading
+                    ? L.t('Checking…', 'Denetleniyor…')
+                    : _formatConnectivity(_connectivity),
               ),
               _Row(
-                'Location phase',
+                L.t('Location phase', 'Konum aşaması'),
                 _formatLocationPhase(loc.phase),
               ),
               _Row(
-                'Detected country',
+                L.t('Detected country', 'Algılanan ülke'),
                 loc.detectedCountry?.toString() ?? '—',
               ),
             ]),
             const SizedBox(height: 16),
 
-            _Section(title: 'Release readiness', items: const [
+            _Section(title: L.t('Release readiness', 'Yayın hazırlığı'), items: [
               _CheckRow(
-                label: 'Privacy strings present',
+                label: L.t('Privacy strings present', 'Gizlilik metinleri mevcut'),
                 ok: true,
                 note: 'NSLocationWhenInUseUsageDescription only',
               ),
               _CheckRow(
-                label: 'No misleading background-location claim',
+                label: L.t(
+                  'No misleading background-location claim',
+                  'Yanıltıcı arka plan konumu iddiası yok',
+                ),
                 ok: true,
               ),
               _CheckRow(
-                label: 'No in-app purchase / paywall in v1',
+                label: L.t(
+                  'No in-app purchase / paywall in v1',
+                  'v1 sürümünde uygulama içi satın alma / ödeme duvarı yok',
+                ),
                 ok: true,
-                note: 'Subscription UI hidden — no IAP shown',
+                note: L.t(
+                  'Subscription UI hidden — no IAP shown',
+                  'Abonelik arayüzü gizli — uygulama içi satın alma gösterilmiyor',
+                ),
               ),
               _CheckRow(
-                label: 'Portrait-only orientation',
+                label: L.t('Portrait-only orientation', 'Yalnızca dikey yönlendirme'),
                 ok: true,
               ),
               _CheckRow(
-                label: 'Encryption export compliance set',
+                label: L.t(
+                  'Encryption export compliance set',
+                  'Şifreleme ihracat uyumluluğu ayarlandı',
+                ),
                 ok: true,
                 note: 'ITSAppUsesNonExemptEncryption = false',
               ),
@@ -175,15 +196,15 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
   String _formatLocationPermission(LocationPermissionStatus s) {
     switch (s) {
       case LocationPermissionStatus.notDetermined:
-        return 'Not asked yet';
+        return L.t('Not asked yet', 'Henüz sorulmadı');
       case LocationPermissionStatus.denied:
-        return 'Denied';
+        return L.t('Denied', 'Reddedildi');
       case LocationPermissionStatus.deniedForever:
-        return 'Denied permanently';
+        return L.t('Denied permanently', 'Kalıcı olarak reddedildi');
       case LocationPermissionStatus.granted:
-        return 'When in use';
+        return L.t('When in use', 'Kullanımdayken');
       case LocationPermissionStatus.restricted:
-        return 'Restricted';
+        return L.t('Restricted', 'Kısıtlı');
     }
   }
 
@@ -203,19 +224,19 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
   String _formatLocationPhase(LocationDetectionPhase p) {
     switch (p) {
       case LocationDetectionPhase.idle:
-        return 'Idle';
+        return L.t('Idle', 'Boşta');
       case LocationDetectionPhase.detecting:
-        return 'Detecting…';
+        return L.t('Detecting…', 'Algılanıyor…');
       case LocationDetectionPhase.detected:
-        return 'Detected';
+        return L.t('Detected', 'Algılandı');
       case LocationDetectionPhase.failed:
-        return 'Failed';
+        return L.t('Failed', 'Başarısız');
     }
   }
 
   String _formatConnectivity(List<ConnectivityResult> results) {
     if (results.isEmpty || results.every((r) => r == ConnectivityResult.none)) {
-      return 'Offline';
+      return L.t('Offline', 'Çevrimdışı');
     }
     return results
         .where((r) => r != ConnectivityResult.none)
@@ -228,7 +249,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
       case ConnectivityResult.wifi:
         return 'Wi-Fi';
       case ConnectivityResult.mobile:
-        return 'Mobile';
+        return L.t('Mobile', 'Mobil');
       case ConnectivityResult.ethernet:
         return 'Ethernet';
       case ConnectivityResult.vpn:
@@ -236,9 +257,9 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen> {
       case ConnectivityResult.bluetooth:
         return 'Bluetooth';
       case ConnectivityResult.other:
-        return 'Other';
+        return L.t('Other', 'Diğer');
       case ConnectivityResult.none:
-        return 'None';
+        return L.t('None', 'Yok');
     }
   }
 }

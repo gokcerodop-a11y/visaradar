@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/localization/country_names.dart';
 import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -198,7 +199,8 @@ class _TripCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            entry.countryLabel ?? entry.country,
+                            countryNameLocalized(
+                                entry.country, entry.countryLabel ?? entry.country),
                             style: AppTextStyles.bodyLarge
                                 .copyWith(fontWeight: FontWeight.w600),
                           ),
@@ -298,8 +300,8 @@ class _TripCard extends StatelessWidget {
         title: Text(isTr ? 'Seyahati sil?' : 'Delete trip?'),
         content: Text(
           isTr
-              ? '${entry.countryLabel ?? entry.country} seyahati silinecek.'
-              : 'This will remove the trip to ${entry.countryLabel ?? entry.country}.',
+              ? '${countryNameLocalized(entry.country, entry.countryLabel ?? entry.country)} seyahati silinecek.'
+              : 'This will remove the trip to ${countryNameLocalized(entry.country, entry.countryLabel ?? entry.country)}.',
           style: AppTextStyles.bodyMedium
               .copyWith(color: AppColors.textSecondary),
         ),

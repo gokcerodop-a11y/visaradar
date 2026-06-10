@@ -7,6 +7,8 @@ import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../border/border_mode_widgets.dart';
+import '../../../location/presentation/screens/location_detail_screen.dart';
 import '../../../border_crossing/presentation/providers/border_crossing_provider.dart';
 import '../../../border_crossing/presentation/widgets/crossing_suggestion_card.dart';
 import '../../../location/presentation/providers/location_provider.dart';
@@ -34,6 +36,13 @@ class RadarScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutes.addTrip),
+        backgroundColor: AppColors.brandTeal,
+        foregroundColor: AppColors.brandNavy,
+        icon: const Icon(Icons.add),
+        label: Text(ref.watch(isTurkishProvider) ? 'Seyahat Ekle' : 'Add Trip'),
+      ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -44,6 +53,7 @@ class RadarScreen extends ConsumerWidget {
                 delegate: SliverChildListDelegate([
                   const _LocationCard(),
                   const SizedBox(height: 12),
+                  const BorderModeCard(),
                   if (hasSuggestion) ...[
                     const CrossingSuggestionCard(),
                     const SizedBox(height: 12),
@@ -99,6 +109,16 @@ class _RadarHeader extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.luggage_outlined,
+              color: AppColors.textSecondary,
+              size: 22,
+            ),
+            onPressed: () => context.push(AppRoutes.trips),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
           ),
           IconButton(
             icon: const Icon(
@@ -189,9 +209,12 @@ class _LocationCard extends ConsumerWidget {
         label: isTr ? 'GÜNCEL KONUM' : 'CURRENT LOCATION',
         title: country.name ?? country.isoCode,
         subtitle: isTr
-            ? 'Otomatik algılandı · ${country.isoCode}'
-            : 'Auto-detected · ${country.isoCode}',
+            ? 'Hava durumu ve detaylar için dokun'
+            : 'Tap for weather & details',
         subtitleColor: AppColors.brandTeal,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LocationDetailScreen()),
+        ),
         action: _LocationAction(
           label: isTr ? 'Yenile' : 'Refresh',
           color: AppColors.textSecondary,
@@ -232,6 +255,7 @@ class _LocationRow extends StatelessWidget {
     this.subtitleColor,
     this.action,
     this.trailing,
+    this.onTap,
   });
 
   final IconData iconData;
@@ -243,10 +267,11 @@ class _LocationRow extends StatelessWidget {
   final Color? subtitleColor;
   final _LocationAction? action;
   final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _DashCard(
+    final card = _DashCard(
       child: Row(
         children: [
           Container(
@@ -284,6 +309,12 @@ class _LocationRow extends StatelessWidget {
           ?action,
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: card,
     );
   }
 }

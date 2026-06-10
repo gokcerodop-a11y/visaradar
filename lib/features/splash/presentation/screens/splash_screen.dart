@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
@@ -99,20 +100,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Primary line in the active language (Turkish bigger on top
+                  // for TR devices); English-only when the device is English.
                   Text(
-                    'Welcome to VisaRadar',
+                    L.isTr
+                        ? "VisaRadar Travel'a Hoş Geldiniz"
+                        : 'Welcome to VisaRadar Travel',
                     style: AppTextStyles.displayMedium,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "VisaRadar'a Hoşgeldiniz",
-                    style: AppTextStyles.titleLarge.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
+                  if (L.isTr) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Welcome to VisaRadar Travel',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                  ],
                 ],
               ),
             ),

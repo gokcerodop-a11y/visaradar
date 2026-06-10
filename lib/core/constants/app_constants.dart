@@ -2,7 +2,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'VisaRadar';
+  static const String appName = 'VisaRadar Travel';
   static const String appVersion = '1.0.0';
 
   // Legal URLs — set to non-empty strings once the pages are live.
@@ -22,6 +22,7 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyOnboardingDone = 'onboarding_done';
+  static const String keyInstallDate = 'install_date_v1'; // ISO8601, first run
   static const String keySelectedLocale = 'selected_locale';
   static const String keyUserProfile = 'user_profile_v1';
   static const String keyTrips = 'trips_v1';

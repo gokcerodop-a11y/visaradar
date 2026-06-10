@@ -51,3 +51,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node / Cloudflare Worker
+node_modules/
+**/node_modules/
+.wrangler/
+**/.dev.vars
+
+# Secrets — never commit signing keys
+*.p8
+*.p12
+*.mobileprovision
