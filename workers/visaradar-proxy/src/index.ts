@@ -12,6 +12,7 @@ import { checkAndIncrementLimit } from "./rate-limit.js";
 import { jsonResponse, parseJsonBody } from "./utils.js";
 import { handleAppleNotify, handleFinTest, sendDailyReport } from "./notify.js";
 import { trDay } from "./finance.js";
+import { privacyPage, termsPage } from "./legal.js";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -33,6 +34,13 @@ export default {
       }
       if (method === "GET" && path === "/healthz") {
         return jsonResponse({ status: "ok", appleEnv: env.APPLE_ENV });
+      }
+      // Public legal pages — App Store metadata links to these (Guideline 3.1.2).
+      if (method === "GET" && (path === "/privacy" || path === "/privacy/")) {
+        return privacyPage();
+      }
+      if (method === "GET" && (path === "/terms" || path === "/terms/")) {
+        return termsPage();
       }
       if (method === "POST" && path === "/v1/chat") {
         return _cors(await handleChat(request, env));
