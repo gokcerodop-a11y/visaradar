@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../services/premium_providers.dart';
 import '../../../assistant/assistant_controller.dart';
+import '../../../location/domain/saved_places.dart';
 import '../../../paywall/paywall_screen.dart';
 import '../../../scanner/document_scanner_screen.dart';
 import '../../domain/models/user_profile.dart';
@@ -21,6 +22,7 @@ class ProfileScreen extends ConsumerWidget {
     final isTr = ref.watch(isTurkishProvider);
     final profile = ref.watch(profileProvider);
     final isPremium = ref.watch(isPremiumProvider);
+    final savedCount = ref.watch(savedPlacesProvider).length;
 
     return Scaffold(
       appBar: AppBar(title: Text(isTr ? 'Profil' : 'Profile')),
@@ -39,6 +41,18 @@ class ProfileScreen extends ConsumerWidget {
             () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const DocumentScannerScreen()),
             ),
+          ),
+          const SizedBox(height: 16),
+          _sectionLabel(isTr ? 'Yerlerim' : 'My places'),
+          _tile(
+            context,
+            Icons.bookmark_outline,
+            savedCount > 0
+                ? (isTr
+                    ? 'Kayıtlı yerlerim ($savedCount)'
+                    : 'Saved places ($savedCount)')
+                : (isTr ? 'Kayıtlı yerlerim' : 'Saved places'),
+            () => context.push(AppRoutes.savedPlaces),
           ),
           const SizedBox(height: 16),
           _sectionLabel(isTr ? 'Ayarlar' : 'Settings'),

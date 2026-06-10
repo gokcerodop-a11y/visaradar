@@ -134,7 +134,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
 
   Widget _content() {
     final w = _weather;
-    final saved = ref.watch(savedPlacesProvider);
     final desc = describeWeather(w?.weatherCode);
     final aqi = describeAqi(w?.europeanAqi);
 
@@ -286,16 +285,9 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Saved places
-        if (saved.isNotEmpty) ...[
-          Text(L.t('Saved places', 'Kayıtlı konumlar'),
-              style: AppTextStyles.labelLarge),
-          const SizedBox(height: 10),
-          ...saved.map(_savedTile),
-        ],
         Text(
-          L.t('Save the exact spots you love and return to them years later.',
-              'Sevdiğin tam noktaları kaydet, yıllar sonra bile aynı yere nokta atışı dön.'),
+          L.t('Saved spots live in Profile › Saved places — return to them years later.',
+              'Kaydettiğin yerler Profil › Kayıtlı yerlerim\'de durur — yıllar sonra bile aynı noktaya dön.'),
           style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
         ),
       ],
@@ -330,41 +322,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     );
   }
 
-  Widget _savedTile(SavedPlace p) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(14),
-        child: ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          leading: const Icon(Icons.place, color: AppColors.brandTeal),
-          title: Text(p.name, style: AppTextStyles.bodyLarge),
-          subtitle: Text(
-            '${p.city ?? ''}${p.city != null && p.city!.isNotEmpty ? ' · ' : ''}'
-            '${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)}',
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.navigation_outlined, size: 20),
-                tooltip: L.t('Navigate', 'Git'),
-                onPressed: () => _openCoordsInMaps(p.lat, p.lng, p.name),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                onPressed: () =>
-                    ref.read(savedPlacesProvider.notifier).remove(p.id),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _openInMaps() async {
     if (_pos != null) {
       await _openCoordsInMaps(_pos!.latitude, _pos!.longitude, _city ?? 'Pin');
@@ -379,37 +336,18 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     }
   }
 
+  // One-tap save: the spot is persisted immediately with a sensible default
+  // name (the detected city, else its coordinates) and shows up under
+  // Profile › Saved places, where it can be renamed or deleted.
   Future<void> _savePlace() async {
-    final controller =
-        TextEditingController(text: _city ?? L.t('My place', 'Konumum'));
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceCard,
-        title: Text(L.t('Save this place', 'Bu konumu kaydet')),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: L.t('Name (e.g. Favourite beach)',
-                'Ad (ör. En sevdiğim plaj)'),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(L.t('Cancel', 'İptal'))),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: Text(L.t('Save', 'Kaydet'))),
-        ],
-      ),
-    );
-    if (name == null || name.isEmpty || _pos == null) return;
+    if (_pos == null) return;
     final now = DateTime.now();
+    final defaultName = (_city != null && _city!.isNotEmpty)
+        ? _city!
+        : '${_pos!.latitude.toStringAsFixed(4)}, ${_pos!.longitude.toStringAsFixed(4)}';
     await ref.read(savedPlacesProvider.notifier).add(SavedPlace(
           id: now.millisecondsSinceEpoch.toString(),
-          name: name,
+          name: defaultName,
           lat: _pos!.latitude,
           lng: _pos!.longitude,
           city: _city,
@@ -418,7 +356,8 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         ));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(L.t('Place saved', 'Konum kaydedildi'))));
+          content: Text(L.t('Saved to Profile › Saved places',
+              'Profil › Kayıtlı yerlerim\'e kaydedildi'))));
     }
   }
 }

@@ -6,6 +6,7 @@ import '../../features/assistant/assistant_screen.dart';
 import '../../features/countries/presentation/countries_screen.dart';
 import '../../features/diagnostics/presentation/screens/diagnostics_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/location/presentation/screens/saved_places_screen.dart';
 import '../../features/paywall/paywall_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/radar/presentation/screens/radar_screen.dart';
@@ -38,6 +39,7 @@ abstract class AppRoutes {
   static const notificationSettings = '/settings/notifications';
   static const legalText = '/settings/legal';
   static const diagnostics = '/settings/diagnostics';
+  static const savedPlaces = '/profile/saved-places';
   static const trips = '/trips';
   static const addTrip = '/trips/add';
   static const editTrip = '/trips/edit/:id';
@@ -106,6 +108,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.diagnostics,
         builder: (context, state) => const DiagnosticsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.savedPlaces,
+        builder: (context, state) => const SavedPlacesScreen(),
       ),
 
       // Main shell — 4-tab bottom navigation.

@@ -83,6 +83,27 @@ class SavedPlacesNotifier extends StateNotifier<List<SavedPlace>> {
     state = state.where((p) => p.id != id).toList();
     await _persist();
   }
+
+  Future<void> rename(String id, String newName) async {
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty) return;
+    state = [
+      for (final p in state)
+        if (p.id == id)
+          SavedPlace(
+            id: p.id,
+            name: trimmed,
+            lat: p.lat,
+            lng: p.lng,
+            city: p.city,
+            address: p.address,
+            savedAt: p.savedAt,
+          )
+        else
+          p,
+    ];
+    await _persist();
+  }
 }
 
 final savedPlacesProvider =
