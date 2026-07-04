@@ -55,7 +55,8 @@ class CountriesScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(c.name(isTr), style: AppTextStyles.titleLarge),
+                      Text(c.name(isTr), style: AppTextStyles.titleLarge,
+                          overflow: TextOverflow.ellipsis, maxLines: 1),
                       const SizedBox(height: 4),
                       Text(
                         '${c.currencyCode} · ${c.currency}',
@@ -65,7 +66,7 @@ class CountriesScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                _schengenChip(c.isSchengen, isTr),
+                _schengenChip(c, isTr),
                 const SizedBox(width: 6),
                 const Icon(Icons.chevron_right, color: AppColors.textMuted),
               ],
@@ -76,11 +77,19 @@ class CountriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _schengenChip(bool isSchengen, bool isTr) {
-    final color = isSchengen ? AppColors.info : AppColors.success;
-    final label = isSchengen
-        ? 'Schengen'
-        : (isTr ? 'Vizesiz*' : 'Visa-free*');
+  Widget _schengenChip(VisaCountry c, bool isTr) {
+    final Color color;
+    final String label;
+    if (c.isSchengen) {
+      color = AppColors.info;
+      label = 'Schengen';
+    } else if (c.requiresVisaForTurkish) {
+      color = AppColors.warning;
+      label = isTr ? 'Vizeyle' : 'Visa req.';
+    } else {
+      color = AppColors.success;
+      label = isTr ? 'Vizesiz' : 'Visa-free';
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(

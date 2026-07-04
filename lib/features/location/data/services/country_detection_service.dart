@@ -42,9 +42,16 @@ class GeolocatorCountryDetectionService implements CountryDetectionService {
       final iso = place.isoCountryCode;
       if (iso == null || iso.isEmpty) return null;
 
+      final city = (place.locality?.isNotEmpty == true)
+          ? place.locality
+          : (place.subAdministrativeArea?.isNotEmpty == true
+              ? place.subAdministrativeArea
+              : place.administrativeArea);
+
       return DetectedCountry(
         isoCode: iso.toUpperCase(),
         name: place.country,
+        city: city,
       );
     } catch (_) {
       // Silently fail — caller reads null as "detection failed".

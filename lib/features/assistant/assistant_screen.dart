@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../core/localization/locale.dart';
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../services/ai/ai_message.dart';
@@ -21,9 +24,53 @@ class AssistantScreen extends ConsumerStatefulWidget {
 class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _speechAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechAvailable = await _speech.initialize(
+      onError: (_) => setState(() => _isListening = false),
+      onStatus: (status) {
+        if (status == 'done' || status == 'notListening') {
+          setState(() => _isListening = false);
+        }
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_speechAvailable) return;
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+    } else {
+      final isTr = ref.read(isTurkishProvider);
+      setState(() => _isListening = true);
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _input.text = result.recognizedWords;
+          });
+        },
+        listenOptions: stt.SpeechListenOptions(
+          localeId: isTr ? 'tr_TR' : 'en_US',
+          listenMode: stt.ListenMode.dictation,
+        ),
+      );
+    }
+  }
 
   @override
   void dispose() {
+    _speech.stop();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -56,6 +103,12 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Navigator.canPop(context)
+            ? const BackButton()
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.go(AppRoutes.radar),
+              ),
         title: Text(isTr ? 'Asistan' : 'Assistant'),
         actions: [
           if (isPremium)
@@ -262,6 +315,21 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
         ),
         child: Row(
           children: [
+            if (_speechAvailable)
+              FloatingActionButton.small(
+                heroTag: 'mic',
+                onPressed: loading ? null : _toggleListening,
+                backgroundColor: _isListening
+                    ? AppColors.danger
+                    : AppColors.surfaceCard,
+                foregroundColor: _isListening
+                    ? Colors.white
+                    : AppColors.textSecondary,
+                elevation: 0,
+                child: Icon(
+                    _isListening ? Icons.mic : Icons.mic_none),
+              ),
+            if (_speechAvailable) const SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _input,
@@ -270,7 +338,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: InputDecoration(
-                  hintText: isTr ? 'Mesaj yaz…' : 'Type a message…',
+                  hintText: _isListening
+                      ? (isTr ? 'Dinleniyor…' : 'Listening…')
+                      : (isTr ? 'Mesaj yaz…' : 'Type a message…'),
                   filled: true,
                   fillColor: AppColors.surfaceCard,
                   border: OutlineInputBorder(
@@ -284,6 +354,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             ),
             const SizedBox(width: 8),
             FloatingActionButton.small(
+              heroTag: 'send',
               onPressed: loading ? null : _send,
               backgroundColor: AppColors.brandTeal,
               foregroundColor: AppColors.brandNavy,

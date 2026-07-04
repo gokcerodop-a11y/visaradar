@@ -25,14 +25,14 @@ class ProfileScreen extends ConsumerWidget {
     final savedCount = ref.watch(savedPlacesProvider).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isTr ? 'Profil' : 'Profile')),
+      appBar: AppBar(title: Text(isTr ? 'Ayarlar' : 'Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
           _passportCard(context, profile, isTr),
           const SizedBox(height: 16),
-          _premiumCard(context, isPremium, ref, isTr),
-          const SizedBox(height: 16),
+
+          // ── Premium tools ──────────────────────────────────────────
           _sectionLabel(isTr ? 'Premium araçları' : 'Premium tools'),
           _tile(
             context,
@@ -43,6 +43,8 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── My places ─────────────────────────────────────────────
           _sectionLabel(isTr ? 'Yerlerim' : 'My places'),
           _tile(
             context,
@@ -55,7 +57,9 @@ class ProfileScreen extends ConsumerWidget {
             () => context.push(AppRoutes.savedPlaces),
           ),
           const SizedBox(height: 16),
-          _sectionLabel(isTr ? 'Ayarlar' : 'Settings'),
+
+          // ── Settings ──────────────────────────────────────────────
+          _sectionLabel(isTr ? 'Tercihler' : 'Preferences'),
           _tile(
             context,
             Icons.badge_outlined,
@@ -75,6 +79,12 @@ class ProfileScreen extends ConsumerWidget {
             () => context.push(AppRoutes.notificationSettings),
           ),
           const SizedBox(height: 16),
+
+          // ── Premium card ───────────────────────────────────────────
+          _premiumCard(context, isPremium, ref, isTr),
+          const SizedBox(height: 16),
+
+          // ── About ─────────────────────────────────────────────────
           _sectionLabel(isTr ? 'Hakkında' : 'About'),
           _tile(
             context,
@@ -99,7 +109,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Center(
             child: Text(
-              'VisaRadar Travel 1.0.0',
+              'VisaRadar Travel 1.1.0',
               style:
                   AppTextStyles.caption.copyWith(color: AppColors.textMuted),
             ),

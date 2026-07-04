@@ -1,7 +1,7 @@
 name: visaradar
 description: "VisaRadar – premium global visa and stay tracking app."
 publish_to: 'none'
-version: 1.0.0+3
+version: 1.1.0+5
 
 environment:
   sdk: ^3.11.3
@@ -52,6 +52,9 @@ dependencies:
   # Models / code-gen
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
+
+  # Speech recognition
+  speech_to_text: ^7.0.0
 
   # Utils
   intl: ^0.20.2

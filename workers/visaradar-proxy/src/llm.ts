@@ -70,7 +70,7 @@ export async function runChat(
     model,
     opts.systemPrompt || DEFAULT_SYSTEM,
     opts.messages,
-    1024,
+    2048,
   );
   return { text, model };
 }

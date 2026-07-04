@@ -5,11 +5,14 @@ class AppConstants {
   static const String appName = 'VisaRadar Travel';
   static const String appVersion = '1.0.0';
 
-  // Legal URLs — set to non-empty strings once the pages are live.
+  // Legal URLs — live pages served by the proxy worker (App Review 3.1.2c).
   // When empty, the app falls back to showing the in-app legal screen.
-  static const String privacyPolicyUrl = ''; // e.g. 'https://visaradar.app/privacy'
-  static const String termsUrl = '';         // e.g. 'https://visaradar.app/terms'
-  static const String supportUrl = '';       // e.g. 'https://visaradar.app/support'
+  static const String privacyPolicyUrl =
+      'https://visaradar-proxy.gokcerodop.workers.dev/privacy';
+  static const String termsUrl =
+      'https://visaradar-proxy.gokcerodop.workers.dev/terms';
+  static const String supportUrl =
+      'https://visaradar-proxy.gokcerodop.workers.dev/support';
 
   // Schengen rule
   static const int schengenMaxDays = 90;

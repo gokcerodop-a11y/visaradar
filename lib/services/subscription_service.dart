@@ -12,6 +12,7 @@
 // never shows price/CTA copy unless the store returned live product details.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -172,10 +173,28 @@ class SubscriptionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Decodes a StoreKit 2 JWS token and extracts the originalTransactionId.
+  // Returns null if the input is not a valid JWS or lacks the field.
+  String? _extractTxIdFromJws(String jws) {
+    try {
+      final parts = jws.split('.');
+      if (parts.length != 3) return null;
+      String padded = parts[1];
+      padded += '=' * ((4 - padded.length % 4) % 4);
+      padded = padded.replaceAll('-', '+').replaceAll('_', '/');
+      final payload = jsonDecode(utf8.decode(base64.decode(padded))) as Map<String, dynamic>;
+      return payload['originalTransactionId']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _activate(PurchaseDetails purchase) async {
     String txId = purchase.purchaseID ?? '';
     if (txId.isEmpty && Platform.isIOS) {
-      txId = purchase.verificationData.serverVerificationData;
+      // serverVerificationData on iOS is a StoreKit 2 JWS — decode it.
+      final jws = purchase.verificationData.serverVerificationData;
+      txId = _extractTxIdFromJws(jws) ?? jws;
     }
     if (txId.isEmpty) {
       debugPrint('[SubscriptionService] purchase has no txId, skipping');
@@ -209,7 +228,12 @@ class SubscriptionService extends ChangeNotifier {
     final tx = prefs.getString(_kCachedTxId);
     final exp = prefs.getInt(_kCachedExpiresAt);
     final planName = prefs.getString(_kCachedPlan);
-    if (tx != null && tx.isNotEmpty) _originalTransactionId = tx;
+    if (tx != null && tx.isNotEmpty) {
+      // Migrate: if cached value is a JWS, decode it to the numeric transaction ID.
+      final decoded = _extractTxIdFromJws(tx) ?? tx;
+      _originalTransactionId = decoded;
+      if (decoded != tx) await prefs.setString(_kCachedTxId, decoded);
+    }
     _plan = PremiumPlan.values.firstWhere(
       (e) => e.name == planName,
       orElse: () => PremiumPlan.none,

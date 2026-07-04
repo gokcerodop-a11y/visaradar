@@ -59,14 +59,18 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VisaRadar uses your current location to detect which country you are in so it can show the right Schengen and visa information for that country.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>VisaRadar uses your current location to detect which country you are in so it can show the right Schengen and visa information for that country.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>VisaRadar uses the camera so you can scan your passport, visa or residence permit and automatically read key dates.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>VisaRadar lets you pick a photo of your travel document from your library to scan it for key dates.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>VisaRadar uses your microphone so you can ask travel questions by voice in the AI Assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>VisaRadar uses speech recognition to convert your voice questions into text for the AI Assistant.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

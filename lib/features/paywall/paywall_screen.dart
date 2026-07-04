@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/locale.dart';
@@ -9,7 +9,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../services/premium_providers.dart';
 import '../../services/subscription_service.dart';
-import '../profile/presentation/providers/profile_provider.dart';
 
 /// Premium paywall. Critically (App Review 2.1b): pricing/CTA copy is only
 /// rendered when the App Store returns live [ProductDetails]. When products are
@@ -23,24 +22,6 @@ class PaywallScreen extends ConsumerStatefulWidget {
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   String _selected = SubscriptionService.productAnnual;
-  bool _showLifetime = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolveLifetimeEligibility();
-  }
-
-  Future<void> _resolveLifetimeEligibility() async {
-    // Lifetime is only offered after 3 days of use (per pricing strategy).
-    final prefs = await SharedPreferences.getInstance();
-    final iso = prefs.getString(AppConstants.keyInstallDate);
-    final installed =
-        iso != null ? DateTime.tryParse(iso) : null;
-    final eligible = installed != null &&
-        DateTime.now().difference(installed).inDays >= 3;
-    if (mounted) setState(() => _showLifetime = eligible);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +36,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       });
     }
 
-    final products = subs.products
-        .where((p) =>
-            _showLifetime || p.id != SubscriptionService.productLifetime)
-        .toList();
+    final products = subs.products.toList();
     final hasProducts = products.isNotEmpty;
 
     return Scaffold(
@@ -307,8 +285,15 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.textMuted)),
               TextButton(
-                onPressed: () => _openTerms(isTr),
+                onPressed: () => _openUrl(AppConstants.termsUrl),
                 child: Text(isTr ? 'Şartlar' : 'Terms'),
+              ),
+              Text('·',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textMuted)),
+              TextButton(
+                onPressed: () => _openUrl(AppConstants.privacyPolicyUrl),
+                child: Text(isTr ? 'Gizlilik' : 'Privacy'),
               ),
             ],
           ),
@@ -326,15 +311,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  void _openTerms(bool isTr) {
-    // Profile read kept for future locale-aware legal routing.
-    ref.read(profileProvider);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isTr
-            ? 'Şartlar Profil > Yasal bölümünde.'
-            : 'Terms are in Profile > Legal.'),
-      ),
-    );
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }

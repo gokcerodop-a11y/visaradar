@@ -8,8 +8,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../services/ai/ai_message.dart';
+import '../../../../services/ai/anthropic_proxy.dart';
+import '../../../../services/premium_providers.dart';
 import '../../data/weather_service.dart';
 import '../../domain/saved_places.dart';
+import '../../../paywall/paywall_screen.dart';
 
 class LocationDetailScreen extends ConsumerStatefulWidget {
   const LocationDetailScreen({super.key});
@@ -27,6 +31,11 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
   String? _address;
   WeatherData? _weather;
 
+  // AI local info
+  bool _aiLoading = false;
+  String? _aiInfo;
+  String? _aiError;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +46,8 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _aiInfo = null;
+      _aiError = null;
     });
     try {
       final perm = await Geolocator.checkPermission();
@@ -49,7 +60,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
       );
       _pos = pos;
 
-      // Reverse geocode (best-effort) + weather in parallel.
       final results = await Future.wait([
         _reverseGeocode(pos.latitude, pos.longitude),
         WeatherService().fetch(pos.latitude, pos.longitude),
@@ -57,6 +67,9 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
       _weather = results[1] as WeatherData;
       if (!mounted) return;
       setState(() => _loading = false);
+
+      // Start AI local info load after main content is shown
+      _loadAiInfo();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -86,6 +99,76 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         ].where((s) => s != null && s.isNotEmpty).cast<String>().join(', ');
       }
     } catch (_) {/* geocoding optional */}
+  }
+
+  Future<void> _loadAiInfo() async {
+    final bearer = ref.read(premiumBearerProvider);
+    if (bearer == null || bearer.isEmpty) {
+      setState(() { _aiLoading = false; _aiError = 'no-bearer'; });
+      return;
+    }
+
+    // Use city name if available, otherwise fall back to address or coordinates.
+    final locationLabel = (_city?.isNotEmpty == true)
+        ? _city!
+        : (_address?.isNotEmpty == true)
+            ? _address!
+            : (_pos != null
+                ? '${_pos!.latitude.toStringAsFixed(4)}, ${_pos!.longitude.toStringAsFixed(4)}'
+                : null);
+
+    if (locationLabel == null) {
+      setState(() { _aiLoading = false; _aiError = 'no-location'; });
+      return;
+    }
+
+    setState(() {
+      _aiLoading = true;
+      _aiError = null;
+    });
+
+    final isTr = ref.read(isTurkishProvider);
+    final lang = isTr ? 'Turkish' : 'English';
+    final location = locationLabel;
+
+    final systemPrompt = 'You are a travel guide expert. Reply in $lang. '
+        'Use short emoji headers and bullet points. Provide factual, specific info. '
+        'Keep total response under 400 words.';
+
+    final userMsg = 'Tell me about $location'
+        '${_pos != null ? ' (${_pos!.latitude.toStringAsFixed(4)}, ${_pos!.longitude.toStringAsFixed(4)})' : ''}. '
+        'Cover: 🍽️ top 3 local eats, 🏛️ top 3 sights, 📚 2-3 history facts, 💡 2 travel tips.';
+
+    final proxy = AnthropicProxy(
+      originalTransactionId: bearer,
+      language: isTr ? 'tr' : 'en',
+    );
+
+    try {
+      final result = await proxy.chat(
+        [AIMessage.user(userMsg)],
+        systemPrompt: systemPrompt,
+      );
+      if (!mounted) return;
+      setState(() {
+        _aiInfo = result;
+        _aiLoading = false;
+      });
+    } on ProxySubscriptionRequiredException {
+      if (!mounted) return;
+      setState(() {
+        _aiLoading = false;
+        _aiError = 'subscription';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _aiLoading = false;
+        _aiError = 'generic';
+      });
+    } finally {
+      proxy.dispose();
+    }
   }
 
   @override
@@ -136,6 +219,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     final w = _weather;
     final desc = describeWeather(w?.weatherCode);
     final aqi = describeAqi(w?.europeanAqi);
+    final isPremium = ref.watch(isPremiumProvider);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -285,12 +369,147 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         ),
         const SizedBox(height: 20),
 
+        // ── AI City Intelligence section ─────────────────────────────────────
+        _aiCitySection(isPremium),
+        const SizedBox(height: 16),
+
         Text(
           L.t('Saved spots live in Profile › Saved places — return to them years later.',
-              'Kaydettiğin yerler Profil › Kayıtlı yerlerim\'de durur — yıllar sonra bile aynı noktaya dön.'),
+              'Kaydettiğin yerler Ayarlar › Kayıtlı yerlerim\'de durur — yıllar sonra bile aynı noktaya dön.'),
           style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
         ),
       ],
+    );
+  }
+
+  Widget _aiCitySection(bool isPremium) {
+    final isTr = L.isTr;
+    final sectionTitle = isTr ? 'Şehir Keşfi' : 'City Intelligence';
+
+    if (!isPremium) {
+      return _infoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: AppColors.brandTeal, size: 20),
+                const SizedBox(width: 8),
+                Text(sectionTitle, style: AppTextStyles.labelLarge),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandTeal.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text('Premium',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.brandTeal, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isTr
+                  ? 'Bulunduğunuz şehir hakkında restoran, otel, tarihi mekan, demografik yapı ve çok daha fazla bilgi. Premium ile açın.'
+                  : 'Restaurants, hotels, historic sites, demographics and much more about your current city. Unlock with Premium.',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.bolt, size: 18),
+                label: Text(isTr ? 'Premium\'a Geç' : 'Unlock Premium'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Premium user — show AI info
+    return _infoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.brandTeal, size: 20),
+              const SizedBox(width: 8),
+              Text(sectionTitle, style: AppTextStyles.labelLarge),
+              const Spacer(),
+              if (_aiLoading)
+                const SizedBox(
+                  width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brandTeal),
+                )
+              else if (_aiInfo != null)
+                const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_aiLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  Text(
+                    L.isTr
+                        ? '${_city ?? 'Şehir'} hakkında bilgi toplanıyor…'
+                        : 'Gathering intelligence about ${_city ?? 'this location'}…',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else if (_aiError != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _aiError == 'no-bearer'
+                      ? (L.isTr ? 'Premium hesabı doğrulanamadı. Uygulamayı yeniden başlatıp tekrar deneyin.' : 'Premium account could not be verified. Restart the app and try again.')
+                      : (L.isTr ? 'Bilgi yüklenemedi. İnternet bağlantınızı kontrol edin.' : 'Could not load info. Check your internet connection.'),
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+                ),
+                if (_aiError != 'no-bearer') ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: Text(L.isTr ? 'Tekrar dene' : 'Retry'),
+                    onPressed: _loadAiInfo,
+                  ),
+                ],
+              ],
+            )
+          else if (_aiInfo != null)
+            SelectableText(_aiInfo!, style: AppTextStyles.bodyMedium)
+          else
+            Text(
+              L.isTr ? 'Konum bilgisi bekleniyor…' : 'Waiting for location…',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.brandTeal.withValues(alpha: 0.25),
+        ),
+      ),
+      child: child,
     );
   }
 
@@ -336,9 +555,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     }
   }
 
-  // One-tap save: the spot is persisted immediately with a sensible default
-  // name (the detected city, else its coordinates) and shows up under
-  // Profile › Saved places, where it can be renamed or deleted.
   Future<void> _savePlace() async {
     if (_pos == null) return;
     final now = DateTime.now();
@@ -356,8 +572,8 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         ));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(L.t('Saved to Profile › Saved places',
-              'Profil › Kayıtlı yerlerim\'e kaydedildi'))));
+          content: Text(L.t('Saved to Settings › Saved places',
+              'Ayarlar › Kayıtlı yerlerim\'e kaydedildi'))));
     }
   }
 }

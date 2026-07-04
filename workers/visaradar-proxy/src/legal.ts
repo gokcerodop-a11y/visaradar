@@ -59,6 +59,26 @@ export function privacyPage(): Response {
 `);
 }
 
+export function supportPage(): Response {
+  return page("Support", `
+<h1>VisaRadar Travel — Support</h1>
+<p>Need help with VisaRadar Travel? We're happy to assist.</p>
+
+<h2>Contact</h2>
+<p>Email us at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> and we'll get back to you. Please include your device model and iOS version so we can help faster.</p>
+
+<h2>Common questions</h2>
+<ul>
+  <li><strong>How does automatic tracking work?</strong> The app uses your device location (with your permission) to detect the country/city you're in and calculates your Schengen 90/180 stay automatically. The app works without an account.</li>
+  <li><strong>VisaRadar Premium</strong> unlocks the AI travel assistant, document scanner and border mode. Plans: Monthly (USD 4.99), Annual (USD 34.99, 3-day free trial), Lifetime (USD 59.99, one-time). Manage or cancel anytime in Settings → your name → Subscriptions.</li>
+  <li><strong>Restore purchases</strong> — open the app's premium screen and tap “Restore Purchases”.</li>
+</ul>
+
+<h2>Legal</h2>
+<p>See our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</p>
+`);
+}
+
 export function termsPage(): Response {
   return page("Terms of Use", `
 <h1>Terms of Use (EULA)</h1>

@@ -12,7 +12,7 @@ import { checkAndIncrementLimit } from "./rate-limit.js";
 import { jsonResponse, parseJsonBody } from "./utils.js";
 import { handleAppleNotify, handleFinTest, sendDailyReport } from "./notify.js";
 import { trDay } from "./finance.js";
-import { privacyPage, termsPage } from "./legal.js";
+import { privacyPage, termsPage, supportPage } from "./legal.js";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -41,6 +41,9 @@ export default {
       }
       if (method === "GET" && (path === "/terms" || path === "/terms/")) {
         return termsPage();
+      }
+      if (method === "GET" && (path === "/support" || path === "/support/")) {
+        return supportPage();
       }
       if (method === "POST" && path === "/v1/chat") {
         return _cors(await handleChat(request, env));

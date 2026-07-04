@@ -14,6 +14,7 @@ import '../../../border_crossing/presentation/widgets/crossing_suggestion_card.d
 import '../../../location/presentation/providers/location_provider.dart';
 import '../../../profile/domain/models/user_profile.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../countries/domain/country_data.dart';
 import '../../../travel/domain/usecases/schengen_calculator.dart';
 import '../../../travel/presentation/providers/trips_provider.dart';
 
@@ -70,6 +71,8 @@ class RadarScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                   ],
                   const _TravelSummaryCard(),
+                  const SizedBox(height: 12),
+                  const _OtherCountriesSummaryCard(),
                 ]),
               ),
             ),
@@ -112,11 +115,23 @@ class _RadarHeader extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(
-              Icons.luggage_outlined,
+              Icons.auto_awesome_outlined,
               color: AppColors.textSecondary,
               size: 22,
             ),
-            onPressed: () => context.push(AppRoutes.trips),
+            tooltip: 'Kolaylıklar',
+            onPressed: () => _showFeatures(context),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.language,
+              color: AppColors.textSecondary,
+              size: 22,
+            ),
+            tooltip: 'Country Stays',
+            onPressed: () => context.push(AppRoutes.stays),
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),
           ),
@@ -134,6 +149,214 @@ class _RadarHeader extends StatelessWidget {
       ),
     );
   }
+
+  void _showFeatures(BuildContext context) {
+    final isTr = Localizations.localeOf(context).languageCode == 'tr';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FeaturesSheet(isTr: isTr),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Features showcase sheet
+// ---------------------------------------------------------------------------
+
+class _FeaturesSheet extends StatelessWidget {
+  const _FeaturesSheet({required this.isTr});
+  final bool isTr;
+
+  @override
+  Widget build(BuildContext context) {
+    final features = [
+      _FeatureItem(
+        emoji: '🌍',
+        en: 'Auto Country Detection',
+        tr: 'Otomatik Ülke Algılama',
+        descEn: 'GPS detects which country you\'re in — the moment you cross a border.',
+        descTr: 'GPS ile hangi ülkede olduğunuzu anlık olarak tespit eder — sınır geçer geçmez.',
+      ),
+      _FeatureItem(
+        emoji: '🛡️',
+        en: 'Auto Schengen Tracker',
+        tr: 'Otomatik Schengen Takip',
+        descEn: 'Real-time 90/180-day rolling window tracker. Never overstay again.',
+        descTr: 'Gerçek zamanlı 90/180 günlük pencere hesabı. Bir daha asla limit aşımı yaşamayın.',
+      ),
+      _FeatureItem(
+        emoji: '⏰',
+        en: 'Smart Expiry Alerts',
+        tr: 'Süreniz Dolmadan Otomatik Uyarı',
+        descEn: 'Get notified before your Schengen allowance or visa-free period runs out.',
+        descTr: 'Schengen hakkınız veya vize serbestiniz dolmadan önce otomatik bildirim alırsınız.',
+      ),
+      _FeatureItem(
+        emoji: '🚗',
+        en: 'Border Intelligence',
+        tr: 'Sınır Geçiş Rehberi',
+        descEn: 'Speed limits, vignettes, alcohol limits, emergency numbers — for every country.',
+        descTr: 'Her ülke için hız limitleri, vinyet, alkol sınırı ve acil numaralar.',
+      ),
+      _FeatureItem(
+        emoji: '✈️',
+        en: 'Visa Guide',
+        tr: 'Vize Rehberi',
+        descEn: 'Exact visa status for Turkish passport holders in 50+ countries.',
+        descTr: 'Türk pasaportu için 50\'den fazla ülkede vize durumu, kapıda vize, e-vize bilgisi.',
+      ),
+      _FeatureItem(
+        emoji: '📍',
+        en: 'Stay History',
+        tr: 'Kalış Geçmişi',
+        descEn: 'Automatic log of every country and city you visit. Your travel journal.',
+        descTr: 'Ziyaret ettiğiniz her ülke ve şehrin otomatik kaydı. Seyahat günlüğünüz.',
+      ),
+      _FeatureItem(
+        emoji: '🗓️',
+        en: 'Go Back Anytime',
+        tr: 'İstediğin Zaman Aynı Yere Dönüş',
+        descEn: 'Return to that exact street with a single tap.',
+        descTr: 'Sevdiğin o sokağa nokta atışı tekrar git.',
+      ),
+      _FeatureItem(
+        emoji: '👥',
+        en: 'Locals & Events Nearby (Premium)',
+        tr: 'Bulunduğun Yerde Seni Bekleyenler (Premium)',
+        descEn: 'Discover expat communities, local events, nearby travellers and hidden gems at your destination. (Premium)',
+        descTr: 'Bulunduğun şehirdeki expat toplulukları, yerel etkinlikler, yakındaki gezginler ve gizli köşeleri keşfet. (Premium)',
+      ),
+      _FeatureItem(
+        emoji: '🌤️',
+        en: 'Live Weather + Air Quality',
+        tr: 'Canlı Hava + Hava Kalitesi',
+        descEn: 'Real-time weather, UV, humidity and PM2.5 at your exact location.',
+        descTr: 'Tam konumunuzda gerçek zamanlı hava, UV, nem ve PM2.5 kalite verisi.',
+      ),
+      _FeatureItem(
+        emoji: '🤖',
+        en: 'AI Travel Assistant (Premium)',
+        tr: 'Yapay Zekâ Asistanı (Premium)',
+        descEn: 'Ask anything about visas, Schengen, borders, and your destination. Get instant expert answers powered by AI. (Premium)',
+        descTr: 'Vize, Schengen, sınır ve gideceğiniz ülke hakkında her şeyi sorun. Yapay zekâ destekli anında uzman yanıtı. (Premium)',
+      ),
+      _FeatureItem(
+        emoji: '📄',
+        en: 'Document Scanner (Premium)',
+        tr: 'Belge Tarayıcı (Premium)',
+        descEn: 'Photograph your passport or visa stamp — travel dates are read automatically and added to your history. (Premium)',
+        descTr: 'Pasaport veya vize damganızı fotoğraflayın — seyahat tarihleri otomatik okunur ve geçmişinize eklenir. (Premium)',
+      ),
+    ];
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      builder: (_, scrollCtrl) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isTr ? 'VisaRadar Kolaylıkları' : 'What VisaRadar Does',
+                    style: AppTextStyles.headlineMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isTr
+                        ? 'Her şey bir arada — seyahatin tüm zor kısımlarını halleder.'
+                        : 'Everything in one place — handles every hard part of travel.',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                itemCount: features.length,
+                itemBuilder: (_, i) => _featureTile(features[i]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _featureTile(_FeatureItem f) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(f.emoji, style: const TextStyle(fontSize: 28)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isTr ? f.tr : f.en,
+                  style: AppTextStyles.labelLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isTr ? f.descTr : f.descEn,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureItem {
+  const _FeatureItem({
+    required this.emoji,
+    required this.en,
+    required this.tr,
+    required this.descEn,
+    required this.descTr,
+  });
+  final String emoji;
+  final String en;
+  final String tr;
+  final String descEn;
+  final String descTr;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,12 +425,15 @@ class _LocationCard extends ConsumerWidget {
     // ── Country detected ────────────────────────────────────────────────────
     if (locState.hasCountry) {
       final country = locState.detectedCountry!;
+      final vc = visaCountryByCode(country.isoCode);
+      final flag = vc?.flag ?? '';
+      final cityPart = country.city != null ? ' · ${country.city}' : '';
       return _LocationRow(
         iconData: Icons.location_on,
         iconColor: AppColors.brandTeal,
         iconBg: AppColors.brandTeal.withAlpha(20),
         label: isTr ? 'GÜNCEL KONUM' : 'CURRENT LOCATION',
-        title: country.name ?? country.isoCode,
+        title: '$flag ${country.name ?? country.isoCode}$cityPart'.trim(),
         subtitle: isTr
             ? 'Hava durumu ve detaylar için dokun'
             : 'Tap for weather & details',
@@ -380,8 +606,8 @@ class _SchengenCard extends ConsumerWidget {
       resetText = isTr ? '$d tarihinde sıfırlanır' : 'Resets $d';
     } else if (usedDays > 0) {
       resetText = isTr
-          ? 'Pencerede $remainingDays gün kaldı'
-          : '${remainingDays}d remaining in window';
+          ? '$remainingDays gün kaldı'
+          : '${remainingDays}d remaining';
     }
 
     return _DashCard(
@@ -478,12 +704,37 @@ class _SchengenCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isTr ? '90/180 günlük pencere' : '90/180-day rolling window',
-                style: AppTextStyles.caption,
+              Flexible(
+                child: Text(
+                  isTr ? '90/180 günlük pencere' : '90/180-day window',
+                  style: AppTextStyles.caption,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Text(resetText, style: AppTextStyles.caption),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  resetText,
+                  style: AppTextStyles.caption,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => context.push(AppRoutes.trips),
+            child: Text(
+              isTr
+                  ? 'Ülke kalış süreleri için tıklayın'
+                  : 'Tap to see country stay durations',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.brandTeal,
+                decoration: TextDecoration.underline,
+                decorationColor: AppColors.brandTeal,
+              ),
+            ),
           ),
         ],
       ),
@@ -604,7 +855,7 @@ class _TravelSummaryCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isTr ? 'SEYAHAT ÖZETİ' : 'TRAVEL SUMMARY',
+            isTr ? 'SCHENGEN ÜLKELERİ SEYAHAT ÖZETİ' : 'SCHENGEN COUNTRIES TRAVEL SUMMARY',
             style: AppTextStyles.caption.copyWith(
               letterSpacing: 0.8,
               color: AppColors.textMuted,
@@ -658,6 +909,93 @@ class _TravelSummaryCard extends ConsumerWidget {
               icon: Icons.flag_outlined,
               label: isTr ? 'Schengen ülkeleri' : 'Schengen countries',
               value: '$schengenCount',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Other Countries summary card — non-Schengen trips
+// ---------------------------------------------------------------------------
+
+class _OtherCountriesSummaryCard extends ConsumerWidget {
+  const _OtherCountriesSummaryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trips = ref.watch(tripsProvider);
+    final isTr = ref.watch(isTurkishProvider);
+
+    final nonSchengenTrips = trips.where((t) => !t.isSchengen).toList();
+    final countrys = nonSchengenTrips.map((t) => t.country).toSet();
+    final count = countrys.length;
+
+    int totalDays = 0;
+    for (final t in nonSchengenTrips) {
+      totalDays += t.daysSpent;
+    }
+
+    String latestName = '—';
+    if (nonSchengenTrips.isNotEmpty) {
+      final latest = nonSchengenTrips
+          .reduce((a, b) => a.entryDate.isAfter(b.entryDate) ? a : b);
+      final vc = visaCountryByCode(latest.country);
+      latestName = vc?.name(isTr) ?? latest.country;
+    }
+
+    return _DashCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isTr ? 'DİĞER ÜLKELER SEYAHAT ÖZETİ' : 'OTHER COUNTRIES TRAVEL SUMMARY',
+            style: AppTextStyles.caption.copyWith(
+              letterSpacing: 0.8,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (nonSchengenTrips.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.flight_takeoff_outlined,
+                      size: 18, color: AppColors.textMuted),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isTr
+                          ? 'Henüz Schengen dışı seyahat eklenmedi'
+                          : 'No non-Schengen trips added yet',
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            _SummaryRow(
+              icon: Icons.flag_outlined,
+              label: isTr ? 'Ziyaret edilen ülkeler' : 'Countries visited',
+              value: '$count',
+              valueColor: AppColors.brandTeal,
+            ),
+            const _RowDivider(),
+            _SummaryRow(
+              icon: Icons.calendar_today_outlined,
+              label: isTr ? 'Toplam gün' : 'Total days',
+              value: isTr ? '${totalDays}g' : '${totalDays}d',
+            ),
+            const _RowDivider(),
+            _SummaryRow(
+              icon: Icons.flight_land_outlined,
+              label: isTr ? 'Son ziyaret' : 'Latest visit',
+              value: latestName,
             ),
           ],
         ],

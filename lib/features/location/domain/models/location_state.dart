@@ -34,13 +34,16 @@ enum LocationDetectionPhase {
 
 /// A country resolved from the device's current position.
 class DetectedCountry {
-  const DetectedCountry({required this.isoCode, this.name});
+  const DetectedCountry({required this.isoCode, this.name, this.city});
 
   /// ISO-3166-1 alpha-2 code, upper-case (e.g. "DE", "TR").
   final String isoCode;
 
   /// Human-readable country name from geocoding (may be null).
   final String? name;
+
+  /// City / locality name from geocoding (may be null).
+  final String? city;
 
   @override
   String toString() => name ?? isoCode;

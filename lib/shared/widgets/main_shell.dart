@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/localization/locale.dart';
+import '../../features/stays/presentation/stays_provider.dart';
 
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.shell});
@@ -11,6 +12,9 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Keep the stays coordinator alive throughout the app session so that GPS
+    // country changes are automatically recorded to the stay history.
+    ref.watch(staysCoordinatorProvider);
     final isTr = ref.watch(isTurkishProvider);
 
     return Scaffold(
@@ -38,9 +42,9 @@ class MainShell extends ConsumerWidget {
             label: isTr ? 'Asistan' : 'Assistant',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: isTr ? 'Profil' : 'Profile',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: isTr ? 'Ayarlar' : 'Settings',
           ),
         ],
       ),

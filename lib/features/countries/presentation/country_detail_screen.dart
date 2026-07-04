@@ -84,6 +84,24 @@ class CountryDetailScreen extends ConsumerWidget {
             ],
           ),
           _smartTips(c, travelMode, isTr),
+          if (c.cultural(isTr) != null)
+            _section(
+              isTr ? 'Kültür & Tarih' : 'Culture & History',
+              Icons.museum_outlined,
+              [Text(c.cultural(isTr)!, style: AppTextStyles.bodyMedium)],
+            ),
+          if (c.practical(isTr) != null)
+            _section(
+              isTr ? 'Pratik Bilgiler' : 'Practical Tips',
+              Icons.tips_and_updates_outlined,
+              [Text(c.practical(isTr)!, style: AppTextStyles.bodyMedium)],
+            ),
+          if (c.bestTime(isTr) != null)
+            _section(
+              isTr ? 'En İyi Zaman' : 'Best Time to Visit',
+              Icons.wb_sunny_outlined,
+              [Text(c.bestTime(isTr)!, style: AppTextStyles.bodyMedium)],
+            ),
           const SizedBox(height: 16),
           Text(
             isTr
@@ -99,8 +117,31 @@ class CountryDetailScreen extends ConsumerWidget {
   }
 
   Widget _visaBanner(VisaCountry c, bool isTr) {
-    final schengen = c.isSchengen;
-    final color = schengen ? AppColors.info : AppColors.success;
+    final Color color;
+    final IconData icon;
+    final String statusLine;
+    if (c.isSchengen) {
+      color = AppColors.info;
+      icon = Icons.public;
+      statusLine = isTr
+          ? 'Schengen bölgesi — günler 90/180 hesabına sayılır.'
+          : 'Schengen area — days count toward your 90/180.';
+    } else if (c.requiresVisaForTurkish) {
+      color = AppColors.warning;
+      icon = Icons.assignment_outlined;
+      statusLine = isTr
+          ? 'Schengen dışı — Türk vatandaşları için vize gereklidir.'
+          : 'Outside Schengen — visa required for Turkish citizens.';
+    } else {
+      color = AppColors.success;
+      icon = Icons.flight_takeoff;
+      statusLine = isTr
+          ? 'Schengen dışı — Türk vatandaşları vizesiz girebilir.'
+          : 'Outside Schengen — Turkish citizens may enter visa-free.';
+    }
+
+    final capital = isTr ? c.capitalTr : c.capitalEn;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -108,24 +149,49 @@ class CountryDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(schengen ? Icons.public : Icons.flight_takeoff, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              schengen
-                  ? (isTr
-                      ? 'Schengen bölgesi — günler 90/180 hesabına sayılır.'
-                      : 'Schengen area — days count toward your 90/180.')
-                  : (isTr
-                      ? 'Schengen dışı — günler 90/180 hesabına sayılmaz.'
-                      : 'Outside Schengen — days don\'t count toward 90/180.'),
-              style: AppTextStyles.bodyMedium.copyWith(color: color),
-            ),
+          Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(statusLine,
+                    style: AppTextStyles.bodyMedium.copyWith(color: color)),
+              ),
+            ],
           ),
+          if (capital != null || c.officialLanguage != null) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                if (capital != null)
+                  _infoChip(Icons.location_city_outlined, capital),
+                if (c.officialLanguage != null)
+                  _infoChip(Icons.translate, c.officialLanguage!),
+                _infoChip(Icons.attach_money,
+                    '${c.currencyCode} ${c.currency}'),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _infoChip(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 4),
+        Text(text,
+            style: AppTextStyles.caption
+                .copyWith(color: AppColors.textSecondary)),
+      ],
     );
   }
 

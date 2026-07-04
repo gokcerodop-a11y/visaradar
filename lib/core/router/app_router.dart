@@ -17,6 +17,7 @@ import '../../features/settings/presentation/screens/legal_screen.dart';
 import '../../features/settings/presentation/screens/notification_settings_screen.dart';
 import '../../features/travel/domain/entities/travel_entry.dart';
 import '../../features/travel/presentation/providers/trips_provider.dart';
+import '../../features/stays/presentation/screens/stays_screen.dart';
 import '../../features/travel/presentation/screens/add_trip_screen.dart';
 import '../../features/travel/presentation/screens/trips_screen.dart';
 import '../../shared/widgets/main_shell.dart';
@@ -40,6 +41,9 @@ abstract class AppRoutes {
   static const legalText = '/settings/legal';
   static const diagnostics = '/settings/diagnostics';
   static const savedPlaces = '/profile/saved-places';
+  static const stays = '/stays';
+  static const staysCountries = '/stays/countries';
+  static const staysCities = '/stays/cities';
   static const trips = '/trips';
   static const addTrip = '/trips/add';
   static const editTrip = '/trips/edit/:id';
@@ -61,6 +65,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Stays (auto-tracked countries/cities)
+      GoRoute(
+        path: AppRoutes.stays,
+        builder: (context, state) => const StaysScreen(),
       ),
 
       // Trips (pushed over the shell)
