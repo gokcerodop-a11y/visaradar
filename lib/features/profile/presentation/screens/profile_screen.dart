@@ -32,6 +32,22 @@ class ProfileScreen extends ConsumerWidget {
           _passportCard(context, profile, isTr),
           const SizedBox(height: 16),
 
+          // ── Acil SOS ──────────────────────────────────────────────
+          _sectionLabel(isTr ? 'Güvenlik' : 'Safety'),
+          _tile(
+            context,
+            Icons.emergency,
+            isTr ? 'Acil SOS' : 'Emergency SOS',
+            () => context.push(AppRoutes.sos),
+          ),
+          _tile(
+            context,
+            Icons.contact_phone_outlined,
+            isTr ? 'Acil Kişiler' : 'Emergency Contacts',
+            () => context.push(AppRoutes.sosSetup),
+          ),
+          const SizedBox(height: 16),
+
           // ── Premium tools ──────────────────────────────────────────
           _sectionLabel(isTr ? 'Premium araçları' : 'Premium tools'),
           _tile(
@@ -41,6 +57,18 @@ class ProfileScreen extends ConsumerWidget {
             () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const DocumentScannerScreen()),
             ),
+          ),
+          _tile(
+            context,
+            Icons.receipt_long,
+            isTr ? 'Tax-Free Rehberi' : 'Tax-Free Guide',
+            () => context.push(AppRoutes.taxFree),
+          ),
+          _tile(
+            context,
+            Icons.camera_alt_outlined,
+            isTr ? 'AI Tur Rehberi' : 'AI Tour Guide',
+            () => context.push(AppRoutes.touristGuide),
           ),
           const SizedBox(height: 16),
 
@@ -106,10 +134,16 @@ class ProfileScreen extends ConsumerWidget {
             isTr ? 'Tanılama' : 'Diagnostics',
             () => context.push(AppRoutes.diagnostics),
           ),
+          _tile(
+            context,
+            Icons.slideshow_outlined,
+            isTr ? 'Uygulama Turu' : 'App Tour',
+            () => context.push('${AppRoutes.welcomeTour}?from=profile'),
+          ),
           const SizedBox(height: 24),
           Center(
             child: Text(
-              'VisaRadar Travel 1.1.0',
+              'VisaRadar Travel 1.2.0',
               style:
                   AppTextStyles.caption.copyWith(color: AppColors.textMuted),
             ),

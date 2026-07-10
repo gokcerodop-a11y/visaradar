@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/locale.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../welcome_tour/presentation/screens/welcome_tour_screen.dart'
+    show isTourSeen;
 
 /// Brief bilingual welcome shown on every cold launch.
 ///
@@ -38,28 +42,44 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
     _controller.forward();
 
+    // Request location permission early (non-blocking — dialog shown after UI).
+    Future.microtask(() async {
+      try {
+        final perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          await Geolocator.requestPermission();
+        }
+      } catch (_) {}
+    });
+
     // Hold the welcome for ~1.5s total, then route based on onboarding state.
     Future.delayed(const Duration(milliseconds: 1500), _route);
   }
 
-  void _route() {
+  Future<void> _route() async {
     if (!mounted) return;
     try {
       final profileService = ref.read(profileServiceProvider);
       if (!profileService.isOnboardingDone) {
-        context.go('/onboarding');
+        if (mounted) context.go(AppRoutes.onboarding);
         return;
       }
       final profile = profileService.load();
       if (profile.nationality == null) {
-        // Corrupt-state recovery, same as router fallback.
         profileService.resetOnboarding();
-        context.go('/onboarding');
+        if (mounted) context.go(AppRoutes.onboarding);
         return;
       }
-      context.go('/main/radar');
+      // Show feature tour on first launch after install/update.
+      final tourSeen = await isTourSeen();
+      if (!mounted) return;
+      if (!tourSeen) {
+        context.go(AppRoutes.welcomeTour);
+      } else {
+        context.go(AppRoutes.radar);
+      }
     } catch (_) {
-      context.go('/onboarding');
+      if (mounted) context.go(AppRoutes.onboarding);
     }
   }
 

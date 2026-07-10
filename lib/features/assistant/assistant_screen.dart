@@ -128,7 +128,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
   Widget _locked(bool isTr) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -162,6 +162,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                   .copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 16),
+            _AiExamplesCard(isTr: isTr),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -270,6 +272,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
               ),
             ),
           ),
+        const SizedBox(height: 8),
+        _AiExamplesCard(isTr: isTr),
       ],
     );
   }
@@ -447,6 +451,111 @@ class _TypingIndicator extends StatelessWidget {
             color: AppColors.brandTeal,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── AI examples showcase ──────────────────────────────────────────────
+
+class _AiExamplesCard extends StatelessWidget {
+  const _AiExamplesCard({required this.isTr});
+  final bool isTr;
+
+  @override
+  Widget build(BuildContext context) {
+    final examples = isTr
+        ? const [
+            'Yakinimdaki change office nerede?',
+            'eSIM satan bayi bul',
+            'Buradan Milano kac km?',
+            'Mayorka plaji UV endeksi ve nem orani nedir?',
+            'Paris hava kirliligi ve yagmur tahmini?',
+            'Hirvatistan gumrugundan kac kilo cikolata gecebilirim?',
+            'Madridte ne yerim, neresi meshur?',
+            'Romada nerede kalayim, hangi mahalle?',
+            'Almanyada hiz limitleri nedir?',
+            'Schengen vizesi nasil alinir?',
+            'Fransada tax-free icin minimum ne kadar harcamam lazim?',
+            'Bu urunum icin gumrukte ne kadar vergi oderim?',
+          ]
+        : const [
+            'Find a currency exchange office nearby',
+            'Find an eSIM provider near me',
+            'How far is Milan from here?',
+            'UV index and humidity at Mallorca beach?',
+            'Paris air quality and rain forecast?',
+            'How much chocolate can I bring through Croatian customs?',
+            'What to eat in Madrid - what is famous?',
+            'Where to stay in Rome - which neighbourhood?',
+            'What are speed limits in Germany?',
+            'How do I get a Schengen visa?',
+            'Minimum spend for tax-free shopping in France?',
+            'How much import tax for this item entering Turkey?',
+          ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_outline,
+                  size: 16, color: AppColors.brandTeal),
+              const SizedBox(width: 8),
+              Text(
+                isTr ? 'Neler Sorabilirsiniz?' : 'What Can You Ask?',
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.brandTeal),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final e in examples) _AiExampleRow(text: e),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiExampleRow extends StatelessWidget {
+  const _AiExampleRow({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 5),
+            decoration: const BoxDecoration(
+              color: AppColors.brandTeal,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

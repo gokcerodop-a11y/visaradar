@@ -8,6 +8,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../profile/domain/models/user_profile.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
 import '../domain/visa_country.dart';
+import '../domain/country_enrichment.dart';
 
 class CountryDetailScreen extends ConsumerWidget {
   const CountryDetailScreen({super.key, required this.country});
@@ -18,6 +19,7 @@ class CountryDetailScreen extends ConsumerWidget {
     final isTr = ref.watch(isTurkishProvider);
     final c = country;
     final travelMode = ref.watch(profileProvider).travelMode;
+    final enrichment = enrichmentFor(c.code);
 
     return Scaffold(
       appBar: AppBar(
@@ -83,6 +85,8 @@ class CountryDetailScreen extends ConsumerWidget {
                     c.emergencyAmbulance!),
             ],
           ),
+          if (enrichment != null)
+            _enrichmentSection(enrichment, isTr),
           _smartTips(c, travelMode, isTr),
           if (c.cultural(isTr) != null)
             _section(
@@ -101,6 +105,24 @@ class CountryDetailScreen extends ConsumerWidget {
               isTr ? 'En İyi Zaman' : 'Best Time to Visit',
               Icons.wb_sunny_outlined,
               [Text(c.bestTime(isTr)!, style: AppTextStyles.bodyMedium)],
+            ),
+          if (enrichment?.foodHighlightsEn != null)
+            _section(
+              isTr ? 'Yemek ve Lezzetler' : 'Food and Cuisine',
+              Icons.restaurant_outlined,
+              [Text(isTr ? enrichment!.foodHighlightsTr ?? enrichment.foodHighlightsEn! : enrichment!.foodHighlightsEn!, style: AppTextStyles.bodyMedium)],
+            ),
+          if (enrichment?.streetFoodEn != null)
+            _section(
+              isTr ? 'Sokak Lezzetleri' : 'Street Food',
+              Icons.storefront_outlined,
+              [Text(isTr ? enrichment!.streetFoodTr ?? enrichment.streetFoodEn! : enrichment!.streetFoodEn!, style: AppTextStyles.bodyMedium)],
+            ),
+          if (enrichment?.cityGuideEn != null)
+            _section(
+              isTr ? 'Konaklama ve Mahalleler' : 'Accommodation and Neighbourhoods',
+              Icons.hotel_outlined,
+              [Text(isTr ? enrichment!.cityGuideTr ?? enrichment.cityGuideEn! : enrichment!.cityGuideEn!, style: AppTextStyles.bodyMedium)],
             ),
           const SizedBox(height: 16),
           Text(
@@ -298,6 +320,50 @@ class CountryDetailScreen extends ConsumerWidget {
           Expanded(child: Text(text, style: AppTextStyles.bodyMedium)),
         ],
       ),
+    );
+  }
+
+  Widget _enrichmentSection(CountryEnrichment e, bool isTr) {
+    final rows = <Widget>[];
+    rows.add(_statRow(
+      isTr ? 'Gunduz Fari (DRL)' : 'Daytime Running Lights',
+      e.daytimeRunningLights
+          ? (isTr ? 'Zorunlu' : 'Required')
+          : (isTr ? 'Zorunlu degil' : 'Not required'),
+    ));
+    rows.add(_statRow(
+      isTr ? 'Guvenlik Yelegi' : 'Safety Vest',
+      e.safetyVestRequired
+          ? (isTr ? 'Aracta bulundurulmali' : 'Must carry in vehicle')
+          : (isTr ? 'Zorunlu degil' : 'Not required'),
+    ));
+    if (e.winterTiresEn != null) {
+      rows.add(const SizedBox(height: 8));
+      rows.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.ac_unit, size: 14, color: AppColors.info),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              isTr ? e.winterTiresTr ?? e.winterTiresEn! : e.winterTiresEn!,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ));
+    }
+    if (e.taxFreeMinEur != null) {
+      rows.add(const SizedBox(height: 8));
+      rows.add(_statRow(
+        isTr ? 'Tax-Free minimum' : 'Tax-Free minimum',
+        'EUR ' + e.taxFreeMinEur!.toStringAsFixed(0) + (e.taxFreeCompanies != null ? ' - ' + e.taxFreeCompanies! : ''),
+      ));
+    }
+    return _section(
+      isTr ? 'Surus Kurallari (Ek)' : 'Driving Rules (Extra)',
+      Icons.car_repair,
+      rows,
     );
   }
 

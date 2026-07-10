@@ -21,6 +21,11 @@ import '../../features/stays/presentation/screens/stays_screen.dart';
 import '../../features/travel/presentation/screens/add_trip_screen.dart';
 import '../../features/travel/presentation/screens/trips_screen.dart';
 import '../../shared/widgets/main_shell.dart';
+import '../../features/sos/presentation/screens/sos_screen.dart';
+import '../../features/sos/presentation/screens/sos_setup_screen.dart';
+import '../../features/tax_free/presentation/screens/tax_free_screen.dart';
+import '../../features/tourist_guide/presentation/screens/tourist_guide_screen.dart';
+import '../../features/welcome_tour/presentation/screens/welcome_tour_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Route path constants
@@ -47,6 +52,11 @@ abstract class AppRoutes {
   static const trips = '/trips';
   static const addTrip = '/trips/add';
   static const editTrip = '/trips/edit/:id';
+  static const sos = '/sos';
+  static const sosSetup = '/sos/setup';
+  static const taxFree = '/tax-free';
+  static const touristGuide = '/tourist-guide';
+  static const welcomeTour = '/welcome-tour';
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +75,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Welcome tour (feature showcase slider)
+      GoRoute(
+        path: AppRoutes.welcomeTour,
+        builder: (context, state) {
+          final fromProfile =
+              state.uri.queryParameters['from'] == 'profile';
+          return WelcomeTourScreen(showDismiss: fromProfile);
+        },
+      ),
+
+      // SOS emergency
+      GoRoute(
+        path: AppRoutes.sos,
+        builder: (context, state) => const SosScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sosSetup,
+        builder: (context, state) => const SosSetupScreen(),
+      ),
+
+      // Tax-Free guide
+      GoRoute(
+        path: AppRoutes.taxFree,
+        builder: (context, state) => const TaxFreeScreen(),
+      ),
+
+      // AI Tourist guide
+      GoRoute(
+        path: AppRoutes.touristGuide,
+        builder: (context, state) => const TouristGuideScreen(),
       ),
 
       // Stays (auto-tracked countries/cities)

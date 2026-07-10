@@ -7,6 +7,7 @@ import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../sos/presentation/widgets/sos_fab.dart';
 import '../../../border/border_mode_widgets.dart';
 import '../../../location/presentation/screens/location_detail_screen.dart';
 import '../../../border_crossing/presentation/providers/border_crossing_provider.dart';
@@ -37,12 +38,22 @@ class RadarScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppRoutes.addTrip),
-        backgroundColor: AppColors.brandTeal,
-        foregroundColor: AppColors.brandNavy,
-        icon: const Icon(Icons.add),
-        label: Text(ref.watch(isTurkishProvider) ? 'Seyahat Ekle' : 'Add Trip'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          SosFab(onPressed: () => context.push(AppRoutes.sos)),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'add_trip_fab',
+            onPressed: () => context.push(AppRoutes.addTrip),
+            backgroundColor: AppColors.brandTeal,
+            foregroundColor: AppColors.brandNavy,
+            icon: const Icon(Icons.add),
+            label: Text(
+                ref.watch(isTurkishProvider) ? 'Seyahat Ekle' : 'Add Trip'),
+          ),
+        ],
       ),
       body: SafeArea(
         child: CustomScrollView(
