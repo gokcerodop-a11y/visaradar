@@ -16,6 +16,9 @@ MONTHLY_CAP_CHAT = "600"
 MONTHLY_CAP_VISION = "120"
 MONTHLY_CAP_QUESTIONS = "120"
 TRIAL_CAP_FACTOR = "0.5"
+# ElevenLabs TTS (ELEVENLABS_API_KEY is a wrangler secret, not here)
+ELEVENLABS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
+ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
 # Daily finance Telegram report
 APP_LABEL = "VisaRadar Travel"
 USD_TRY = "43"

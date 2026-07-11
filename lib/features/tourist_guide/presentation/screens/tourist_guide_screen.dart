@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../services/ai/ai_message.dart' show AIImageAttachment;
 import '../../../../services/ai/anthropic_proxy.dart';
+import '../../../../services/natural_tts.dart';
 import '../../../../services/premium_providers.dart';
 import '../../../paywall/paywall_screen.dart';
 
@@ -27,6 +28,14 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
   String? _guideText;
   String? _errorText;
   bool _isLoading = false;
+  final _tts = NaturalTts();
+  bool _ttsPlaying = false;
+
+  @override
+  void dispose() {
+    _tts.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -132,12 +141,28 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
     }
   }
 
+  Future<void> _toggleSpeak() async {
+    if (_guideText == null) return;
+    if (_ttsPlaying) {
+      await _tts.stop();
+      if (mounted) setState(() => _ttsPlaying = false);
+      return;
+    }
+    final bearer = ref.read(premiumBearerProvider);
+    if (bearer == null || bearer.isEmpty) return;
+    setState(() => _ttsPlaying = true);
+    await _tts.speak(_guideText!, baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    if (mounted) setState(() => _ttsPlaying = false);
+  }
+
   void _reset() {
+    _tts.stop();
     setState(() {
       _imageBytes = null;
       _guideText = null;
       _errorText = null;
       _isLoading = false;
+      _ttsPlaying = false;
     });
   }
 
@@ -368,9 +393,52 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
             children: [
               const Icon(Icons.auto_awesome, color: AppColors.brandTeal, size: 20),
               const SizedBox(width: 8),
-              Text(
-                isTr ? 'AI Tur Rehberi' : 'AI Tour Guide',
-                style: AppTextStyles.labelLarge,
+              Expanded(
+                child: Text(
+                  isTr ? 'AI Tur Rehberi' : 'AI Tour Guide',
+                  style: AppTextStyles.labelLarge,
+                ),
+              ),
+              // Dinle butonu
+              InkWell(
+                onTap: _toggleSpeak,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _ttsPlaying
+                        ? AppColors.danger.withValues(alpha: 0.12)
+                        : AppColors.brandTeal.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _ttsPlaying
+                          ? AppColors.danger.withValues(alpha: 0.4)
+                          : AppColors.brandTeal.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _ttsPlaying
+                            ? Icons.stop_circle_outlined
+                            : Icons.volume_up_outlined,
+                        size: 15,
+                        color: _ttsPlaying ? AppColors.danger : AppColors.brandTeal,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        _ttsPlaying
+                            ? (isTr ? 'Durdur' : 'Stop')
+                            : (isTr ? 'Dinle' : 'Listen'),
+                        style: AppTextStyles.caption.copyWith(
+                          color: _ttsPlaying ? AppColors.danger : AppColors.brandTeal,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

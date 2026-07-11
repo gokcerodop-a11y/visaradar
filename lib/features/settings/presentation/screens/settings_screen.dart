@@ -87,6 +87,16 @@ class SettingsScreen extends ConsumerWidget {
               title: isTr ? 'Gizlilik ve Yasal' : 'Privacy & Legal',
               items: [
                 _SettingsTile(
+                  icon: Icons.shield_outlined,
+                  title: isTr ? 'KVKK / Kişisel Veriler' : 'Data Protection (KVKK)',
+                  onTap: () => _openLegal(
+                    context,
+                    url: AppConstants.privacyPolicyUrl,
+                    fallback:
+                        '${AppRoutes.legalText}?title=KVKK+%2F+Gizlilik&type=privacy',
+                  ),
+                ),
+                _SettingsTile(
                   icon: Icons.privacy_tip_outlined,
                   title: isTr ? 'Gizlilik Politikası' : 'Privacy Policy',
                   onTap: () => _openLegal(

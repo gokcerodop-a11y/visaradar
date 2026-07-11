@@ -23,6 +23,11 @@ export interface Env {
   USD_TRY?: string;
   APPLE_COMMISSION?: string;
 
+  // ElevenLabs TTS (optional — 503 when absent, client falls back to silent)
+  ELEVENLABS_API_KEY?: string;
+  ELEVENLABS_VOICE_ID?: string;
+  ELEVENLABS_MODEL_ID?: string;
+
   // Secrets
   ANTHROPIC_API_KEY: string;
   APPLE_API_KEY_P8: string;

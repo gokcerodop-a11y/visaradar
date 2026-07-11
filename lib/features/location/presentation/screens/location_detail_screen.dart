@@ -472,12 +472,12 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _aiError == 'no-bearer'
-                      ? (L.isTr ? 'Premium hesabı doğrulanamadı. Uygulamayı yeniden başlatıp tekrar deneyin.' : 'Premium account could not be verified. Restart the app and try again.')
-                      : (L.isTr ? 'Bilgi yüklenemedi. İnternet bağlantınızı kontrol edin.' : 'Could not load info. Check your internet connection.'),
+                  (_aiError == 'no-bearer' || _aiError == 'subscription')
+                      ? (L.isTr ? 'Premium aboneliğiniz doğrulanamadı. Lütfen uygulamayı yeniden başlatın.' : 'Premium subscription could not be verified. Please restart the app.')
+                      : (L.isTr ? 'Şehir bilgisi yüklenemedi. İnternet bağlantınızı kontrol edin.' : 'Could not load city info. Check your internet connection.'),
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
                 ),
-                if (_aiError != 'no-bearer') ...[
+                if (_aiError != 'no-bearer' && _aiError != 'subscription') ...[
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.refresh, size: 16),

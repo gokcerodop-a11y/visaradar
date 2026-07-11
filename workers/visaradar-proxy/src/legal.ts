@@ -1,30 +1,32 @@
-// legal.ts — public Privacy Policy and Terms of Use (EULA) pages served by the
+// legal.ts — public Privacy Policy, KVKK, Terms of Use pages served by the
 // proxy so the App Store metadata can point at functional, always-live links
 // (App Review Guideline 3.1.2 requires these for auto-renewable subscriptions).
 
 const SUPPORT_EMAIL = "gokcerodop@gmail.com";
-const LAST_UPDATED = "10 June 2026";
+const LAST_UPDATED = "12 Temmuz 2026 / 12 July 2026";
 
 function page(title: string, bodyHtml: string): Response {
   const html = `<!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} · VisaRadar Travel</title>
 <style>
   :root { color-scheme: light dark; }
-  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  body { font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
          max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; color: #1c2a3f; background: #fff; }
   @media (prefers-color-scheme: dark){ body{ background:#0B1120; color:#e6edf6 } a{ color:#00D4AA } }
-  h1 { font-size: 26px; } h2 { font-size: 19px; margin-top: 32px; }
+  h1 { font-size: 26px; } h2 { font-size: 19px; margin-top: 32px; color: #00A884; }
+  h3 { font-size: 16px; margin-top: 20px; }
   a { color: #00A884; } .muted { opacity: .7; font-size: 14px; }
   hr { border: none; border-top: 1px solid rgba(127,127,127,.25); margin: 40px 0; }
+  .badge { display:inline-block; background:#00A884; color:#fff; border-radius:4px; padding:2px 8px; font-size:13px; font-weight:600; margin-left:8px; }
 </style>
 </head>
 <body>${bodyHtml}
 <hr>
-<p class="muted">VisaRadar Travel · Contact: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> · Last updated: ${LAST_UPDATED}</p>
+<p class="muted">VisaRadar Travel · İletişim / Contact: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> · Son güncelleme / Last updated: ${LAST_UPDATED}</p>
 </body></html>`;
   return new Response(html, {
     status: 200,
@@ -33,71 +35,114 @@ function page(title: string, bodyHtml: string): Response {
 }
 
 export function privacyPage(): Response {
-  return page("Privacy Policy", `
-<h1>Privacy Policy</h1>
-<p>VisaRadar Travel ("the app") helps travellers track visas, border crossings and Schengen 90/180 stay limits. This policy explains what data the app uses and how.</p>
+  return page("Gizlilik Politikası & KVKK / Privacy Policy & GDPR", `
+<h1>Gizlilik Politikası ve Kişisel Verilerin Korunması</h1>
+<p><em>Privacy Policy &amp; Personal Data Protection (KVKK / GDPR)</em></p>
+<p>VisaRadar Travel ("uygulama"), seyahatçilerin vize, sınır geçişleri ve Schengen 90/180 kalış sürelerini takip etmesine yardımcı olur. Bu politika, uygulamanın hangi verileri kullandığını ve nasıl işlediğini açıklamaktadır.</p>
 
-<h2>Data the app uses</h2>
+<h2>1. Toplanan Veriler / Data We Collect</h2>
+
+<h3>1.1 Konum Verisi (Location)</h3>
+<p>Uygulama, yalnızca <strong>cihazınızda</strong> konumunuzu kullanır; hangi ülke/şehirde olduğunuzu belirleyerek size doğru vize ve kalış bilgisi sunar. Konum verisi üçüncü taraflara satılmaz ve yurt dışına aktarılmaz.</p>
+<p><em>The app uses your location only on-device to detect which country/city you are in. Location data is not sold to third parties.</em></p>
+
+<h3>1.2 Seyahat Profili ve Geziler (Travel Profile &amp; Trips)</h3>
+<p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri <strong>yalnızca cihazınızda</strong> saklanır. Herhangi bir sunucuya gönderilmez.</p>
+
+<h3>1.3 AI Asistan ve Belge Tarayıcı</h3>
+<p>AI asistana soru sorduğunuzda veya bir belge/fotoğraf yüklediğinizde ilgili metin/görüntü, güvenli proxy sunucumuz aracılığıyla <strong>Anthropic Claude API</strong>'ye iletilir. Bu veriler yalnızca yanıt üretmek amacıyla kullanılır; reklam, profil oluşturma veya satış için kullanılmaz.</p>
+<p><strong>Önemli uyarı:</strong> TC kimlik numarası, IBAN, banka bilgisi gibi hassas kişisel verileri AI asistana yazmayınız.</p>
+<p><em>When you use the AI assistant or document scanner, your input is sent to our secure proxy and Anthropic's API solely to generate your answer. It is never used for advertising or profiling.</em></p>
+
+<h3>1.4 Satın Alma (Purchases)</h3>
+<p>Satın alma işlemleri Apple üzerinden doğrulanır. Kart bilgilerinize erişmiyoruz.</p>
+
+<h2>2. Veri Güvenliği / Data Security</h2>
 <ul>
-  <li><strong>Location</strong> — used only on your device to detect which country/city you are in, so the app can show the right visa and stay information. Your location is processed for that purpose and is not sold.</li>
-  <li><strong>Trips and profile</strong> — the trips, dates and traveller profile you enter are stored locally on your device.</li>
-  <li><strong>AI assistant & document scanner</strong> — when you ask the assistant a question or scan a document, the relevant text/image is sent to our secure proxy and to Anthropic's Claude API to generate the answer. It is used only to produce your response and is not used to sell anything.</li>
-  <li><strong>Purchases</strong> — purchase receipts are validated through Apple. We do not see your card details.</li>
+  <li>Uygulama sunucu bağlantıları TLS/HTTPS ile şifrelenir.</li>
+  <li>Apple fatura bilgileriniz Apple'ın güvenli altyapısında saklanır.</li>
+  <li>Cloudflare Worker proxy, gelen istekleri doğrular ve rate-limit uygular.</li>
+  <li>Cihaz üzerindeki veriler (geziler, profil) cihazın kendi şifreleme mekanizması ile korunur.</li>
 </ul>
 
-<h2>What we do not do</h2>
+<h2>3. Kişisel Verilerin Korunması — KVKK (6698 Sayılı Kanun)</h2>
+<p>Türkiye Cumhuriyeti 6698 Sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sahibi olarak aşağıdaki haklara sahipsiniz:</p>
 <ul>
-  <li>We do not sell your personal data to third parties.</li>
-  <li>We do not show third-party advertising.</li>
+  <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
+  <li>Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme,</li>
+  <li>Kişisel verilerinizin işlenme amacını ve bunların amacına uygun kullanılıp kullanılmadığını öğrenme,</li>
+  <li>Yurt içinde veya yurt dışında kişisel verilerinizin aktarıldığı üçüncü kişileri bilme,</li>
+  <li>Kişisel verilerinizin eksik veya yanlış işlenmiş olması hâlinde bunların düzeltilmesini isteme,</li>
+  <li>Kanun'un 7. maddesinde öngörülen şartlar çerçevesinde kişisel verilerinizin silinmesini veya yok edilmesini isteme,</li>
+  <li>Kişisel verilerinizin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme.</li>
+</ul>
+<p>Bu haklarınızı kullanmak için <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> adresine başvurabilirsiniz.</p>
+
+<h2>4. GDPR — Avrupa Birliği</h2>
+<p>AB/AEA vatandaşları için GDPR kapsamında: işleme hukuki dayanağı <em>meşru menfaat</em> ve <em>sözleşme ifası</em>dır (abonelik hizmetinin sunulması). Verilerinize erişim, düzeltme, silme veya taşınabilirlik taleplerinizi e-posta yoluyla iletebilirsiniz. Şikâyetlerinizi yerel veri koruma otoritenize iletebilirsiniz.</p>
+
+<h2>5. Üçüncü Taraf Hizmetler / Third-Party Services</h2>
+<ul>
+  <li><strong>Anthropic Claude API</strong> — AI yanıtları için. <a href="https://www.anthropic.com/privacy">Anthropic Gizlilik Politikası</a></li>
+  <li><strong>Apple App Store / StoreKit</strong> — Satın alma doğrulaması.</li>
+  <li><strong>Open-Meteo</strong> — Hava durumu verileri (anonim konum koordinatı).</li>
+  <li><strong>ElevenLabs</strong> — Sesli anlatım (TTS); yalnızca AI yanıt metni iletilir.</li>
 </ul>
 
-<h2>Your rights (GDPR/KVKK)</h2>
-<p>You can delete your local data at any time from within the app. For questions or data requests, contact us at the email below.</p>
+<h2>6. Verinin Yurt Dışına Aktarımı</h2>
+<p>AI asistanı kullandığınızda sorunuz, Anthropic'in sunucularına (ABD) iletilir. Bu aktarım, hizmetin sunulabilmesi için zorunludur ve yalnızca bu amaçla gerçekleştirilir.</p>
 
-<h2>Disclaimer</h2>
-<p>VisaRadar Travel provides travel and visa information for general guidance only. Always verify entry, visa and stay requirements with official government sources before travelling.</p>
+<h2>7. Yasal Uyarı / Disclaimer</h2>
+<p>VisaRadar Travel, yalnızca genel bilgilendirme amaçlıdır; hukuki tavsiye niteliği taşımaz. Seyahat etmeden önce giriş, vize ve kalış koşullarını her zaman resmi hükümet kaynaklarından doğrulayınız.</p>
 `);
 }
 
 export function supportPage(): Response {
-  return page("Support", `
-<h1>VisaRadar Travel — Support</h1>
-<p>Need help with VisaRadar Travel? We're happy to assist.</p>
+  return page("Destek / Support", `
+<h1>VisaRadar Travel — Destek / Support</h1>
+<p>Yardıma mı ihtiyacınız var? Memnuniyetle yardımcı oluruz. / Need help? We're happy to assist.</p>
 
-<h2>Contact</h2>
-<p>Email us at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> and we'll get back to you. Please include your device model and iOS version so we can help faster.</p>
+<h2>İletişim / Contact</h2>
+<p><a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> adresine e-posta gönderin; cihaz modelinizi ve iOS sürümünüzü belirtin.</p>
 
-<h2>Common questions</h2>
+<h2>Sık Sorulan Sorular / FAQ</h2>
 <ul>
-  <li><strong>How does automatic tracking work?</strong> The app uses your device location (with your permission) to detect the country/city you're in and calculates your Schengen 90/180 stay automatically. The app works without an account.</li>
-  <li><strong>VisaRadar Premium</strong> unlocks the AI travel assistant, document scanner and border mode. Plans: Monthly (USD 4.99), Annual (USD 34.99, 3-day free trial), Lifetime (USD 59.99, one-time). Manage or cancel anytime in Settings → your name → Subscriptions.</li>
-  <li><strong>Restore purchases</strong> — open the app's premium screen and tap “Restore Purchases”.</li>
+  <li><strong>Otomatik takip nasıl çalışır?</strong> Uygulama, izninizle cihaz konumunuzu kullanarak hangi ülkede/şehirde olduğunuzu tespit eder ve Schengen 90/180 günlük kalışınızı otomatik hesaplar.</li>
+  <li><strong>VisaRadar Premium:</strong> AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modu içerir. Planlar: Aylık (4,99 USD), Yıllık (34,99 USD, 3 günlük deneme), Ömür boyu (59,99 USD). Ayarlar → Adınız → Abonelikler'den yönetip iptal edebilirsiniz.</li>
+  <li><strong>Satın alma geri yükleme:</strong> Premium ekranında "Satın Almaları Geri Yükle" seçeneğine dokunun.</li>
 </ul>
 
-<h2>Legal</h2>
-<p>See our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Use</a>.</p>
+<h2>Yasal / Legal</h2>
+<p><a href="/privacy">Gizlilik Politikası &amp; KVKK</a> · <a href="/terms">Kullanım Şartları</a></p>
 `);
 }
 
 export function termsPage(): Response {
-  return page("Terms of Use", `
-<h1>Terms of Use (EULA)</h1>
-<p>By downloading or using VisaRadar Travel you agree to these terms and to Apple's standard
-<a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Licensed Application End User License Agreement</a>.</p>
+  return page("Kullanım Şartları / Terms of Use", `
+<h1>Kullanım Şartları (EULA)</h1>
+<p><em>End User License Agreement</em></p>
+<p>VisaRadar Travel'ı indirerek veya kullanarak bu şartları ve Apple'ın standart
+<a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Lisanslı Uygulama Son Kullanıcı Lisans Sözleşmesi</a>'ni kabul etmiş olursunuz.</p>
 
-<h2>Subscriptions and purchases</h2>
-<p>VisaRadar Travel offers an optional <strong>VisaRadar Premium</strong> upgrade that unlocks the AI travel assistant, the document scanner and border mode:</p>
+<h2>Abonelikler ve Satın Almalar</h2>
+<p>VisaRadar Travel, AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
 <ul>
-  <li><strong>Monthly Premium</strong> — auto-renewable subscription, 1 month, USD 4.99 (price localised per region).</li>
-  <li><strong>Annual Premium</strong> — auto-renewable subscription, 1 year, USD 34.99, with a 3-day free trial.</li>
-  <li><strong>Lifetime Premium</strong> — one-time purchase, USD 59.99 (non-consumable).</li>
+  <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
+  <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD; 3 günlük deneme süresi ile.</li>
+  <li><strong>Ömür Boyu Premium</strong> — Tek seferlik satın alma, 59,99 USD (tükenmeyen).</li>
 </ul>
-<p>Payment is charged to your Apple Account at confirmation of purchase. Auto-renewable subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Any unused portion of a free trial is forfeited when you buy a subscription. You can manage or cancel subscriptions in your Apple Account settings (Settings → your name → Subscriptions).</p>
+<p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Bir abonelik satın aldığınızda ücretsiz denemenin kullanılmamış kısmı iptal edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
 
-<h2>Use of the app</h2>
-<p>The information provided is for general guidance only and is not legal advice. Always confirm visa, entry and stay requirements with official government sources. You are responsible for your own travel decisions.</p>
+<h2>Uygulamanın Kullanımı</h2>
+<p>Sağlanan bilgiler yalnızca genel rehberlik içindir ve hukuki tavsiye niteliği taşımaz. Vize, giriş ve kalış koşullarını her zaman resmi hükümet kaynaklarıyla teyit edin. Seyahat kararlarınızdan siz sorumlusunuz.</p>
 
-<h2>Contact</h2>
-<p>Questions about these terms can be sent to the contact email below.</p>
+<h2>Sorumluluk Sınırlandırması</h2>
+<p>Uygulama "olduğu gibi" sunulmaktadır. VisaRadar Travel, yanlış veya eksik bilgiden kaynaklanabilecek doğrudan ya da dolaylı zararlardan sorumlu değildir.</p>
+
+<h2>Değişiklikler</h2>
+<p>Bu şartlar zaman zaman güncellenebilir. Önemli değişikliklerde uygulama içi bildirim veya e-posta ile bilgilendirme yapılacaktır.</p>
+
+<h2>İletişim / Contact</h2>
+<p>Bu şartlarla ilgili sorularınızı aşağıdaki iletişim adresine gönderebilirsiniz.</p>
 `);
 }

@@ -10,6 +10,8 @@ import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../services/ai/ai_message.dart';
+import '../../services/ai/anthropic_proxy.dart';
+import '../../services/natural_tts.dart';
 import '../../services/premium_providers.dart';
 import '../paywall/paywall_screen.dart';
 import 'assistant_controller.dart';
@@ -25,8 +27,10 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final _speech = stt.SpeechToText();
+  final _tts = NaturalTts();
   bool _isListening = false;
   bool _speechAvailable = false;
+  int _playingIndex = -1;
 
   @override
   void initState() {
@@ -68,9 +72,27 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     }
   }
 
+  Future<void> _toggleSpeak(String text, int index) async {
+    if (_playingIndex == index) {
+      await _tts.stop();
+      setState(() => _playingIndex = -1);
+      return;
+    }
+    if (_tts.isPlaying) await _tts.stop();
+    setState(() => _playingIndex = index);
+    final bearer = ref.read(premiumBearerProvider);
+    if (bearer == null || bearer.isEmpty) {
+      setState(() => _playingIndex = -1);
+      return;
+    }
+    await _tts.speak(text, baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    if (mounted) setState(() => _playingIndex = -1);
+  }
+
   @override
   void dispose() {
     _speech.stop();
+    _tts.dispose();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -211,7 +233,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     }
                     final m = state.messages[i];
                     final isLast = i == state.messages.length - 1;
-                    return _bubble(m, animate: isLast && !state.loading);
+                    return _bubble(m, i, isTr, animate: isLast && !state.loading);
                   },
                 ),
         ),
@@ -278,33 +300,85 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     );
   }
 
-  Widget _bubble(AIMessage m, {required bool animate}) {
+  Widget _bubble(AIMessage m, int index, bool isTr, {required bool animate}) {
     final isUser = m.role == AIMessageRole.user;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.82,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? AppColors.brandTeal : AppColors.surfaceCard,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isUser ? 16 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 16),
+    final isPlaying = _playingIndex == index;
+
+    return Column(
+      crossAxisAlignment:
+          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.82,
+            ),
+            decoration: BoxDecoration(
+              color: isUser ? AppColors.brandTeal : AppColors.surfaceCard,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isUser ? 16 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 16),
+              ),
+            ),
+            child: isUser
+                ? Text(m.text,
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.brandNavy))
+                : (animate
+                    ? _TypewriterText(text: m.text)
+                    : Text(m.text, style: AppTextStyles.bodyMedium)),
           ),
         ),
-        child: isUser
-            ? Text(m.text,
-                style:
-                    AppTextStyles.bodyMedium.copyWith(color: AppColors.brandNavy))
-            : (animate
-                ? _TypewriterText(text: m.text)
-                : Text(m.text, style: AppTextStyles.bodyMedium)),
-      ),
+        if (!isUser) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap: () => _toggleSpeak(m.text, index),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPlaying
+                          ? Icons.stop_circle_outlined
+                          : Icons.volume_up_outlined,
+                      size: 14,
+                      color: isPlaying
+                          ? AppColors.danger
+                          : AppColors.brandTeal,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      isPlaying
+                          ? (isTr ? 'Durdur' : 'Stop')
+                          : (isTr ? 'Dinle' : 'Listen'),
+                      style: AppTextStyles.caption.copyWith(
+                        color: isPlaying
+                            ? AppColors.danger
+                            : AppColors.brandTeal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ] else
+          const SizedBox(height: 12),
+      ],
     );
   }
 
@@ -409,7 +483,6 @@ class _TypewriterTextState extends State<_TypewriterText> {
         t.cancel();
         return;
       }
-      // Reveal a few chars per tick for a smooth, fast typewriter feel.
       setState(() => _shown = (_shown + 3).clamp(0, widget.text.length));
     });
   }
@@ -511,7 +584,7 @@ class _AiExamplesCard extends StatelessWidget {
                   size: 16, color: AppColors.brandTeal),
               const SizedBox(width: 8),
               Text(
-                isTr ? 'Neler Sorabilirsiniz?' : 'What Can You Ask?',
+                isTr ? 'Soracaklarınızdan Bazıları' : 'Some of Your Questions',
                 style: AppTextStyles.labelLarge
                     .copyWith(color: AppColors.brandTeal),
               ),
@@ -519,6 +592,14 @@ class _AiExamplesCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           for (final e in examples) _AiExampleRow(text: e),
+          const SizedBox(height: 4),
+          Text(
+            isTr ? 've diğer sormak istedikleriniz…' : 'and whatever else you\'d like to ask…',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textMuted,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ],
       ),
     );

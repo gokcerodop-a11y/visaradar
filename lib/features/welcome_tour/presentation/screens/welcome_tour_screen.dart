@@ -28,6 +28,8 @@ class _Slide {
   final String bodyEn;
   final List<String> bulletsTr;
   final List<String> bulletsEn;
+  final String? premiumNoteTr;
+  final String? premiumNoteEn;
 
   const _Slide({
     required this.icon,
@@ -38,10 +40,13 @@ class _Slide {
     required this.bodyEn,
     this.bulletsTr = const [],
     this.bulletsEn = const [],
+    this.premiumNoteTr,
+    this.premiumNoteEn,
   });
 }
 
 final _slides = <_Slide>[
+  // 1 — Schengen
   _Slide(
     icon: Icons.public,
     color: AppColors.brandTeal,
@@ -52,6 +57,7 @@ final _slides = <_Slide>[
     bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Otomatik sınır geçişi tespiti', 'Tüm Schengen ülkeleri destekleniyor'],
     bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Automatic border crossing detection', 'All Schengen countries supported'],
   ),
+  // 2 — 42 Ülke
   _Slide(
     icon: Icons.map_outlined,
     color: const Color(0xFF6366F1),
@@ -62,6 +68,7 @@ final _slides = <_Slide>[
     bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Anlık hava ve UV endeksi'],
     bulletsEn: ['Driving rules (DRL, winter tyres, vest)', 'City guide & street food', 'Live weather and UV index'],
   ),
+  // 3 — AI Seyahat Asistanı
   _Slide(
     icon: Icons.bolt,
     color: const Color(0xFFF59E0B),
@@ -69,9 +76,10 @@ final _slides = <_Slide>[
     titleEn: 'AI Travel Assistant',
     bodyTr: 'Aklınıza gelen her soruyu sorun. Vize, gümrük, döviz, vergi iadesi, yerel lezzetler…',
     bodyEn: 'Ask anything. Visas, customs, currency, tax-free, local food — Claude answers instantly.',
-    bulletsTr: ['"Change office bul"', '"Gümrükten kaç kilo geçebilirim?"', '"Romada nerede kalayım?"'],
-    bulletsEn: ['"Find a change office nearby"', '"How much chocolate can I bring?"', '"Where to stay in Rome?"'],
+    bulletsTr: ['"Change office bul"', '"Aldığım bilgisayarı ülkeme götürebilir miyim?"', '"Romada nerede kalayım?"', '"E-sim nereden bulabilirim?"'],
+    bulletsEn: ['"Find a change office nearby"', '"Can I bring the laptop I bought home?"', '"Where to stay in Rome?"', '"Where can I get an eSIM?"'],
   ),
+  // 4 — Acil SOS
   _Slide(
     icon: Icons.emergency,
     color: const Color(0xFFEF4444),
@@ -79,9 +87,10 @@ final _slides = <_Slide>[
     titleEn: 'Emergency SOS',
     bodyTr: 'Tehlike anında güçlü siren sesi ve SOS ışık sinyali. 2 acil kişinize anında konum mesajı gönderin.',
     bodyEn: 'In danger: loud siren alarm and SOS torch signal. Instantly message your 2 emergency contacts with GPS location.',
-    bulletsTr: ['Yüksek sesli alarm sireni', 'SOS Mors kodu ışık sinyali', '2 kişiye konum/güvende mesajı'],
-    bulletsEn: ['Loud alarm siren', 'SOS Morse code torch signal', 'Location/safe message to 2 contacts'],
+    bulletsTr: ['Yüksek sesli alarm sireni', 'SOS Mors kodu ışık sinyali', '2 kişiye konum/güvende mesajı', 'Ayarlar sayfası Acil Kişilerden belirleyin'],
+    bulletsEn: ['Loud alarm siren', 'SOS Morse code torch signal', 'Location/safe message to 2 contacts', 'Set contacts in Settings › Emergency Contacts'],
   ),
+  // 5 — Tax-Free
   _Slide(
     icon: Icons.receipt_long,
     color: const Color(0xFF10B981),
@@ -91,7 +100,10 @@ final _slides = <_Slide>[
     bodyEn: 'Shop in Europe, claim your VAT back. Which form, how to fill it, where to submit — step by step.',
     bulletsTr: ['Global Blue & Planet adımları', 'Ülke bazlı minimum tutar', 'Havalimanı iade noktaları'],
     bulletsEn: ['Global Blue & Planet steps', 'Country minimum amounts', 'Airport refund desk locator'],
+    premiumNoteTr: 'Ayarlar Sayfası Premium Bölümünde',
+    premiumNoteEn: 'Available in Settings › Premium',
   ),
+  // 6 — AI Tur Rehberi
   _Slide(
     icon: Icons.camera_alt_outlined,
     color: const Color(0xFF8B5CF6),
@@ -101,7 +113,10 @@ final _slides = <_Slide>[
     bodyEn: 'Point your camera at a monument, museum or artwork. Take a photo and let the AI narrate like a tour guide.',
     bulletsTr: ['Anında tarihi bilgi', 'Fotoğrafla tanımlama', 'Türkçe ve İngilizce'],
     bulletsEn: ['Instant historical info', 'Photo-based identification', 'Turkish and English'],
+    premiumNoteTr: 'Ayarlar Sayfası Premium Bölümünde',
+    premiumNoteEn: 'Available in Settings › Premium',
   ),
+  // 7 — Hava & Konum
   _Slide(
     icon: Icons.cloud_outlined,
     color: const Color(0xFF0EA5E9),
@@ -112,6 +127,7 @@ final _slides = <_Slide>[
     bulletsTr: ['UV endeksi ve güneş kremi uyarısı', 'Hava kalitesi (AQI)', 'Konumu kaydet (favori yerler)'],
     bulletsEn: ['UV index and sunscreen alert', 'Air quality index (AQI)', 'Save location (favourite places)'],
   ),
+  // 8 — Sınır Geçiş
   _Slide(
     icon: Icons.swap_horiz,
     color: AppColors.brandTeal,
@@ -121,6 +137,41 @@ final _slides = <_Slide>[
     bodyEn: 'When you approach a Schengen border, the app alerts you, smartly logs the crossing and updates your Schengen count.',
     bulletsTr: ['GPS tabanlı sınır tespiti', 'Otomatik veya manuel kayıt', 'Anlık bildirim'],
     bulletsEn: ['GPS-based border detection', 'Automatic or manual logging', 'Instant notification'],
+  ),
+  // 9 — Kayıtlı Yerler
+  _Slide(
+    icon: Icons.bookmark_added,
+    color: const Color(0xFFF59E0B),
+    titleTr: 'Yıllar Sonra Bile Aynı Sokak',
+    titleEn: 'That Street, Years Later',
+    bodyTr: 'Seneler sonra unutamadığın o sokağa nokta atışı geri dön. Bulunduğun yeri hafızaya al — navigasyon seni tam o noktaya ulaştırır.',
+    bodyEn: 'Return precisely to that street you could never forget — years later. Save your location and navigation brings you back to the exact spot.',
+    bulletsTr: ['Bir dokunuşla kaydet', 'Harita uygulamasına aktar ve yönlendir', 'Ayarlar › Kayıtlı Yerlerim'],
+    bulletsEn: ['Save with one tap', 'Open in maps app and navigate', 'Settings › Saved Places'],
+  ),
+  // 10 — Belge Tarayıcı
+  _Slide(
+    icon: Icons.document_scanner_outlined,
+    color: const Color(0xFF6366F1),
+    titleTr: 'Belge Tarayıcı',
+    titleEn: 'Document Scanner',
+    bodyTr: 'Pasaportunuzu, sağlık sigortanızı, yeşil sigortanızı, ehliyetinizi, biletinizi, bütün seyahat evraklarınızı yükleyin ve bir arada tutun.',
+    bodyEn: 'Upload your passport, health insurance, green card, driving licence, flight tickets — all your travel documents stored in one place.',
+    bulletsTr: ['Tüm belgeler tek yerde', 'İnternetsiz erişim', 'Güvenli ve şifreli'],
+    bulletsEn: ['All documents in one place', 'Access offline', 'Secure and encrypted'],
+    premiumNoteTr: 'Ayarlar Sayfası Premium Bölümünde',
+    premiumNoteEn: 'Available in Settings › Premium',
+  ),
+  // 11 — Seyahat Profili
+  _Slide(
+    icon: Icons.manage_accounts_outlined,
+    color: AppColors.brandTeal,
+    titleTr: 'Seyahat Profilin',
+    titleEn: 'Your Travel Profile',
+    bodyTr: 'Ayarlar sayfasında Seyahat Profili bölümüne git. Pasaport türünü, ikametgah durumunu, seyahat yöntemini seç.',
+    bodyEn: 'Go to Travel Profile in Settings. Choose your passport type, residence status and preferred travel method.',
+    bulletsTr: ['Pasaport türü', 'İkametgah durumu', 'Seyahat yöntemi'],
+    bulletsEn: ['Passport type', 'Residence status', 'Travel method'],
   ),
 ];
 
@@ -278,6 +329,7 @@ class _SlidePage extends StatelessWidget {
     final title = isTr ? slide.titleTr : slide.titleEn;
     final body = isTr ? slide.bodyTr : slide.bodyEn;
     final bullets = isTr ? slide.bulletsTr : slide.bulletsEn;
+    final premiumNote = isTr ? slide.premiumNoteTr : slide.premiumNoteEn;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -346,6 +398,31 @@ class _SlidePage extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+          if (premiumNote != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: slide.color.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: slide.color.withAlpha(70)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.settings_outlined, size: 13, color: slide.color),
+                  const SizedBox(width: 6),
+                  Text(
+                    premiumNote,
+                    style: AppTextStyles.caption.copyWith(
+                      color: slide.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

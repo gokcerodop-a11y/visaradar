@@ -13,6 +13,7 @@ import { jsonResponse, parseJsonBody } from "./utils.js";
 import { handleAppleNotify, handleFinTest, sendDailyReport } from "./notify.js";
 import { trDay } from "./finance.js";
 import { privacyPage, termsPage, supportPage } from "./legal.js";
+import { handleTts } from "./tts.js";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -50,6 +51,9 @@ export default {
       }
       if (method === "POST" && path === "/v1/vision") {
         return _cors(await handleVision(request, env));
+      }
+      if (method === "POST" && path === "/v1/tts") {
+        return _cors(await handleTts(request, env));
       }
       if (method === "POST" && path === "/v1/apple-notify") {
         return handleAppleNotify(request, env);
