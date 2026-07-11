@@ -173,6 +173,28 @@ final _slides = <_Slide>[
     bulletsTr: ['Pasaport türü', 'İkametgah durumu', 'Seyahat yöntemi'],
     bulletsEn: ['Passport type', 'Residence status', 'Travel method'],
   ),
+  // 12 — Seyahat Takvimi
+  _Slide(
+    icon: Icons.calendar_month_outlined,
+    color: const Color(0xFF0EA5E9),
+    titleTr: 'Seyahat Takvimi',
+    titleEn: 'Travel Calendar',
+    bodyTr: 'Her gün gittiğin şehirler, kat ettiğin km, yürüdüğün mesafe ve attığın adımlar otomatik kaydedilir.',
+    bodyEn: 'Every day, the cities you visited, km travelled, walking distance and steps are recorded automatically.',
+    bulletsTr: ['Günlük şehir ve ülke kaydı', 'Adım sayacı & yürüyüş km', 'Not ekle, günü sil'],
+    bulletsEn: ['Daily city and country log', 'Step counter & walking km', 'Add notes, delete a day'],
+  ),
+  // 13 — Derin Bilgi
+  _Slide(
+    icon: Icons.verified_outlined,
+    color: const Color(0xFF6366F1),
+    titleTr: 'Derin Bilgi — Konum Kanıtı',
+    titleEn: 'Deep Intel — Location Proof',
+    bodyTr: 'SHA-256 zinciriyle birbirine bağlı konum kayıtları. Seyahat ettiğinizi hukuki düzeyde kanıtlayan, değiştirilemez dijital iz.',
+    bodyEn: 'Location records chained with SHA-256. An immutable digital trail that proves your travel at legal-grade quality.',
+    bulletsTr: ['Blockchain tarzı değiştirilemezlik', 'Zinciri doğrula & dışa aktar', 'Vize / sigorta anlaşmazlıklarında kanıt'],
+    bulletsEn: ['Blockchain-style tamper-proof chain', 'Verify chain & export', 'Evidence for visa / insurance disputes'],
+  ),
 ];
 
 class WelcomeTourScreen extends StatefulWidget {

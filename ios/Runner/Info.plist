@@ -69,6 +69,8 @@
 	<string>VisaRadar lets you pick a photo of your travel document from your library to scan it for key dates.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>VisaRadar uses your microphone so you can ask travel questions by voice in the AI Assistant.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>VisaRadar uses motion data to count your daily steps and walking distance in the Travel Calendar.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>VisaRadar uses speech recognition to convert your voice questions into text for the AI Assistant.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>

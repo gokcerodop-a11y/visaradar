@@ -26,6 +26,8 @@ import '../../features/sos/presentation/screens/sos_setup_screen.dart';
 import '../../features/tax_free/presentation/screens/tax_free_screen.dart';
 import '../../features/tourist_guide/presentation/screens/tourist_guide_screen.dart';
 import '../../features/welcome_tour/presentation/screens/welcome_tour_screen.dart';
+import '../../features/location_proof/presentation/screens/location_proof_screen.dart';
+import '../../features/travel_calendar/presentation/screens/travel_calendar_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Route path constants
@@ -57,6 +59,9 @@ abstract class AppRoutes {
   static const taxFree = '/tax-free';
   static const touristGuide = '/tourist-guide';
   static const welcomeTour = '/welcome-tour';
+  static const locationProof = '/location-proof';
+  static const travelCalendar = '/travel-calendar';
+  static const travelCalendarDay = '/travel-calendar/day';
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +112,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.touristGuide,
         builder: (context, state) => const TouristGuideScreen(),
+      ),
+
+      // Location Proof (Derin Bilgi)
+      GoRoute(
+        path: AppRoutes.locationProof,
+        builder: (context, state) => const LocationProofScreen(),
+      ),
+
+      // Travel Calendar (Seyahat Takvimi)
+      GoRoute(
+        path: AppRoutes.travelCalendar,
+        builder: (context, state) => const TravelCalendarScreen(),
       ),
 
       // Stays (auto-tracked countries/cities)

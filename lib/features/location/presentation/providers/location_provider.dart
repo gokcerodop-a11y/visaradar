@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/country_detection_service.dart';
 import '../../data/services/location_permission_service.dart';
 import '../../domain/models/location_state.dart';
+import '../../../travel_calendar/data/services/travel_log_service.dart';
 
 // ---------------------------------------------------------------------------
 // Service providers — override in tests to inject mocks.
@@ -74,6 +75,10 @@ class LocationNotifier extends StateNotifier<LocationState> {
         phase: LocationDetectionPhase.detected,
         detectedCountry: country,
       );
+      // Record city in the travel calendar (fire-and-forget).
+      if (country.city != null && country.city!.isNotEmpty) {
+        TravelLogService().addCity(country.city!).ignore();
+      }
     } else {
       state = state.copyWith(
         phase: LocationDetectionPhase.failed,

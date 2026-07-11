@@ -53,6 +53,15 @@ dependencies:
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
 
+  # Cryptography (hash chain için)
+  crypto: ^3.0.3
+
+  # Pedometer (adım sayacı — Core Motion, HealthKit gerekmez)
+  pedometer: ^3.0.0
+
+  # Share / export
+  share_plus: ^10.0.0
+
   # Speech recognition & audio
   speech_to_text: ^7.0.0
   flutter_ringtone_player: ^4.0.0
