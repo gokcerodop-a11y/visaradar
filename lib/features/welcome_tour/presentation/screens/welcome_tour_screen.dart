@@ -184,7 +184,18 @@ final _slides = <_Slide>[
     bulletsTr: ['Günlük şehir ve ülke kaydı', 'Adım sayacı & yürüyüş km', 'Not ekle, günü sil'],
     bulletsEn: ['Daily city and country log', 'Step counter & walking km', 'Add notes, delete a day'],
   ),
-  // 13 — Derin Bilgi
+  // 13 — Güvenlik Tarayıcı
+  _Slide(
+    icon: Icons.security_outlined,
+    color: const Color(0xFF6366F1),
+    titleTr: 'Güvenlik Tarayıcı',
+    titleEn: 'Security Scanner',
+    bodyTr: 'Gizli kamera, ses dinleme cihazı ve yüksek sesli alarm tehditlerini tespit etmek için 3 farklı tarayıcı tek ekranda.',
+    bodyEn: '3 detectors in one screen: hidden cameras, audio bugs and loud alarm threats — swipe to switch.',
+    bulletsTr: ['Gizli kamera — manyetik alan', 'Ses böceği — RF anomali', 'Gaz/alarm — mikrofon ile ses izleme'],
+    bulletsEn: ['Hidden camera — magnetic field', 'Audio bug — RF anomaly', 'Gas/alarm — microphone sound monitoring'],
+  ),
+  // 14 — Derin Bilgi
   _Slide(
     icon: Icons.verified_outlined,
     color: const Color(0xFF6366F1),

@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-12):** v1.2.0+6 **WAITING_FOR_REVIEW** — submission a76d0c61-dcfe-40bf-ad5c-9c7b3713864f. Bir sonraki güncellemede: 11 slaytlı karşılama turu, ElevenLabs TTS Dinle butonu (asistan+tur rehberi), Şehir keşfi bug fix, Belge Tarayıcı+Seyahat Profili+Kayıtlı Yerler slaytları, KVKK Ayarlar sayfası, kapsamlı legal.ts.
+**App Store durumu (2026-07-12):** v1.2.0+6 **WAITING_FOR_REVIEW** — submission a76d0c61-dcfe-40bf-ad5c-9c7b3713864f. Bir sonraki güncellemede: 13 slaytlı karşılama turu, ElevenLabs TTS Dinle butonu (asistan+tur rehberi), Şehir keşfi bug fix, KVKK Ayarlar sayfası, kapsamlı legal.ts, **Derin Bilgi** (SHA-256 zincirli konum kanıtı), **Seyahat Takvimi** (günlük km/adım/şehir/not).
 
 ## Teknoloji & Mimari
 - **İstemci:** Flutter (iOS + Android + web + masaüstü). **Melos monorepo** — `melos.yaml`, `packages/` (paylaşılan paketler), `lise_ai/`, omnicore workspace. Ana app `lib/`. i18n `l10n.yaml`.

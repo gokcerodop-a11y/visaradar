@@ -28,6 +28,7 @@ import '../../features/tourist_guide/presentation/screens/tourist_guide_screen.d
 import '../../features/welcome_tour/presentation/screens/welcome_tour_screen.dart';
 import '../../features/location_proof/presentation/screens/location_proof_screen.dart';
 import '../../features/travel_calendar/presentation/screens/travel_calendar_screen.dart';
+import '../../features/security_scanner/presentation/screens/security_scanner_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Route path constants
@@ -62,6 +63,7 @@ abstract class AppRoutes {
   static const locationProof = '/location-proof';
   static const travelCalendar = '/travel-calendar';
   static const travelCalendarDay = '/travel-calendar/day';
+  static const securityScanner = '/security-scanner';
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +114,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.touristGuide,
         builder: (context, state) => const TouristGuideScreen(),
+      ),
+
+      // Security Scanner (Güvenlik Tarayıcı)
+      GoRoute(
+        path: AppRoutes.securityScanner,
+        builder: (context, state) => const SecurityScannerScreen(),
       ),
 
       // Location Proof (Derin Bilgi)

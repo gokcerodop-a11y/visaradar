@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
           _passportCard(context, profile, isTr),
           const SizedBox(height: 16),
 
-          // ── Acil SOS ──────────────────────────────────────────────
+          // ── Güvenlik ──────────────────────────────────────────────
           _sectionLabel(isTr ? 'Güvenlik' : 'Safety'),
           _tile(
             context,
@@ -45,6 +45,12 @@ class ProfileScreen extends ConsumerWidget {
             Icons.contact_phone_outlined,
             isTr ? 'Acil Kişiler' : 'Emergency Contacts',
             () => context.push(AppRoutes.sosSetup),
+          ),
+          _tile(
+            context,
+            Icons.security_outlined,
+            isTr ? 'Güvenlik Tarayıcı' : 'Security Scanner',
+            () => context.push(AppRoutes.securityScanner),
           ),
           const SizedBox(height: 16),
 
