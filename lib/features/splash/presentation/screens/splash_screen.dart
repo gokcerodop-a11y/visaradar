@@ -43,7 +43,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _controller.forward();
 
     // Hold the welcome for ~1.5s total, then route based on onboarding state.
-    Future.delayed(const Duration(milliseconds: 1500), _route);
+    Future.delayed(const Duration(milliseconds: 800), _route);
   }
 
   Future<void> _route() async {

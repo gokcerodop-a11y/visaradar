@@ -40,6 +40,14 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: nextResetDate metni → kayan 180-gün penceresi açıklaması
 - ORTA: Paywall fayda listesi tam: AI Asistan, Güvenlik Tarayıcı, Tax-Free, AI Tur Rehberi, Belge Tarayıcı
 
+**Performans Düzeltmeleri (2026-07-29):**
+- ORTA: Splash bekleme 1500ms → 800ms (~0.7 sn açılış kazancı)
+- ORTA: TTS statik bellek cache (20 giriş, <5 MB/giriş) — aynı metin tekrar ElevenLabs'a gitmez
+- DÜŞÜK: Magnetometre 50 Hz (gameInterval) → 10 Hz (100ms) — tarama sırasında CPU/pil tasarrufu
+- DÜŞÜK: STT `listenFor` 1 saat → 15 dakika, `pauseFor` 30 dk → 5 dk
+- DÜŞÜK: Countries screen `ListView(children:)` → `ListView.builder` (lazy)
+- DÜŞÜK: `pubspec.yaml` `assets/icons/` bundle'dan çıkarıldı (~300 KB IPA tasarrufu)
+
 **Re-test Düzeltmeleri (2026-07-29 — commit sonrası):**
 - KRİTİK: Worker free-trial bypass — `Bearer free-trial` → IP tabanlı 3 soru limiti (KV); Apple doğrulama atlanır
 - YÜKSEK: Splash'tan konum izni isteği kaldırıldı (geolocator import temizlendi); izin artık radar'da pre-permission kart ile isteniyor

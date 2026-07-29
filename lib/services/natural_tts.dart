@@ -1,6 +1,7 @@
 // natural_tts.dart
 // ElevenLabs doğal ses: worker /v1/tts'ten mp3 alır, audioplayers ile çalar.
 // Başarısız olursa (anahtar yok / ağ / hata) false döner → çağıran sessiz kalır.
+// Aynı metin için statik bellek cache — ElevenLabs'a gereksiz tekrar istek atmaz.
 
 import 'dart:async';
 import 'dart:convert';
@@ -20,7 +21,18 @@ class NaturalTts {
   /// newer request superseded this one — skip playback.
   int _generation = 0;
 
+  /// Session-scoped TTS audio cache keyed by normalised text.
+  /// Capped at 20 entries to bound memory; LRU approximated by insert order.
+  static final Map<String, Uint8List> _cache = {};
+  static const int _cacheMax = 20;
+
   bool get isPlaying => _playing;
+
+  static String _cacheKey(String text) {
+    // Normalise: trim + collapse whitespace; truncate to 1000 chars max.
+    final normalised = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    return normalised.length > 1000 ? normalised.substring(0, 1000) : normalised;
+  }
 
   Future<bool> speak(
     String text, {
@@ -30,6 +42,22 @@ class NaturalTts {
     if (token.isEmpty || text.trim().isEmpty) return false;
     _generation++;
     final gen = _generation;
+
+    // ── Check cache first ────────────────────────────────────────────────────
+    final key = _cacheKey(text);
+    final cached = _cache[key];
+    if (cached != null) {
+      if (gen != _generation) return false;
+      await stop();
+      _completer = Completer<void>();
+      _playing = true;
+      _sub = _player.onPlayerComplete.listen((_) => _finish());
+      await _player.play(BytesSource(cached, mimeType: 'audio/mpeg'));
+      await _completer!.future;
+      return true;
+    }
+
+    // ── Fetch from Worker ────────────────────────────────────────────────────
     try {
       final resp = await http
           .post(
@@ -46,6 +74,14 @@ class NaturalTts {
       final bytes = resp.bodyBytes;
       if (bytes.length < 256) return false;
       if (gen != _generation) return false; // tekrar kontrol
+
+      // Store in cache — evict oldest entry if cap reached.
+      if (bytes.length < 5 * 1024 * 1024) { // yalnızca <5 MB dosyaları cache'le
+        if (_cache.length >= _cacheMax) {
+          _cache.remove(_cache.keys.first);
+        }
+        _cache[key] = bytes;
+      }
 
       await stop();
       _completer = Completer<void>();

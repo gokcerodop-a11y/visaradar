@@ -279,7 +279,7 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
       _magnitude = 0;
     });
     _magnetSub = magnetometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
+      samplingPeriod: const Duration(milliseconds: 100), // 10 Hz — sufficient for room scanning
     ).listen((event) {
       final mag = sqrt(
           event.x * event.x + event.y * event.y + event.z * event.z);
@@ -336,8 +336,8 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
       onResult: (_) {},
       onSoundLevelChange: _onAudioLevel,
       listenOptions: stt.SpeechListenOptions(
-        listenFor: const Duration(hours: 1),
-        pauseFor: const Duration(minutes: 30),
+        listenFor: const Duration(minutes: 15),
+        pauseFor: const Duration(minutes: 5),
         cancelOnError: false,
       ),
     );

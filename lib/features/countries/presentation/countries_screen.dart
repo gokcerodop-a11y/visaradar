@@ -17,19 +17,24 @@ class CountriesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(isTr ? 'Ülkeler' : 'Countries')),
-      body: ListView(
+      body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          Text(
-            isTr
-                ? 'Sınır geçişinde ihtiyacın olan her şey — bir dokunuş uzağında.'
-                : 'Everything you need at a border crossing — one tap away.',
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-          for (final c in kVisaCountries) _card(context, c, isTr),
-        ],
+        itemCount: kVisaCountries.length + 1, // +1 for header
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                isTr
+                    ? 'Sınır geçişinde ihtiyacın olan her şey — bir dokunuş uzağında.'
+                    : 'Everything you need at a border crossing — one tap away.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            );
+          }
+          return _card(context, kVisaCountries[index - 1], isTr);
+        },
       ),
     );
   }
