@@ -181,6 +181,8 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `paywall_screen.dart:179` — yıllık plan "Free trial included · best value" → "Best value · annual" (hardcoded trial claim temizlendi)
 - Worker deploy: `bbb3f0f3` (2026-07-29)
 
+**Hukuki / KVKK Test #11 RE-TEST (2026-07-29): 10/10 GEÇTI — kalan bulgu yok.**
+
 **Hukuki / KVKK Test #11 Tam Düzeltmeleri (2026-07-29 — commit 2a0d1d1):**
 - YÜKSEK: `consent_gate_screen.dart` — `_accept()` içine `prefs.setString('visaradar.consent.date', DateTime.now().toIso8601String())` eklendi (onay tarihi audit trail)
 - YÜKSEK: `consent_gate_screen.dart` — `resetConsent()` public fonksiyon eklendi (SharedPrefs siler)
