@@ -199,6 +199,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `onboarding_screen.dart:631` — `onSelect(country.code, country.name)` → `onSelect(country.code, _isTr ? (country.nameTr ?? country.name) : country.name)` (settings/profil ekranı TR modda "Türkiye" yerine "Turkey" gösteriyordu)
 
 **Backlog (kapsam dışı, sonraki sürüm):**
+- **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
 - Çoklu vatandaşlık veri modeli (mimari değişiklik)
