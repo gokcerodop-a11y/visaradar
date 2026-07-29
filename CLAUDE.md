@@ -297,10 +297,10 @@ DÜŞÜK:
 ## Önemli Sabitler
 - Bundle id: `com.visaradar.visaradar` · App id: `6761065257` · Team: `V8CC8CQG3W`
 - Worker: `visaradar-proxy.gokcerodop.workers.dev`
-- Worker chat modeli: `claude-sonnet-5` (deploy: `3497463f`, 2026-07-29 — Opus 4.8'den düşürüldü)
+- Worker chat modeli: `claude-sonnet-5` (son deploy: `2e484934`, 2026-07-29)
 - ASC key: `~/.private_keys/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
 - ASC otomasyonu: `tool/asc_visaradar.mjs` (status/verify/shots/builds)
-- IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99, lifetime $59.99}`
+- IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99}` — lifetime kaldırıldı (2026-07-29)
 - Yasal (canlı, worker): `…workers.dev/privacy` ve `…workers.dev/terms` · Kaynak: `workers/visaradar-proxy/src/legal.ts`
 - ElevenLabs: voice `JBFqnCBsd6RMkjVDRZzb`, model `eleven_multilingual_v2` (wrangler.toml [vars])
 
