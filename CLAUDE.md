@@ -208,12 +208,19 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - `assistant_controller.dart` system prompt: `NEARBY SEARCHES` bölümü eklendi — yakın yer sorularına `maps://?q=SEARCH_TERM` Apple Maps linki döndürülür.
 - `saved_places_screen.dart`: Maps icon `Icons.navigation_outlined` → `Icons.map_outlined`, tooltip "Git"→"Haritada Aç" / "Navigate"→"Open in Maps".
 
-**Özellik Düzeltmeleri — Batch 3 (2026-07-29):**
-- `profile_screen.dart`: Derin Bilgi tile "Yerlerim" bölümünden kaldırıldı (yalnızca Settings > Premium Araçlar'da olmalı)
-- `legal.ts` privacy: KVKK haklar maddesinden "gokcerodop@gmail.com adresine başvurabilirsiniz" kaldırıldı — genel yönlendirme bırakıldı
-- `legal.ts` terms: "Ömür Boyu Premium — 59,99 USD" satırı kaldırıldı; support FAQ'tan da lifetime planı silindi
-- `welcome_tour_screen.dart`: Güvenlik Tarayıcı slaydı eklendi (8. slayt, 23+ Ülke ile Premium arasında) — 3 özellik + kesin güvenilmemesi uyarısı
+**Özellik Düzeltmeleri — Batch 3 (2026-07-29 — commit a0c983a, telefonda):**
+- `profile_screen.dart`: Derin Bilgi "Yerlerim"den kaldırıldı → "Premium araçları" bölümüne taşındı (4. tab / ProfileScreen'de)
+- `profile_screen.dart`: "Rızamı Geri Çek" tile eklendi (Hakkında bölümü, kırmızı) — dialog → resetConsent() → consent gate; hem KVKK hakkı hem test kolaylığı
+- `legal.ts` privacy: KVKK haklar maddesinden e-posta adresi kaldırıldı (global kural)
+- `legal.ts` terms: "Ömür Boyu Premium" satırı kaldırıldı; support FAQ'tan da lifetime silindi
+- `welcome_tour_screen.dart`: 8. slayt eklendi — Güvenlik Tarayıcı (turuncu, Icons.security_outlined); 3 özellik + "⚠️ kesinlikle güvenilmemeli" uyarısı
+- `consent_gate_screen.dart`: `_consentVersion` 4 → 5 (cihazda 4 kayıtlı olduğu için yeniden onay zorlandı)
 - Worker deploy: `37577b66` (2026-07-29)
+
+**KVKK Onay — Nasıl Çalışır:**
+- Yeni kullanıcı (App Store): prefs boş → `0 >= 5 = false` → KVKK her zaman çıkar ✓
+- Test cihazı (önceden kabul edilmiş): Ayarlar → Hakkında → "Rızamı Geri Çek" → kapat/aç → KVKK çıkar
+- `_consentVersion` artırıldığında eski kayıt geçersiz kalır; gereksiz yere artırma — test için "Rızamı Geri Çek" kullan
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
@@ -240,8 +247,8 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 | 10 | Seyahat Takvimi | `features/travel_calendar/` | `/travel-calendar` |
 | 11 | Derin Bilgi | `features/location_proof/` | `/location-proof` |
 | 12 | Güvenlik Tarayıcı | `features/security_scanner/` | `/security-scanner` |
-| 13 | Karşılama Turu (6 slayt; her açılışta) | `features/welcome_tour/` | `/welcome-tour` |
-| 14 | KVKK Onay (4 checkbox, bilingual) | `screens/consent_gate_screen.dart` | `/consent-gate` |
+| 13 | Karşılama Turu (**8 slayt**; her açılışta) | `features/welcome_tour/` | `/welcome-tour` |
+| 14 | KVKK Onay (3 checkbox, bilingual, **consentVersion=5**) | `screens/consent_gate_screen.dart` | `/consent-gate` |
 
 **Güvenlik Tarayıcı detayı:**
 - Sayfa 1: Gizli Kamera — magnetometre (>75 µT şüpheli, >105 µT alarm)
@@ -291,8 +298,10 @@ flutter_local_notifications: ^18.0.1  # Schengen uyarı bildirimleri
 2. **Onboarding** (2 adım): Adım 1 = Dil, Adım 2 = Vatandaşlık
    - Pasaport türü ve seyahat şekli artık onboarding'de YOK; varsayılanlar (ordinary, plane) otomatik
    - Ayarlar > Seyahat Profili'nden değiştirilebilir
-3. **KVKK ConsentGate** (bilingual, 3 zorunlu checkbox: KVKK, AI işleme, konum; `consentVersion=3`)
-4. **Welcome Tour** (5 slayt; "Atla" + "Bir daha gösterme" mevcut)
+3. **KVKK ConsentGate** (bilingual, 3 zorunlu checkbox: KVKK, AI işleme, konum; **`consentVersion=5`**)
+   - Yeni kullanıcı: prefs boş → `0 >= 5 = false` → her zaman gösterilir
+   - Test cihazı: Ayarlar → Hakkında → "Rızamı Geri Çek" ile sıfırla
+4. **Welcome Tour** (**8 slayt**; "Atla" + "Bir daha gösterme" mevcut; Ayarlar > Uygulama Turu ile tekrar açılır)
 5. **Radar** (ana ekran)
 
 ## Komutlar
