@@ -10,7 +10,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/travel_entry.dart';
 import '../providers/trips_provider.dart';
 
-final _dateFmt = DateFormat('d MMM yyyy');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
 
 class TripsScreen extends ConsumerWidget {
   const TripsScreen({super.key});
@@ -136,9 +136,9 @@ class _TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entryStr = _dateFmt.format(entry.entryDate.toLocal());
+    final entryStr = _dateFmt().format(entry.entryDate.toLocal());
     final exitStr = entry.exitDate != null
-        ? _dateFmt.format(entry.exitDate!.toLocal())
+        ? _dateFmt().format(entry.exitDate!.toLocal())
         : (isTr ? 'Devam ediyor' : 'Ongoing');
     final days = entry.daysSpent;
 

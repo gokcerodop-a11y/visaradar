@@ -31,7 +31,7 @@ const _visaFreeDays = {
 // Turkish citizens live in Turkey — no visa limit applies.
 const _homeCountry = 'TR';
 
-final _dateFmt = DateFormat('d MMM yyyy');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
 
 // ---------------------------------------------------------------------------
 // Schengen 90/180 rolling-window calc from stay records
@@ -224,8 +224,8 @@ class _CountriesTab extends ConsumerWidget {
                 ? (vc?.nameTr ?? group.first.countryNameTr)
                 : (vc?.nameEn ?? group.first.countryNameEn),
             subtitle: isTr
-                ? 'Toplam $totalDays gün · Son giriş: ${_dateFmt.format(latestEntry)}'
-                : 'Total $totalDays days · Last entry: ${_dateFmt.format(latestEntry)}',
+                ? 'Toplam $totalDays gün · Son giriş: ${_dateFmt().format(latestEntry)}'
+                : 'Total $totalDays days · Last entry: ${_dateFmt().format(latestEntry)}',
             badge: hasOngoing
                 ? (isTr ? 'Şu an burada' : 'Currently here')
                 : null,
@@ -347,7 +347,7 @@ class _CitiesTab extends ConsumerWidget {
             ),
             title: first.city!,
             subtitle:
-                '$countryName · $totalDays ${isTr ? 'gün' : 'days'} · ${_dateFmt.format(latestEntry)}',
+                '$countryName · $totalDays ${isTr ? 'gün' : 'days'} · ${_dateFmt().format(latestEntry)}',
             badge: hasOngoing
                 ? (isTr ? 'Şu an burada' : 'Currently here')
                 : null,

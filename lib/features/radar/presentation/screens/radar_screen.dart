@@ -25,8 +25,8 @@ import '../../../countries/domain/country_data.dart';
 import '../../../travel/domain/usecases/schengen_calculator.dart';
 import '../../../travel/presentation/providers/trips_provider.dart';
 
-final _dateFmt = DateFormat('d MMM yyyy');
-final _dayFmt = DateFormat('EEEE, d MMM');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
+DateFormat _dayFmt() => DateFormat('EEEE, d MMM');
 
 // ---------------------------------------------------------------------------
 // Automatic capture — location proof chain (Derin Bilgi) + travel calendar
@@ -267,7 +267,7 @@ class RadarScreen extends ConsumerWidget {
 class _RadarHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final dateStr = _dayFmt.format(DateTime.now());
+    final dateStr = _dayFmt().format(DateTime.now());
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
@@ -864,12 +864,14 @@ class _EesEtiasBannerState extends State<_EesEtiasBanner> {
           Expanded(
             child: Text(
               L.isTr
-                  ? "🔷 EES/ETIAS Yeni Kural: 2024'ten itibaren Schengen "
-                      'girişlerinde biyometrik EES kaydı ve ETIAS vizesi '
-                      'zorunlu. Seyahat öncesi hazırlık yapın.'
-                  : '🔷 EES/ETIAS New Rule: Since 2024, Schengen entry '
-                      'requires biometric EES registration and ETIAS '
-                      'authorization. Prepare before travel.',
+                  ? '🔷 EES/ETIAS Yeni Kural: EES biyometrik kaydı ve '
+                      'ETIAS seyahat izni yakında Schengen girişlerinde '
+                      'zorunlu olacak. Seyahat öncesi resmi kaynaklardan '
+                      'takip edin.'
+                  : '🔷 EES/ETIAS New Rule: Biometric EES registration '
+                      'and ETIAS travel authorisation will be required '
+                      'for Schengen entry. Check official sources before '
+                      'travel.',
               style: AppTextStyles.bodySmall,
             ),
           ),
@@ -1039,7 +1041,7 @@ class _SchengenCard extends ConsumerWidget {
     // describe it honestly.
     String resetText = isTr ? 'Kayan pencere' : 'Rolling window';
     if (result.nextResetDate != null) {
-      final d = _dateFmt.format(result.nextResetDate!.toLocal());
+      final d = _dateFmt().format(result.nextResetDate!.toLocal());
       resetText = isTr ? 'Kayan pencere · $d' : 'Rolling window · $d';
     } else if (usedDays > 0) {
       resetText = isTr
@@ -1360,7 +1362,7 @@ class _TravelSummaryCard extends ConsumerWidget {
               icon: Icons.flight_land_outlined,
               label: isTr ? 'Son giriş' : 'Last entry',
               value: latest != null
-                  ? _dateFmt.format(latest.entryDate.toLocal())
+                  ? _dateFmt().format(latest.entryDate.toLocal())
                   : '—',
             ),
             const _RowDivider(),
@@ -1490,10 +1492,14 @@ class _SummaryRow extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          value,
-          style: AppTextStyles.labelLarge.copyWith(
-            color: valueColor ?? AppColors.textPrimary,
+        Flexible(
+          child: Text(
+            value,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: valueColor ?? AppColors.textPrimary,
+            ),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

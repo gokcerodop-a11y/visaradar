@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -529,7 +530,8 @@ class _NationalityPageState extends State<_NationalityPage> {
         .where(
           (c) =>
               c.name.toLowerCase().contains(q) ||
-              c.code.toLowerCase().contains(q),
+              c.code.toLowerCase().contains(q) ||
+              (_isTr && (c.nameTr?.toLowerCase().contains(q) ?? false)),
         )
         .toList();
   }
@@ -676,7 +678,7 @@ class _CountryRow extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  country.name,
+                  L.isTr ? (country.nameTr ?? country.name) : country.name,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: isSelected

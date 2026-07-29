@@ -12,7 +12,7 @@ import '../../domain/data/schengen_countries.dart';
 import '../../domain/entities/travel_entry.dart';
 import '../providers/trips_provider.dart';
 
-final _dateFmt = DateFormat('d MMM yyyy');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
 
 class AddTripScreen extends ConsumerStatefulWidget {
   /// Pass an existing entry to edit it. Null = add mode.
@@ -313,7 +313,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                   leading: const Icon(Icons.flight_land_outlined,
                       size: 20, color: AppColors.textSecondary),
                   label: _entryDate != null
-                      ? _dateFmt.format(_entryDate!)
+                      ? _dateFmt().format(_entryDate!)
                       : L.t('Entry date', 'Giriş tarihi'),
                   hasValue: _entryDate != null,
                   onTap: _pickEntryDate,
@@ -325,7 +325,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                   leading: const Icon(Icons.flight_takeoff_outlined,
                       size: 20, color: AppColors.textSecondary),
                   label: _exitDate != null
-                      ? _dateFmt.format(_exitDate!)
+                      ? _dateFmt().format(_exitDate!)
                       : L.t('Exit date', 'Çıkış tarihi'),
                   hasValue: _exitDate != null,
                   onTap: _pickExitDate,

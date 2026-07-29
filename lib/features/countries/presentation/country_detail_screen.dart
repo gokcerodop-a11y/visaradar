@@ -64,7 +64,9 @@ class CountryDetailScreen extends ConsumerWidget {
             [
               _statRow(
                 isTr ? 'Yasal alkol sınırı' : 'Legal alcohol limit',
-                '${c.alcoholBac.toStringAsFixed(2)} g/L',
+                isTr
+                    ? '${c.alcoholBac.toStringAsFixed(2).replaceAll('.', ',')} g/L'
+                    : '${c.alcoholBac.toStringAsFixed(2)} g/L',
               ),
               const SizedBox(height: 8),
               Text(c.drive(isTr), style: AppTextStyles.bodyMedium),
@@ -399,18 +401,18 @@ class CountryDetailScreen extends ConsumerWidget {
     final rows = <Widget>[];
     rows.add(
       _statRow(
-        isTr ? 'Gunduz Fari (DRL)' : 'Daytime Running Lights',
+        isTr ? 'Gündüz Farı (DRL)' : 'Daytime Running Lights',
         e.daytimeRunningLights
             ? (isTr ? 'Zorunlu' : 'Required')
-            : (isTr ? 'Zorunlu degil' : 'Not required'),
+            : (isTr ? 'Zorunlu değil' : 'Not required'),
       ),
     );
     rows.add(
       _statRow(
-        isTr ? 'Guvenlik Yelegi' : 'Safety Vest',
+        isTr ? 'Güvenlik Yeleği' : 'Safety Vest',
         e.safetyVestRequired
-            ? (isTr ? 'Aracta bulundurulmali' : 'Must carry in vehicle')
-            : (isTr ? 'Zorunlu degil' : 'Not required'),
+            ? (isTr ? 'Araçta bulundurulmalı' : 'Must carry in vehicle')
+            : (isTr ? 'Zorunlu değil' : 'Not required'),
       ),
     );
     if (e.winterTiresEn != null) {
@@ -443,7 +445,7 @@ class CountryDetailScreen extends ConsumerWidget {
       );
     }
     return _section(
-      isTr ? 'Surus Kurallari (Ek)' : 'Driving Rules (Extra)',
+      isTr ? 'Sürüş Kuralları (Ek)' : 'Driving Rules (Extra)',
       Icons.car_repair,
       rows,
     );

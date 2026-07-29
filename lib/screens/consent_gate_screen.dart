@@ -147,7 +147,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                             setState(() => _aiConsent = v ?? false),
                         label: L.t(
                           'I consent to my personal data being processed by AI.',
-                          'Kişisel verilerimin yapay zeka tarafından işlenmesine onay veriyorum.',
+                          'Kişisel verilerimin yapay zekâ tarafından işlenmesine onay veriyorum.',
                         ),
                       ),
                       _checkTile(
