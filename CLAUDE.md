@@ -181,6 +181,16 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `paywall_screen.dart:179` — yıllık plan "Free trial included · best value" → "Best value · annual" (hardcoded trial claim temizlendi)
 - Worker deploy: `bbb3f0f3` (2026-07-29)
 
+**Hukuki / KVKK Test #11 Tam Düzeltmeleri (2026-07-29 — commit 2a0d1d1):**
+- YÜKSEK: `consent_gate_screen.dart` — `_accept()` içine `prefs.setString('visaradar.consent.date', DateTime.now().toIso8601String())` eklendi (onay tarihi audit trail)
+- YÜKSEK: `consent_gate_screen.dart` — `resetConsent()` public fonksiyon eklendi (SharedPrefs siler)
+- YÜKSEK: `settings_screen.dart` — "Rızamı Geri Çek / Withdraw Consent" tile: onay dialog → `resetConsent()` → `context.go(AppRoutes.consentGate)`
+- YÜKSEK: `settings_screen.dart` — "Verilerimi Sil / Request Data Deletion" tile: KVKK konu+gövde doldurulmuş `mailto:` linki
+- ORTA: `legal_screen.dart:76` — Privacy Overview "All travel data is stored locally" yanıltıcı cümle → AI iletimi doğrudan belirtildi
+- ORTA: `legal.ts §5` — Cloudflare üçüncü taraf listesine eklendi (onay metninde vardı ama §5'te eksikti)
+- ORTA: `settings_screen.dart` — `_SettingsTile`'a opsiyonel `iconColor` parametresi; tehlikeli tile'lara `AppColors.warning/danger`
+- Worker deploy: `655db2d1` (LAST_UPDATED → 29 Temmuz 2026)
+
 **Yerelleştirme RE-TEST #2 Düzeltmeleri (2026-07-29 — commit 9bf5b92):**
 - DÜŞÜK: `country_enrichment.dart:44` TR `foodHighlightsTr` — "Iskender"→"İskender" (EN doğruydu, TR'de gözden kaçmıştı)
 - DÜŞÜK: `countries_stay_screen.dart:33` + `cities_stay_screen.dart:12` — `final _dateFmt` → `DateFormat _dateFmt()` fonksiyon (ilk re-test'te gözden kaçan iki dosya)
