@@ -167,6 +167,14 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - D3: `legal.ts` supportPage FAQ — TR sorulara EN yanıtlar eklendi (bilingual)
 - Worker deploy: `aa975c0a` (2026-07-29)
 
+**Yerelleştirme RE-TEST Düzeltmeleri (2026-07-29 — commit d43c772):**
+- YÜKSEK: `assistant_screen.dart:594-608` — 12 TR örnek soru tam Türkçe karakter + kesme işareti (Yakınımdaki, döviz bürosu, Hırvatistan gümrüğü, Madrid'te, Roma'da, Almanya'da vb.)
+- YÜKSEK: `country_detail_screen.dart:402-446` — Sürüş Kuralları etiketleri: "Gunduz Fari"→"Gündüz Farı", "Guvenlik Yelegi"→"Güvenlik Yeleği", "Zorunlu degil"→"Zorunlu değil", "Aracta"→"Araçta", "Surus"→"Sürüş"
+- ORTA: `radar/stays/trips/add_trip` `final _dateFmt` → `DateFormat _dateFmt()` fonksiyon (oturum içi dil değişiminde locale güncellenir)
+- ORTA: `countries.dart` — 116 ülkeye `nameTr` eklendi; onboarding arama TR'de `nameTr` tarıyor; `_CountryRow` TR modda Türkçe ad gösteriyor
+- ORTA: `radar_screen.dart:866-872` EES/ETIAS banner — "ETIAS vizesi"→"ETIAS seyahat izni"; "zorunlu"→"yakında zorunlu olacak"
+- DÜŞÜK: `country_enrichment.dart` "Iskender"→"İskender"; `country_detail` alkol "0.50"→"0,50" TR; `_SummaryRow` Flexible+ellipsis; `consent_gate` "yapay zeka"→"yapay zekâ"
+
 **Hukuki / KVKK RE-TEST Düzeltmeleri (2026-07-29 — commit 310582c):**
 - ORTA: `legal.ts §1.2` — "sunucuya gönderilmez" mutlak iddiası kaldırıldı; AI asistanında pasaport türü + Schengen bakiyesinin Anthropic'e iletildiği bilingual belirtildi
 - DÜŞÜK: `legal.ts terms` — "ücretsiz denemenin kullanılmamış kısmı iptal edilir" kaldırıldı (intro offer yok; proje trial-ban kuralı)
