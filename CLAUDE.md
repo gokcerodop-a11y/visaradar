@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 16 POST-TEST BULGUSU TÜMÜ DÜZELTİLDİ** (commit a59154e, Worker 23eb956e).
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 24 TOPLAM BULGU DÜZELTİLDİ** (commit 7580430, Worker 2e484934).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -237,6 +237,19 @@ DÜŞÜK:
 - `subscription_service.dart`: "Three products... and lifetime" yorumu düzeltildi → "Two products..."
 - `welcome_tour_screen.dart`: "Premium Araçlar"→"Premium araçları"; "Seyahat Profili"→"Seyahat profili"
 - `legal.ts §1.2`: milliyet ve tespit edilen konum ifşaatı eklendi (sistem promptuyla uyum)
+
+**Test-Round-3 Bulgular — 8/8 Düzeltildi (2026-07-29 — commit 7580430, Worker 2e484934):**
+YÜKSEK:
+- `workers/.../index.ts:130,186`: sanitizeString maxLen 2000→6000; sistem promptu (~3424 ch) artık tam iletiliyor; NEARBY SEARCHES özelliği çalışıyor
+- `legal.ts:89,168,169`: /destek → /support (KVKK Md.13 başvuru bağlantısı artık çalışıyor)
+ORTA:
+- `assistant_screen.dart:394-399`: canLaunchUrl false + catch → SnackBar geri bildirimi
+- `assistant_screen.dart:403-404`: "Haritada Aç" dokunma hedefi vertical:13→15 (44pt tam sınır)
+DÜŞÜK:
+- `legal.ts supportPage():122-123`: FAQ premium listesi tam (Tax-Free, Güvenlik Tarayıcı, Derin Bilgi eklendi)
+- `ios/Runner/Info.plist`: LSApplicationQueriesSchemes eklendi (maps, comgooglemaps)
+- `subscription_service.dart:3-7`: yorum 7 premium özelliği tam listiyor
+- `welcome_tour_screen.dart:76`: EN premiumNote "Travel Profile" → "Travel profile"
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
