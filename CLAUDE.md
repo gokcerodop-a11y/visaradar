@@ -65,10 +65,16 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `AppConstants` sahte fiyat sabitleri kaldırıldı (`priceEurMonthly`, `priceTryMonthly`, `trialDays`)
 - DÜŞÜK: Welcome Tour slayt 4 "Anlık hava ve UV endeksi" → "Acil numaralar ve para birimi" (country_info "Coming Soon" tutarsızlık giderildi)
 - DÜŞÜK: `legal.ts` terms → Tax-Free Rehberi + Güvenlik Tarayıcı premium listesine eklendi
-- DÜŞÜK: `docs/APP_STORE_METADATA.md` tamamen güncellendi (v0.1.0 → v1.3.0, gerçek URL'ler, 12+ yaş, Google Play todo listesi)
+- DÜŞÜK: `docs/APP_STORE_METADATA.md` tamamen güncellendi (v0.1.0 → v1.3.0, gerçek URL'ler, **9+ yaş**, Google Play todo listesi)
 - DÜŞÜK: Android adaptive icon — `pubspec.yaml` + flutter_launcher_icons → `mipmap-anydpi-v26/ic_launcher.xml`
 - Worker deploy: `a09e9656` (legal.ts güncellemesi)
 - **ASC API ile tamamlandı (2026-07-29):** Privacy URL ✅ zaten doğru; Support URL ✅ zaten doğru; Age rating 4+ → **9+ (NINE_PLUS)** — `matureOrSuggestiveThemes: INFREQUENT_OR_MILD` (travel AI app için 9+ dürüst, 12+ yersiz); v1.3.0 PREPARE_FOR_SUBMISSION appInfo oluşturuldu (`b6c38b9e`)
+
+**Store Uyumluluk RE-TEST Düzeltmeleri (2026-07-29):**
+- DÜŞÜK: `AppConstants.appVersion` '1.0.0' → '1.3.0' (settings/legal/diagnostics doğru versiyon)
+- DÜŞÜK: ConsentGate `TapGestureRecognizer` — State'e field olarak taşındı (initState + dispose ile bellek sızıntısı engellendi)
+- DÜŞÜK: `country_detail_screen.dart:366` string concatenation → interpolation (lint temizlendi)
+- DÜŞÜK: `docs/APP_STORE_METADATA.md` 3 yerde "12+" → "9+" (ASC gerçek değeriyle uyumlu)
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)

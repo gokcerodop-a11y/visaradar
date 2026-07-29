@@ -363,7 +363,7 @@ class CountryDetailScreen extends ConsumerWidget {
       rows.add(const SizedBox(height: 8));
       rows.add(_statRow(
         isTr ? 'Tax-Free minimum' : 'Tax-Free minimum',
-        'EUR ' + e.taxFreeMinEur!.toStringAsFixed(0) + (e.taxFreeCompanies != null ? ' - ' + e.taxFreeCompanies! : ''),
+        'EUR ${e.taxFreeMinEur!.toStringAsFixed(0)}${e.taxFreeCompanies != null ? ' - ${e.taxFreeCompanies!}' : ''}',
       ));
     }
     return _section(

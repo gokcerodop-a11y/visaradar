@@ -27,6 +27,27 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
   bool _tipsOptIn = false; // 4 — isteğe bağlı / optional
   bool _busy = false;
 
+  late final TapGestureRecognizer _privacyRec;
+  late final TapGestureRecognizer _termsRec;
+
+  @override
+  void initState() {
+    super.initState();
+    _privacyRec = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse(AppConstants.privacyPolicyUrl),
+          mode: LaunchMode.externalApplication);
+    _termsRec = TapGestureRecognizer()
+      ..onTap = () => launchUrl(Uri.parse(AppConstants.termsUrl),
+          mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  void dispose() {
+    _privacyRec.dispose();
+    _termsRec.dispose();
+    super.dispose();
+  }
+
   bool get _canAccept =>
       _termsAccepted && _aiConsent && _locationConsent && !_busy;
 
@@ -216,10 +237,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                     color: AppColors.brandTeal,
                     decoration: TextDecoration.underline,
                     decorationColor: AppColors.brandTeal),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(
-                      Uri.parse(AppConstants.privacyPolicyUrl),
-                      mode: LaunchMode.externalApplication),
+                recognizer: _privacyRec,
               ),
               TextSpan(text: L.t(' and ', ' ve ')),
               TextSpan(
@@ -228,10 +246,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                     color: AppColors.brandTeal,
                     decoration: TextDecoration.underline,
                     decorationColor: AppColors.brandTeal),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(
-                      Uri.parse(AppConstants.termsUrl),
-                      mode: LaunchMode.externalApplication),
+                recognizer: _termsRec,
               ),
               const TextSpan(text: '.'),
             ],

@@ -3,7 +3,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'VisaRadar Travel';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.3.0';
 
   // Legal URLs — live pages served by the proxy worker (App Review 3.1.2c).
   // When empty, the app falls back to showing the in-app legal screen.

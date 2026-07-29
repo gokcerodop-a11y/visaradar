@@ -17,7 +17,7 @@ Preparation document for App Store (iOS) and Google Play (Android) submissions.
 | **Version** | 1.3.0 |
 | **Build Number** | 7 |
 | **Category** | Travel |
-| **Age Rating** | **12+** (üretken AI sohbet içerir — Apple anketi 12+ sonucu verir) |
+| **Age Rating** | **9+** (matureOrSuggestiveThemes: INFREQUENT_OR_MILD — ASC'de ayarlandı) |
 | **Platforms** | iOS 16.0+ |
 
 ---
@@ -130,8 +130,8 @@ VisaRadar Premium: Monthly $4.99 · Annual $34.99 (3-day free trial) · Lifetime
 
 ## Age Rating
 
-**iOS App Store:** 12+ seçilmeli (üretken AI içeriği — serbest metin sohbeti)
-**Google Play:** IARC anketinde "User-generated content" + "AI-generated content" işaretle → 12+
+**iOS App Store:** 9+ (NINE_PLUS) — ASC'de `matureOrSuggestiveThemes: INFREQUENT_OR_MILD` ile ayarlandı (2026-07-29)
+**Google Play:** IARC anketinde AI içeriği işaretle → beklenen sonuç 9+ veya 12+ (IARC bağımsız sistem)
 
 ---
 
@@ -147,7 +147,7 @@ VisaRadar Premium: Monthly $4.99 · Annual $34.99 (3-day free trial) · Lifetime
 - [x] KVKK ConsentGate (4 checkbox, bilingual)
 - [ ] ASC → App Information → Support URL: `.../support` olduğunu teyit et
 - [ ] ASC → App Information → Privacy Policy URL: `.../privacy` olduğunu teyit et
-- [ ] ASC → App Information → Age Rating: 12+ seç
+- [x] ASC → Age Rating: 9+ (API ile ayarlandı 2026-07-29)
 - [ ] App Privacy (Data collection questionnaire) doldur
 
 ### Google Play (henüz gönderilmedi)
