@@ -1,9 +1,9 @@
 // subscription_service.dart
 // Apple StoreKit (in_app_purchase) wrapper for VisaRadar Premium.
 //
-// Two products: monthly + annual (auto-renewable). The Premium entitlement
-// unlocks the AI Assistant,
-// document scanner and border mode. The original transaction id is cached and
+// Two products: monthly + annual (auto-renewable). Premium unlocks: AI
+// Assistant, Tax-Free Guide, AI Tour Guide, Document Scanner, Security
+// Scanner, Deep Record and Border Mode. The original transaction id is cached and
 // sent as the Authorization bearer to the visaradar-proxy Worker, which
 // performs authoritative Apple receipt validation.
 //

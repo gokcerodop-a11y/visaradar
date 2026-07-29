@@ -127,7 +127,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     try {
       const result = await runChat(env, {
         messages: sanitized,
-        systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 2000) : undefined,
+        systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 6000) : undefined,
       });
       // Increment on success only — failed requests don't consume trial quota.
       await env.USAGE.put(freeKey, String(used + 1), { expirationTtl: 30 * 24 * 3600 });
@@ -183,7 +183,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   try {
     const result = await runChat(env, {
       messages: sanitized,
-      systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 2000) : undefined,
+      systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 6000) : undefined,
     });
     // Increment only after a successful response — timeouts/errors don't burn quota.
     await incrementUsage(env, receipt.originalTransactionId, "chat");

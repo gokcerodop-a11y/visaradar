@@ -391,17 +391,26 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 child: InkWell(
                   onTap: () async {
                     final uri = Uri.parse(mapsUrl);
+                    bool opened = false;
                     try {
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(
                             uri, mode: LaunchMode.externalApplication);
+                        opened = true;
                       }
                     } catch (_) {}
+                    if (!opened && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(isTr
+                            ? 'Harita uygulaması açılamadı'
+                            : 'Could not open Maps'),
+                      ));
+                    }
                   },
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 13),
+                        horizontal: 12, vertical: 15),
                     decoration: BoxDecoration(
                       color: AppColors.brandTeal.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),

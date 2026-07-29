@@ -74,7 +74,7 @@ final _slides = <_Slide>[
     bulletsTr: ['Milliyetiniz ve pasaport tipiniz', 'Tercih ettiğiniz uygulama dili', 'Ayarlar › Seyahat Profili\'nden her zaman düzenleyebilirsiniz'],
     bulletsEn: ['Your nationality and passport type', 'Your preferred app language', 'Edit anytime from Settings › Travel Profile'],
     premiumNoteTr: 'Ayarlar Sayfası › Seyahat profili',
-    premiumNoteEn: 'Settings › Travel Profile',
+    premiumNoteEn: 'Settings › Travel profile',
   ),
   // 3 — AI Seyahat Asistanı (key differentiator)
   _Slide(
