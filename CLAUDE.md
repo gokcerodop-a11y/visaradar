@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu — **TÜM TESTLER TAMAMLANDI** (Test 1–7). Son commit: TBD.
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu — **TÜM TESTLER TAMAMLANDI** (Test 1–7). Son commit: `a4cbba9`.
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -105,6 +105,11 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `assistant_screen.dart _initSpeech()` → try/catch sarmalayıcı (STT PlatformException yakalandı)
 - DÜŞÜK: `security_scanner_screen.dart`, `country_detail_screen.dart`, `stays_screen.dart` (×2) — alt padding `+ MediaQuery.paddingOf(context).bottom` (home indicator örtüşmesi engellendi)
 - DÜŞÜK: `WeatherService.close()` metodu eklendi (http.Client kaynak serbest bırakma)
+
+**Cihaz/Sürüm Uyumluluk RE-TEST Düzeltmeleri (2026-07-29):**
+- DÜŞÜK: `travel_log_service.dart` `_writeStore()` → 730-gün kayan cap eklendi (sınırsız büyüme engellendi)
+- DÜŞÜK: `natural_tts.dart` yorum "20 entries" → "5 entries" (gerçek değerle uyumlu)
+- DÜŞÜK: 6 push ekran daha alt padding + home indicator inset: `sos_setup`, `document_scanner`, `add_trip`, `trips`, `location_detail`, `border_mode_widgets`
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)

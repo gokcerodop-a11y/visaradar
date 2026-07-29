@@ -45,10 +45,18 @@ class TravelLogService {
     }
   }
 
+  static const int _maxStoreDays = 730;
+
   Future<void> _writeStore(Map<String, DayLog> store) async {
     final prefs = await _prefs;
+    Map<String, DayLog> trimmed = store;
+    if (store.length > _maxStoreDays) {
+      final keys = store.keys.toList()..sort();
+      final stale = keys.take(store.length - _maxStoreDays).toSet();
+      trimmed = Map.fromEntries(store.entries.where((e) => !stale.contains(e.key)));
+    }
     final encoded =
-        jsonEncode(store.map((key, log) => MapEntry(key, log.toJson())));
+        jsonEncode(trimmed.map((key, log) => MapEntry(key, log.toJson())));
     await prefs.setString(_storeKey, encoded);
   }
 

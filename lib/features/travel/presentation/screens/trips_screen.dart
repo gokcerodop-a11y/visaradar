@@ -45,7 +45,7 @@ class TripsScreen extends ConsumerWidget {
               onAdd: () => context.push('/trips/add'),
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + MediaQuery.paddingOf(context).bottom),
               itemCount: sorted.length,
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (ctx, i) => _TripCard(

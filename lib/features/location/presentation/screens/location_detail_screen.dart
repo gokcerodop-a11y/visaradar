@@ -222,7 +222,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
     final isPremium = ref.watch(isPremiumProvider);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 28 + MediaQuery.paddingOf(context).bottom),
       children: [
         // City + condition hero
         Container(

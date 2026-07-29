@@ -22,7 +22,7 @@ class NaturalTts {
   int _generation = 0;
 
   /// Session-scoped TTS audio cache keyed by normalised text.
-  /// Capped at 20 entries to bound memory; LRU approximated by insert order.
+  /// Capped at 5 entries to bound memory; LRU approximated by insert order.
   static final Map<String, Uint8List> _cache = {};
   static const int _cacheMax = 5;
 

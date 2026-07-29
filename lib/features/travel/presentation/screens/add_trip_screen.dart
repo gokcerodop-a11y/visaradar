@@ -265,7 +265,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
         children: [
           // ── Country ──────────────────────────────────────────────────────
           _SectionLabel(L.t('Country', 'Ülke')),

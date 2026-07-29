@@ -124,7 +124,7 @@ class _DocumentScannerScreenState
 
   Widget _scanner(bool isTr) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 28 + MediaQuery.paddingOf(context).bottom),
       children: [
         Row(
           children: [

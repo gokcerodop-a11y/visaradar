@@ -115,7 +115,7 @@ class BorderModeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(border.name)),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 28 + MediaQuery.paddingOf(context).bottom),
         children: [
           _info(
             isTr ? 'Geçilen ülke' : 'Destination',
