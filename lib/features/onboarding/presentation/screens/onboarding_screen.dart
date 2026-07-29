@@ -365,7 +365,7 @@ class _WelcomeLanguagePage extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "VisaRadar'a Hoşgeldiniz",
+              "VisaRadar'a Hoş Geldiniz",
               style: AppTextStyles.titleLarge.copyWith(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,

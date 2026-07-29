@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../features/travel/presentation/providers/trips_provider.dart';
@@ -41,10 +42,12 @@ class _SuggestionCard extends ConsumerWidget {
     final trips = ref.read(tripsProvider);
     final tripsNotifier = ref.read(tripsProvider.notifier);
 
+    final isTr = L.isTr;
     final isClose = suggestion.type == CrossingSuggestionType.closeAndStartNew;
     final actionLabel = isClose
-        ? 'Close stay & log entry'
-        : 'Log entry in ${suggestion.toLabel}';
+        ? L.t('Close stay & log entry', 'Kalışı kapat ve giriş kaydet')
+        : L.t('Log entry in ${suggestion.toLabel}',
+              '${suggestion.toLabel} girişini kaydet');
     final timeStr = _timeFmt.format(suggestion.detectedAt.toLocal());
 
     return Container(
@@ -83,7 +86,7 @@ class _SuggestionCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'POSSIBLE BORDER CROSSING',
+                        L.t('POSSIBLE BORDER CROSSING', 'OLASI SINIR GEÇİŞİ'),
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.brandTeal,
                           letterSpacing: 0.8,
@@ -92,7 +95,7 @@ class _SuggestionCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 1),
                       Text(
-                        'Detected at $timeStr',
+                        L.t('Detected at $timeStr', '$timeStr itibarıyla algılandı'),
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textMuted,
                         ),
@@ -136,8 +139,12 @@ class _SuggestionCard extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: Text(
               isClose
-                  ? 'You appear to have left ${suggestion.fromLabel} and entered ${suggestion.toLabel}. Confirm to close your current stay and log your new entry.'
-                  : 'You appear to be in ${suggestion.toLabel}. Confirm to log a new trip entry.',
+                  ? L.t(
+                      'You appear to have left ${suggestion.fromLabel} and entered ${suggestion.toLabel}. Confirm to close your current stay and log your new entry.',
+                      '${suggestion.fromLabel} ülkesinden ayrılıp ${suggestion.toLabel} ülkesine girmiş görünüyorsunuz. Mevcut kalışı kapatıp yeni girişi kaydetmek için onaylayın.')
+                  : L.t(
+                      'You appear to be in ${suggestion.toLabel}. Confirm to log a new trip entry.',
+                      '${suggestion.toLabel} ülkesinde görünüyorsunuz. Yeni seyahat girişi kaydetmek için onaylayın.'),
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
                 height: 1.5,
@@ -165,7 +172,7 @@ class _SuggestionCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 10),
                 _ActionButton(
-                  label: 'Not now',
+                  label: isTr ? 'Şimdi değil' : 'Not now',
                   isPrimary: false,
                   onTap: notifier.dismissSuggestion,
                 ),

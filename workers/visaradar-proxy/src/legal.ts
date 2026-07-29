@@ -43,8 +43,8 @@ export function privacyPage(): Response {
 <h2>1. Toplanan Veriler / Data We Collect</h2>
 
 <h3>1.1 Konum Verisi (Location)</h3>
-<p>Uygulama, yalnızca <strong>cihazınızda</strong> konumunuzu kullanır; hangi ülke/şehirde olduğunuzu belirleyerek size doğru vize ve kalış bilgisi sunar. Konum verisi üçüncü taraflara satılmaz ve yurt dışına aktarılmaz.</p>
-<p><em>The app uses your location only on-device to detect which country/city you are in. Location data is not sold to third parties.</em></p>
+<p>Uygulama, konumunuzu cihazınızda işleyerek hangi ülke/şehirde olduğunuzu belirler ve size doğru vize ve kalış bilgisi sunar. Konum verisi satılmaz. Hava durumu için anonim koordinatlar açık kaynaklı <strong>Open-Meteo</strong> servisine (Avusturya merkezli) iletilir.</p>
+<p><em>The app processes your location on-device to detect your country/city. Location data is not sold. Anonymous coordinates are shared with Open-Meteo (open-source, Austria-based) for weather data.</em></p>
 
 <h3>1.2 Seyahat Profili ve Geziler (Travel Profile &amp; Trips)</h3>
 <p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri <strong>yalnızca cihazınızda</strong> saklanır. Herhangi bir sunucuya gönderilmez.</p>
@@ -64,6 +64,15 @@ export function privacyPage(): Response {
   <li>Cloudflare Worker proxy, gelen istekleri doğrular ve rate-limit uygular.</li>
   <li>Cihaz üzerindeki veriler (geziler, profil) cihazın kendi şifreleme mekanizması ile korunur.</li>
 </ul>
+
+<h2>2a. Veri Sorumlusu / Data Controller</h2>
+<p><strong>Gökçe Rodop</strong> — VisaRadar Travel uygulamasının geliştiricisi ve 6698 Sayılı KVKK kapsamındaki veri sorumlusudur.<br>
+<em>Gökçe Rodop is the developer of VisaRadar Travel and the data controller under KVKK.</em></p>
+<p>İletişim / Contact: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
+
+<h2>2b. Veri Saklama Süresi / Data Retention</h2>
+<p>Cihazınızda sakladığınız veriler (seyahatler, profil, konum kayıtları) uygulamayı kaldırana kadar saklanır. Yapay zekâ sorularınız Anthropic'in sunucularında en fazla 30 gün süreyle tutulabilir; bu süre Anthropic'in gizlilik politikasına göre belirlenir.</p>
+<p><em>Data stored on your device (trips, profile, location records) is kept until you delete the app. AI query content may be retained on Anthropic's servers for up to 30 days per Anthropic's privacy policy.</em></p>
 
 <h2>3. Kişisel Verilerin Korunması — KVKK (6698 Sayılı Kanun)</h2>
 <p>Türkiye Cumhuriyeti 6698 Sayılı Kişisel Verilerin Korunması Kanunu kapsamında veri sahibi olarak aşağıdaki haklara sahipsiniz:</p>
@@ -107,9 +116,10 @@ export function supportPage(): Response {
 
 <h2>Sık Sorulan Sorular / FAQ</h2>
 <ul>
-  <li><strong>Otomatik takip nasıl çalışır?</strong> Uygulama, izninizle cihaz konumunuzu kullanarak hangi ülkede/şehirde olduğunuzu tespit eder ve Schengen 90/180 günlük kalışınızı otomatik hesaplar.</li>
-  <li><strong>VisaRadar Premium:</strong> AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modu içerir. Planlar: Aylık (4,99 USD), Yıllık (34,99 USD, 3 günlük deneme), Ömür boyu (59,99 USD). Ayarlar → Adınız → Abonelikler'den yönetip iptal edebilirsiniz.</li>
-  <li><strong>Satın alma geri yükleme:</strong> Premium ekranında "Satın Almaları Geri Yükle" seçeneğine dokunun.</li>
+  <li><strong>Otomatik takip nasıl çalışır?</strong> Uygulama, izninizle cihaz konumunuzu kullanarak hangi ülkede/şehirde olduğunuzu tespit eder ve Schengen 90/180 günlük kalışınızı otomatik hesaplar.<br><em>How does automatic tracking work? The app uses your device location (with your permission) to detect your country/city and automatically calculates your Schengen 90/180-day usage.</em></li>
+  <li><strong>VisaRadar Premium:</strong> AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modu içerir. Planlar: Aylık (4,99 USD), Yıllık (34,99 USD), Ömür boyu (59,99 USD). Ayarlar → Adınız → Abonelikler'den yönetip iptal edebilirsiniz.</li>
+  <li><strong>VisaRadar Premium (EN):</strong> Includes AI travel assistant, document scanner, AI tour guide, and border mode. Plans: Monthly ($4.99/mo), Annual ($34.99/yr), Lifetime ($59.99 one-time). Manage or cancel via Settings → Your Name → Subscriptions.</li>
+  <li><strong>Satın alma geri yükleme:</strong> Premium ekranında "Satın Almaları Geri Yükle" seçeneğine dokunun.<br><em>To restore purchases: tap "Restore Purchases" on the Premium screen.</em></li>
 </ul>
 
 <h2>Yasal / Legal</h2>
@@ -128,7 +138,7 @@ export function termsPage(): Response {
 <p>VisaRadar Travel, AI seyahat asistanı, Tax-Free Rehberi, AI tur rehberi, belge tarayıcı, güvenlik tarayıcı ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
 <ul>
   <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
-  <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD; 3 günlük deneme süresi ile.</li>
+  <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD.</li>
   <li><strong>Ömür Boyu Premium</strong> — Tek seferlik satın alma, 59,99 USD (tükenmeyen).</li>
 </ul>
 <p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Bir abonelik satın aldığınızda ücretsiz denemenin kullanılmamış kısmı iptal edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>

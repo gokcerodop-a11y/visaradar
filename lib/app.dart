@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import 'core/localization/locale.dart';
 import 'core/router/app_router.dart';
@@ -52,6 +53,7 @@ class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
     final localeCode = ref.watch(localeProvider);
     // Keep the global ref-free locale accessor in sync for sub-screens.
     L.code = localeCode;
+    Intl.defaultLocale = localeCode == 'tr' ? 'tr_TR' : 'en_US';
 
     return MaterialApp.router(
       title: 'VisaRadar Travel',

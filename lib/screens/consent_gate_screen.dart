@@ -8,9 +8,8 @@ import '../core/localization/locale.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 
-const _consentVersion = 2;
+const _consentVersion = 3;
 const _consentKey = 'visaradar.consent.version';
-const _tipsOptInKey = 'visaradar.consent.tipsOptIn';
 
 class ConsentGateScreen extends StatefulWidget {
   final VoidCallback onAccepted;
@@ -24,7 +23,6 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
   bool _termsAccepted = false; // 1 — zorunlu / required
   bool _aiConsent = false; // 2 — zorunlu / required
   bool _locationConsent = false; // 3 — zorunlu / required
-  bool _tipsOptIn = false; // 4 — isteğe bağlı / optional
   bool _busy = false;
 
   late final TapGestureRecognizer _privacyRec;
@@ -56,7 +54,6 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
     setState(() => _busy = true);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_consentKey, _consentVersion);
-    await prefs.setBool(_tipsOptInKey, _tipsOptIn);
     widget.onAccepted();
   }
 
@@ -101,8 +98,10 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                       _body(L.t(
                         'VisaRadar uses artificial intelligence technology to '
                         'answer your travel and visa questions.\n\n'
-                        'Data processed: the questions you type, your passport '
-                        'details and your travel plans.\n\n'
+                        'Data processed: the questions you type, photos you upload '
+                        'for document scanning, voice text sent for speech synthesis '
+                        '(TTS), anonymous location coordinates sent to Open-Meteo for '
+                        'weather, your passport details and your travel plans.\n\n'
                         'This content is transmitted over a secure (TLS) '
                         'connection through Anthropic, PBC (USA — the "Claude" '
                         'service) and Cloudflare infrastructure to generate '
@@ -113,8 +112,10 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                         'only on your device.',
                         'VisaRadar, seyahat ve vize sorularınızı yanıtlamak için '
                         'yapay zekâ teknolojisi kullanmaktadır.\n\n'
-                        'İşlenen veriler: Yazdığınız sorular, pasaport bilgileriniz ve '
-                        'seyahat planlarınız.\n\n'
+                        'İşlenen veriler: Yazdığınız sorular, belge tarama için '
+                        'yüklediğiniz fotoğraflar, sesli anlatım (TTS) için gönderilen '
+                        'metin, Open-Meteo\'ya iletilen anonim konum koordinatı, '
+                        'pasaport bilgileriniz ve seyahat planlarınız.\n\n'
                         'Bu içerik, yanıt oluşturmak amacıyla güvenli (TLS) bağlantı '
                         'üzerinden Anthropic, PBC (ABD — "Claude" servisi) ve Cloudflare '
                         'altyapısı üzerinden iletilir. Bu, KVKK kapsamında yurt dışına '
@@ -156,15 +157,6 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                         label: L.t(
                           'I consent to my location data being used for Schengen and border tracking.',
                           'Konum verilerimin Schengen ve sınır takibi için kullanılmasına onay veriyorum.',
-                        ),
-                      ),
-                      _checkTile(
-                        value: _tipsOptIn,
-                        onChanged: (v) =>
-                            setState(() => _tipsOptIn = v ?? false),
-                        label: L.t(
-                          'I want to receive in-app tips and notifications. (optional)',
-                          'Uygulama içi ipuçları ve bildirimler almak istiyorum. (isteğe bağlı)',
                         ),
                       ),
                       const SizedBox(height: 8),

@@ -361,8 +361,8 @@ class _FeaturesSheet extends StatelessWidget {
         emoji: '🛡️',
         en: 'Auto Schengen Tracker',
         tr: 'Otomatik Schengen Takip',
-        descEn: '90/180-day rolling window tracker — auto-detection when app is open. Never overstay again.',
-        descTr: '90/180 günlük pencere hesabı — uygulama açıkken otomatik algılama. Bir daha asla limit aşımı yaşamayın.',
+        descEn: '90/180-day rolling window tracker — auto-detection when app is open. Stay informed and avoid overstays.',
+        descTr: '90/180 günlük pencere hesabı — uygulama açıkken otomatik algılama. Güncel bilgiyle sınır aşımlarının önüne geçin.',
       ),
       _FeatureItem(
         emoji: '⏰',
@@ -1160,6 +1160,16 @@ class _SchengenCard extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isTr
+                ? 'Hesaplama referans amaçlıdır; resmi kayıtlar esas alınır.'
+                : 'Calculation is for reference only; official records prevail.',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textMuted,
+              fontStyle: FontStyle.italic,
+            ),
           ),
           const SizedBox(height: 8),
           Semantics(

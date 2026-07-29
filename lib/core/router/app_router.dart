@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../localization/locale.dart';
+
 import '../../features/assistant/assistant_screen.dart';
 import '../../features/countries/presentation/countries_screen.dart';
 import '../../features/diagnostics/presentation/screens/diagnostics_screen.dart';
@@ -245,7 +247,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Route not found: ${state.uri}')),
+      body: Center(
+        child: Text(L.isTr
+            ? 'Sayfa bulunamadı: ${state.uri}'
+            : 'Route not found: ${state.uri}'),
+      ),
     ),
   );
 });

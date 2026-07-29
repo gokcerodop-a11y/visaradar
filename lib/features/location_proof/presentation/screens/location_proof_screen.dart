@@ -276,7 +276,7 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
               'for visa applications, insurance claims and legal '
               'proceedings.',
               'Her konumunuz kayıt altına alınır ve değiştirilemez SHA-256 '
-              'hash zinciriyle güvence altına alınır. Visa başvuruları, '
+              'hash zinciriyle güvence altına alınır. Vize başvuruları, '
               'sigorta talepleri ve hukuki süreçlerde güçlü destekleyici '
               'kanıt sağlar.',
             ),

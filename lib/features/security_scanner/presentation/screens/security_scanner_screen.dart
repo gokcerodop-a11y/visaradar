@@ -165,7 +165,7 @@ const _pages = <_Page>[
         'Keep the screen on — audio detection requires the app to be in the foreground.',
     tipsTr:
         '• Gaz kokusu veya duman görüyorsanız HEMEN binayı boşaltın\n'
-        '• Elektrik düğmelerine dokunmayın, çakmak ve sigara yaklamayın\n'
+        '• Elektrik düğmelerine dokunmayın, çakmak ve sigara yakmayın\n'
         '• Acil: 112 (genel) · Gaz arıza: 187 · İGDAŞ: 444 4628 · BOTAŞ: 444 4187\n'
         '• Otel odası: CO ve duman dedektörü var mı kontrol edin\n'
         '• Taşınabilir CO dedektörü seyahat ekipmanınızın bir parçası olmalı',

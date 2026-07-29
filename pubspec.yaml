@@ -95,7 +95,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: true                 # enables flutter gen-l10n
 
   assets:
     - assets/images/

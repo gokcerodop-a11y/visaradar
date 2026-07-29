@@ -61,8 +61,8 @@ class LegalScreen extends StatelessWidget {
               type == 'about'
                   ? L.t('Version ${AppConstants.appVersion}',
                       'Sürüm ${AppConstants.appVersion}')
-                  : L.t('Last updated: May 2026',
-                      'Son güncelleme: Mayıs 2026'),
+                  : L.t('Last updated: July 2026',
+                      'Son güncelleme: Temmuz 2026'),
               style: AppTextStyles.caption
                   .copyWith(color: AppColors.textSecondary),
             ),
@@ -87,8 +87,8 @@ class LegalScreen extends StatelessWidget {
             _LegalSection(
               heading: L.t('Data Storage', 'Veri Saklama'),
               body: L.t(
-                'All your profile and travel data is stored locally on your device. No data is transmitted to remote servers in this version of the app.',
-                'Tüm profil ve seyahat verileriniz cihazınızda yerel olarak saklanır. Uygulamanın bu sürümünde hiçbir veri uzak sunuculara gönderilmez.',
+                'Your travel profile and trip history are stored locally on your device. When you use the AI assistant or document scanner, your questions and uploaded content are securely transmitted to Anthropic\'s API. Anonymous location coordinates may be shared with Open-Meteo for weather data.',
+                'Seyahat profiliniz ve gezi geçmişiniz cihazınızda yerel olarak saklanır. AI asistan veya belge tarayıcı kullandığınızda sorularınız ve yüklediğiniz içerikler güvenli biçimde Anthropic API\'sine iletilir. Hava durumu için anonim konum koordinatları Open-Meteo\'ya gönderilebilir.',
               ),
             ),
             const SizedBox(height: 20),
