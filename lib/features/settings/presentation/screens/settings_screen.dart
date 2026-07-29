@@ -8,6 +8,7 @@ import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../screens/consent_gate_screen.dart';
 import '../../../profile/domain/models/user_profile.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 
@@ -124,6 +125,18 @@ class SettingsScreen extends ConsumerWidget {
                     '${AppRoutes.legalText}?title=About+VisaRadar&type=about',
                   ),
                 ),
+                _SettingsTile(
+                  icon: Icons.delete_outline,
+                  iconColor: AppColors.warning,
+                  title: isTr ? 'Verilerimi Sil' : 'Request Data Deletion',
+                  onTap: () => _requestDataDeletion(context, isTr),
+                ),
+                _SettingsTile(
+                  icon: Icons.cancel_outlined,
+                  iconColor: AppColors.danger,
+                  title: isTr ? 'Rızamı Geri Çek' : 'Withdraw Consent',
+                  onTap: () => _withdrawConsent(context, isTr),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -144,6 +157,50 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _requestDataDeletion(BuildContext context, bool isTr) {
+    final subject = Uri.encodeComponent(
+      isTr ? 'Veri Silme Talebi — VisaRadar' : 'Data Deletion Request — VisaRadar',
+    );
+    final body = Uri.encodeComponent(
+      isTr
+          ? 'Merhaba,\n\nKVKK kapsamında kişisel verilerimin silinmesini talep ediyorum.\n\nCihaz: iOS\nUygulama: VisaRadar Travel\n'
+          : 'Hello,\n\nI request deletion of my personal data under KVKK/GDPR.\n\nDevice: iOS\nApp: VisaRadar Travel\n',
+    );
+    launchUrl(
+      Uri.parse('mailto:gokcerodop@gmail.com?subject=$subject&body=$body'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> _withdrawConsent(BuildContext context, bool isTr) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isTr ? 'Rızamı Geri Çek' : 'Withdraw Consent'),
+        content: Text(isTr
+            ? 'AI işleme ve konum onaylarınız sıfırlanacak. Uygulamayı kullanmaya devam etmek için onay ekranını tekrar geçmeniz gerekecek.'
+            : 'Your AI processing and location consents will be reset. You will need to complete the consent screen again to continue using the app.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isTr ? 'İptal' : 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              isTr ? 'Geri Çek' : 'Withdraw',
+              style: const TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await resetConsent();
+      if (context.mounted) context.go(AppRoutes.consentGate);
+    }
   }
 
   Future<void> _openLegal(
@@ -370,18 +427,20 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.title,
     this.value,
+    this.iconColor,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String? value;
+  final Color? iconColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary, size: 22),
+      leading: Icon(icon, color: iconColor ?? AppColors.textSecondary, size: 22),
       title: Text(title, style: AppTextStyles.bodyMedium),
       trailing: value != null
           ? Row(

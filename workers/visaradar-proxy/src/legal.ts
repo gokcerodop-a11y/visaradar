@@ -3,7 +3,7 @@
 // (App Review Guideline 3.1.2 requires these for auto-renewable subscriptions).
 
 const SUPPORT_EMAIL = "gokcerodop@gmail.com";
-const LAST_UPDATED = "12 Temmuz 2026 / 12 July 2026";
+const LAST_UPDATED = "29 Temmuz 2026 / 29 July 2026";
 
 function page(title: string, bodyHtml: string): Response {
   const html = `<!doctype html>
@@ -97,6 +97,7 @@ export function privacyPage(): Response {
   <li><strong>Apple App Store / StoreKit</strong> — Satın alma doğrulaması.</li>
   <li><strong>Open-Meteo</strong> — Hava durumu verileri (anonim konum koordinatı).</li>
   <li><strong>ElevenLabs</strong> — Sesli anlatım (TTS); yalnızca AI yanıt metni iletilir.</li>
+  <li><strong>Cloudflare</strong> — Güvenli API proxy altyapısı; gelen istekleri doğrular ve rate-limit uygular. <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare Gizlilik Politikası</a></li>
 </ul>
 
 <h2>6. Verinin Yurt Dışına Aktarımı</h2>

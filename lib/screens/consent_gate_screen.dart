@@ -10,6 +10,7 @@ import '../core/theme/app_text_styles.dart';
 
 const _consentVersion = 3;
 const _consentKey = 'visaradar.consent.version';
+const _consentDateKey = 'visaradar.consent.date';
 
 class ConsentGateScreen extends StatefulWidget {
   final VoidCallback onAccepted;
@@ -54,6 +55,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
     setState(() => _busy = true);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_consentKey, _consentVersion);
+    await prefs.setString(_consentDateKey, DateTime.now().toIso8601String());
     widget.onAccepted();
   }
 
@@ -267,4 +269,10 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
 Future<bool> isConsentGiven() async {
   final prefs = await SharedPreferences.getInstance();
   return (prefs.getInt(_consentKey) ?? 0) >= _consentVersion;
+}
+
+Future<void> resetConsent() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(_consentKey);
+  await prefs.remove(_consentDateKey);
 }

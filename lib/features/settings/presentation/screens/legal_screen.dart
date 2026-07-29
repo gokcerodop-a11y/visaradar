@@ -73,8 +73,8 @@ class LegalScreen extends StatelessWidget {
                   : L.t('Overview', 'Genel Bakış'),
               body: type == 'privacy'
                   ? L.t(
-                      'VisaRadar respects your privacy. All travel data is stored locally on your device and is never shared with third parties without your explicit consent.',
-                      'VisaRadar Travel gizliliğinize saygı duyar. Tüm seyahat verileri cihazınızda yerel olarak saklanır ve açık rızanız olmadan asla üçüncü taraflarla paylaşılmaz.')
+                      'VisaRadar respects your privacy. Your trips, profile and travel history are stored locally on your device. When you use AI features, your questions are securely transmitted to Anthropic to generate responses. See the Data Storage section below for full details.',
+                      'VisaRadar Travel gizliliğinize saygı duyar. Gezileriniz, profiliniz ve seyahat geçmişiniz cihazınızda yerel olarak saklanır. AI özelliklerini kullandığınızda sorularınız yanıt oluşturmak amacıyla güvenli biçimde Anthropic API\'sine iletilir. Ayrıntılar için aşağıdaki Veri Saklama bölümüne bakınız.')
                   : type == 'terms'
                       ? L.t(
                           'By using VisaRadar you agree to use the application for lawful purposes only. VisaRadar provides travel tracking tools for informational purposes and is not a substitute for official legal or immigration advice.',
