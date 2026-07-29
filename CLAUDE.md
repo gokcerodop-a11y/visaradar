@@ -2,13 +2,25 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik yaması + telefonda test build.
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel tam yama + telefonda.
 
-**Güvenlik Durumu (2026-07-29 — Güvenlik Denetimi + tam yama + yeniden denetim TAMAM):**
-- Worker: KVKK consent enforcement, 6 güvenlik header, sanitizeString/sanitizeMessages, Apple JWS doğrulama (ES256 x5c), TTS rate limit, body boyut sınırı (2 MB), imageMediaType allowlist, role validation, KV cache temizleme (revoke/refund)
-- Flutter: Premium txId iOS Keychain'de (flutter_secure_storage), Tax-Free + Güvenlik Tarayıcı premium gate, AppLifecycleState ekran gizleme, Random.secure(), jailbreak tespiti (startup hard-block), Apple JWS'den gerçek expiresDate okuma
-- Worker deploy edildi: `08fe2b7b-9493-4d6a-9fe8-0be4fb740542`
-- Tüm 30 güvenlik kontrolü ONAYLANDI (yeniden denetim 2026-07-29)
+**Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
+- Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
+- Flutter: Keychain txId, premium gate'ler, AppLifecycle ekran gizleme, Random.secure(), jailbreak hard-block, gerçek expiresDate
+- Worker deploy: `08fe2b7b-9493-4d6a-9fe8-0be4fb740542`
+
+**Fonksiyonel Düzeltmeler (2026-07-29 — tüm test bulgularıyla tam yama):**
+- KRİTİK: `/paywall` → `/subscription` (Tax-Free + Güvenlik Tarayıcı premium butonu düzeltildi)
+- KRİTİK: KVKK ConsentGate akışa bağlandı — onboarding → consent → tur → radar
+- KRİTİK: LocationProofService.recordCurrentLocation() radar GPS hook'una bağlandı
+- YÜKSEK: AI Asistan history kırpma (son 11 mesaj → Worker 12 limit aşılmaz)
+- YÜKSEK: SOS sireni arka plan: Info.plist UIBackgroundModes=audio + resume hook
+- YÜKSEK: TravelLogService.updateFromPosition() radar GPS hook'una bağlandı
+- YÜKSEK: "42/50+ ülke" → "23+ ülke" (welcome tour + kolaylıklar sheet)
+- ORTA: AnthropicProxy timeout 45 sn, TTS nesil sayacı (ghost play engeli)
+- ORTA: AI Asistan maxLength:4000, TTS hata snackbar, 429 özel mesaj
+- ORTA: Gaz dedektörü yanıltıcı "arka planda" metni düzeltildi, dB→% birim
+- DÜŞÜK: Stays Schengen ±1 senkron, sürüm 1.3.0, ölü route sabitleri temizlendi
 
 ## Mevcut Özellikler (tüm liste)
 

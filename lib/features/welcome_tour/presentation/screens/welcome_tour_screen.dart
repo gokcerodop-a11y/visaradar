@@ -57,12 +57,12 @@ final _slides = <_Slide>[
     bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Otomatik sınır geçişi tespiti', 'Tüm Schengen ülkeleri destekleniyor'],
     bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Automatic border crossing detection', 'All Schengen countries supported'],
   ),
-  // 2 — 42 Ülke
+  // 2 — 23+ Ülke
   _Slide(
     icon: Icons.map_outlined,
     color: const Color(0xFF6366F1),
-    titleTr: '42 Ülke, Tek Uygulama',
-    titleEn: '42 Countries, One App',
+    titleTr: '23+ Ülke, Tek Uygulama',
+    titleEn: '23+ Countries, One App',
     bodyTr: 'Her ülke için hız limitleri, vize kuralları, acil numaralar, para birimi, kültür ve pratik seyahat bilgisi.',
     bodyEn: 'Speed limits, visa rules, emergency numbers, currency, culture and practical tips for every country.',
     bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Anlık hava ve UV endeksi'],

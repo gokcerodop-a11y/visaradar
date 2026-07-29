@@ -29,6 +29,7 @@ import '../../features/welcome_tour/presentation/screens/welcome_tour_screen.dar
 import '../../features/location_proof/presentation/screens/location_proof_screen.dart';
 import '../../features/travel_calendar/presentation/screens/travel_calendar_screen.dart';
 import '../../features/security_scanner/presentation/screens/security_scanner_screen.dart';
+import '../../screens/consent_gate_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Route path constants
@@ -37,7 +38,7 @@ import '../../features/security_scanner/presentation/screens/security_scanner_sc
 abstract class AppRoutes {
   static const splash = '/';
   static const onboarding = '/onboarding';
-  static const main = '/main';
+  static const consentGate = '/consent-gate';
   static const radar = '/main/radar';
   static const countries = '/main/countries';
   static const assistant = '/main/assistant';
@@ -50,8 +51,6 @@ abstract class AppRoutes {
   static const diagnostics = '/settings/diagnostics';
   static const savedPlaces = '/profile/saved-places';
   static const stays = '/stays';
-  static const staysCountries = '/stays/countries';
-  static const staysCities = '/stays/cities';
   static const trips = '/trips';
   static const addTrip = '/trips/add';
   static const editTrip = '/trips/edit/:id';
@@ -62,7 +61,6 @@ abstract class AppRoutes {
   static const welcomeTour = '/welcome-tour';
   static const locationProof = '/location-proof';
   static const travelCalendar = '/travel-calendar';
-  static const travelCalendarDay = '/travel-calendar/day';
   static const securityScanner = '/security-scanner';
 }
 
@@ -82,6 +80,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // KVKK consent gate — shown once before the app becomes usable.
+      // On acceptance, continues the normal flow (welcome tour or radar).
+      GoRoute(
+        path: AppRoutes.consentGate,
+        builder: (context, state) => ConsentGateScreen(
+          onAccepted: () async {
+            final tourSeen = await isTourSeen();
+            if (context.mounted) {
+              context.go(
+                tourSeen ? AppRoutes.radar : AppRoutes.welcomeTour,
+              );
+            }
+          },
+        ),
       ),
 
       // Welcome tour (feature showcase slider)

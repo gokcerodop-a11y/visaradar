@@ -169,7 +169,7 @@ class _TaxFreeScreenState extends ConsumerState<TaxFreeScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => context.push('/paywall'),
+              onPressed: () => context.push('/subscription'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandTeal,
                 foregroundColor: Colors.white,

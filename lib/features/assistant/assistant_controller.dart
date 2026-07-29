@@ -123,7 +123,13 @@ class AssistantController extends StateNotifier<AssistantState> {
     );
     try {
       final systemPrompt = _ref.read(assistantSystemPromptProvider);
-      final reply = await proxy.chat(history, systemPrompt: systemPrompt);
+      // Worker enforces a 12-message cap; send only the last 11 so long
+      // conversations never hit a permanent 400.
+      final trimmedMessages = state.messages.length > 11
+          ? state.messages.sublist(state.messages.length - 11)
+          : state.messages;
+      final reply =
+          await proxy.chat(trimmedMessages, systemPrompt: systemPrompt);
       state = state.copyWith(
         messages: [...history, AIMessage.assistant(reply)],
         loading: false,

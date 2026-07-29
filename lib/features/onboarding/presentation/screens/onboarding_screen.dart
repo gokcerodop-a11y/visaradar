@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../screens/consent_gate_screen.dart' show isConsentGiven;
 import '../../../../shared/widgets/country_code_badge.dart';
 import '../../../profile/domain/data/countries.dart';
 import '../../../profile/domain/models/user_profile.dart';
@@ -81,7 +83,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       preferredLocale: _preferredLocale,
     );
     await ref.read(profileProvider.notifier).completeOnboarding(profile);
-    if (mounted) context.go('/main/radar');
+    // First the KVKK consent gate (if not yet accepted), then the welcome
+    // tour — the gate itself continues to the tour on acceptance.
+    final consentGiven = await isConsentGiven();
+    if (!mounted) return;
+    context.go(
+      consentGiven ? AppRoutes.welcomeTour : AppRoutes.consentGate,
+    );
   }
 
   @override

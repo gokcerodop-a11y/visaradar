@@ -154,6 +154,39 @@ class _TravelCalendarScreenState extends ConsumerState<TravelCalendarScreen> {
                   _buildWeekdayRow(),
                   const SizedBox(height: 6),
                   _buildCalendarGrid(),
+                  // Little info hint while the calendar is (almost) empty so
+                  // users know data is collected automatically.
+                  if (_logs.values.where((log) => !log.isEmpty).length < 3)
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            color: AppColors.brandTeal,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              L.isTr
+                                  ? 'Seyahat verileri uygulamayı ön planda '
+                                      'kullanırken otomatik toplanır.'
+                                  : 'Travel data is collected automatically '
+                                      'while using the app.',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   Text(
                     L.t('This Month', 'Bu Ay'),

@@ -161,7 +161,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Center(
             child: Text(
-              'VisaRadar Travel 1.2.0',
+              'VisaRadar Travel 1.3.0',
               style:
                   AppTextStyles.caption.copyWith(color: AppColors.textMuted),
             ),

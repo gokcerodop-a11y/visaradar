@@ -157,12 +157,12 @@ const _pages = <_Page>[
         'Telefon kimyasal gaz tespit edemez — bunu yalnızca fiziksel sensörler yapabilir. '
         'Bu özellik, ortamınızdaki ani yüksek ses patlamalarını (CO dedektörü sireni, yangın alarmı, gaz sızıntısı alarm sesi) '
         'mikrofon yoluyla sürekli izler ve sizi anında uyarır. '
-        'Otel odanızda veya konakladığınız herhangi bir yerde CO dedektörü yoksa arka planda açık bırakın.',
+        'Ekranı açık tutun — ses algılama arka planda çalışmaz.',
     howEn:
         'A phone cannot detect chemical gases — only physical sensors can. '
         'This feature continuously monitors for sudden loud sounds (CO detector siren, fire alarm, gas leak alarm) '
         'via the microphone and alerts you immediately. '
-        'Leave it running in the background if your hotel room or accommodation lacks a CO detector.',
+        'Keep the screen on — audio detection requires the app to be in the foreground.',
     tipsTr:
         '• Gaz kokusu veya duman görüyorsanız HEMEN binayı boşaltın\n'
         '• Elektrik düğmelerine dokunmayın, çakmak ve sigara yaklamayın\n'
@@ -413,7 +413,7 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
       if (!_audioScanning) return isTr ? 'Bekleniyor' : 'Idle';
       // Map audio level from [-60, 0] to [0, 100] for display.
       final pct = ((_audioLevel + 60) / 60 * 100).clamp(0, 100).toInt();
-      return '$pct dB';
+      return '$pct%';
     }
   }
 
@@ -470,7 +470,7 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () => context.push('/paywall'),
+                  onPressed: () => context.push('/subscription'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandTeal,
                     foregroundColor: Colors.white,
@@ -495,7 +495,16 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
       body: Column(
         children: [
           // ── Page indicator ───────────────────────────────────────────────
-          _PageDots(current: _page, count: _pages.length, pages: _pages),
+          _PageDots(
+            current: _page,
+            count: _pages.length,
+            pages: _pages,
+            onDotTap: (index) => _pageCtrl.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
+          ),
           const SizedBox(height: 4),
 
           // ── PageView ─────────────────────────────────────────────────────
@@ -778,11 +787,13 @@ class _PageDots extends StatelessWidget {
     required this.current,
     required this.count,
     required this.pages,
+    required this.onDotTap,
   });
 
   final int current;
   final int count;
   final List<_Page> pages;
+  final ValueChanged<int> onDotTap;
 
   @override
   Widget build(BuildContext context) {
@@ -791,7 +802,7 @@ class _PageDots extends StatelessWidget {
       children: List.generate(count, (i) {
         final active = i == current;
         return GestureDetector(
-          onTap: () {},
+          onTap: () => onDotTap(i),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),

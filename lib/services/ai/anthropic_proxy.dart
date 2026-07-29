@@ -94,11 +94,13 @@ class AnthropicProxy {
     if (!isReady) {
       throw const ProxySubscriptionRequiredException('no-subscription');
     }
-    final resp = await _client.post(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-      body: jsonEncode(body),
-    );
+    final resp = await _client
+        .post(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 45));
 
     if (resp.statusCode == 401 || resp.statusCode == 402) {
       throw ProxySubscriptionRequiredException(

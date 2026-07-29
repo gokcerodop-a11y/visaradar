@@ -20,7 +20,7 @@ class SosScreen extends ConsumerStatefulWidget {
 }
 
 class _SosScreenState extends ConsumerState<SosScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   bool _sosActive = false;
   bool _torchAvailable = false;
   Position? _position;
@@ -32,6 +32,7 @@ class _SosScreenState extends ConsumerState<SosScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -55,10 +56,20 @@ class _SosScreenState extends ConsumerState<SosScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseCtrl.dispose();
     _holdTimer?.cancel();
     if (_sosActive) SosService.stopAll();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // If iOS suspended audio while the app was in the background, restart the
+    // siren as soon as the user returns to the app while SOS is still active.
+    if (state == AppLifecycleState.resumed && _sosActive) {
+      SosService.startAlarm();
+    }
   }
 
   void _startHold() {

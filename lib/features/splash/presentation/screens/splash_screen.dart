@@ -10,6 +10,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../welcome_tour/presentation/screens/welcome_tour_screen.dart'
     show isTourSeen;
+import '../../../../screens/consent_gate_screen.dart' show isConsentGiven;
 
 /// Brief bilingual welcome shown on every cold launch.
 ///
@@ -68,6 +69,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (profile.nationality == null) {
         profileService.resetOnboarding();
         if (mounted) context.go(AppRoutes.onboarding);
+        return;
+      }
+      // KVKK consent gate — must be accepted before the app is usable.
+      final consentGiven = await isConsentGiven();
+      if (!mounted) return;
+      if (!consentGiven) {
+        context.go(AppRoutes.consentGate);
         return;
       }
       // Show feature tour on first launch after install/update.

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -85,7 +86,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
       setState(() => _playingIndex = -1);
       return;
     }
-    await _tts.speak(text, baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    final ok = await _tts.speak(text,
+        baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L.isTr ? 'Ses yüklenemedi' : 'Audio unavailable'),
+        ),
+      );
+    }
     if (mounted) setState(() => _playingIndex = -1);
   }
 
@@ -413,12 +422,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 controller: _input,
                 minLines: 1,
                 maxLines: 4,
+                maxLength: 4000,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: InputDecoration(
                   hintText: _isListening
                       ? (isTr ? 'Dinleniyor…' : 'Listening…')
                       : (isTr ? 'Mesaj yaz…' : 'Type a message…'),
+                  counterText: '',
                   filled: true,
                   fillColor: AppColors.surfaceCard,
                   border: OutlineInputBorder(

@@ -49,7 +49,9 @@ int _schengenDaysUsedFromStays(List<StayRecord> allStays) {
     final from = entry.isAfter(cutoff) ? entry : cutoff;
     final to = exit;
     if (to.isAfter(from)) {
-      total += to.difference(from).inDays;
+      // +1: entry and exit days both count as Schengen presence days
+      // (matches the main Radar calculation).
+      total += to.difference(from).inDays + 1;
     }
   }
   return total;

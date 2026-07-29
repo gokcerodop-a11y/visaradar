@@ -130,6 +130,14 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const PaywallScreen()),
       );
+    } on ProxyRateLimitException {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorText = isTr
+            ? 'Günlük kullanım limitine ulaştın. Yarın tekrar dene.'
+            : 'Daily limit reached. Try again tomorrow.';
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -151,7 +159,15 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
     final bearer = ref.read(premiumBearerProvider);
     if (bearer == null || bearer.isEmpty) return;
     setState(() => _ttsPlaying = true);
-    await _tts.speak(_guideText!, baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    final ok = await _tts.speak(_guideText!,
+        baseUrl: AnthropicProxy.defaultBaseUrl, token: bearer);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L.isTr ? 'Ses yüklenemedi' : 'Audio unavailable'),
+        ),
+      );
+    }
     if (mounted) setState(() => _ttsPlaying = false);
   }
 

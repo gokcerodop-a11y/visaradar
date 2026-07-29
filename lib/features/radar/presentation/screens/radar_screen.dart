@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -12,7 +13,10 @@ import '../../../border/border_mode_widgets.dart';
 import '../../../location/presentation/screens/location_detail_screen.dart';
 import '../../../border_crossing/presentation/providers/border_crossing_provider.dart';
 import '../../../border_crossing/presentation/widgets/crossing_suggestion_card.dart';
+import '../../../location/domain/models/location_state.dart';
 import '../../../location/presentation/providers/location_provider.dart';
+import '../../../location_proof/data/services/location_proof_service.dart';
+import '../../../travel_calendar/data/services/travel_log_service.dart';
 import '../../../profile/domain/models/user_profile.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../countries/domain/country_data.dart';
@@ -21,6 +25,50 @@ import '../../../travel/presentation/providers/trips_provider.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy');
 final _dayFmt = DateFormat('EEEE, d MMM');
+
+// ---------------------------------------------------------------------------
+// Automatic capture — location proof chain (Derin Bilgi) + travel calendar
+// ---------------------------------------------------------------------------
+
+/// Records the freshly detected GPS fix in the tamper-evident location-proof
+/// chain and in the travel calendar. Fire-and-forget; never throws.
+Future<void> _recordAutomaticCapture(DetectedCountry country) async {
+  final Position pos;
+  try {
+    pos = await Geolocator.getLastKnownPosition() ??
+        await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+  } catch (e) {
+    debugPrint('[AutoCapture] position error: $e');
+    return;
+  }
+
+  // K-2 — append the fix to the SHA-256 location proof chain.
+  try {
+    await LocationProofService().recordCurrentLocation(
+      pos,
+      city: country.city,
+      country: country.name,
+      countryCode: country.isoCode,
+    );
+  } catch (e) {
+    debugPrint('[LocationProof] $e');
+  }
+
+  // Y-3 — travel calendar. updateFromPosition() persists the previous fix
+  // itself and adds the km delta (with a 50 m jitter filter), so a separate
+  // addKm() call is not needed — it would double-count the distance.
+  try {
+    await TravelLogService()
+        .updateFromPosition(pos, country.city, country.name);
+  } catch (e) {
+    debugPrint('[TravelLog] $e');
+  }
+}
 
 class RadarScreen extends ConsumerWidget {
   const RadarScreen({super.key});
@@ -35,6 +83,16 @@ class RadarScreen extends ConsumerWidget {
     // whenever suggestion state changes.
     final suggestion = ref.watch(borderCrossingProvider);
     final hasSuggestion = suggestion != null;
+
+    // Every successful GPS detection feeds the location-proof chain (K-2)
+    // and the travel calendar (Y-3). A new DetectedCountry instance is
+    // created per successful detection, so `identical` gates duplicates.
+    ref.listen<LocationState>(locationProvider, (prev, next) {
+      final country = next.detectedCountry;
+      if (country != null && !identical(prev?.detectedCountry, country)) {
+        _recordAutomaticCapture(country);
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
@@ -130,7 +188,7 @@ class _RadarHeader extends StatelessWidget {
               color: AppColors.textSecondary,
               size: 22,
             ),
-            tooltip: 'Kolaylıklar',
+            tooltip: L.isTr ? 'Kolaylıklar' : 'Quick Access',
             onPressed: () => _showFeatures(context),
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),
@@ -215,8 +273,8 @@ class _FeaturesSheet extends StatelessWidget {
         emoji: '✈️',
         en: 'Visa Guide',
         tr: 'Vize Rehberi',
-        descEn: 'Exact visa status for Turkish passport holders in 50+ countries.',
-        descTr: 'Türk pasaportu için 50\'den fazla ülkede vize durumu, kapıda vize, e-vize bilgisi.',
+        descEn: 'Exact visa status for Turkish passport holders in 23+ countries.',
+        descTr: 'Türk pasaportu için 23\'ten fazla ülkede vize durumu, kapıda vize, e-vize bilgisi.',
       ),
       _FeatureItem(
         emoji: '📍',
