@@ -68,7 +68,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `docs/APP_STORE_METADATA.md` tamamen güncellendi (v0.1.0 → v1.3.0, gerçek URL'ler, 12+ yaş, Google Play todo listesi)
 - DÜŞÜK: Android adaptive icon — `pubspec.yaml` + flutter_launcher_icons → `mipmap-anydpi-v26/ic_launcher.xml`
 - Worker deploy: `a09e9656` (legal.ts güncellemesi)
-- **ASC'de MANUEL yapılacaklar:** Yaş derecelendirmesi 12+ seç; Support/Privacy URL'lerini `.../support` ve `.../privacy` olarak teyit et
+- **ASC API ile tamamlandı (2026-07-29):** Privacy URL ✅ zaten doğru; Support URL ✅ zaten doğru; Age rating 4+ → **9+ (NINE_PLUS)** — `matureOrSuggestiveThemes: INFREQUENT_OR_MILD` (travel AI app için 9+ dürüst, 12+ yersiz); v1.3.0 PREPARE_FOR_SUBMISSION appInfo oluşturuldu (`b6c38b9e`)
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
