@@ -1,11 +1,15 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_jailbreak_detection (1.0.0):
+    - Flutter
+    - IOSSecuritySuite
   - flutter_local_notifications (0.0.1):
     - Flutter
   - flutter_ringtone_player (0.0.1):
     - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
+  - IOSSecuritySuite (2.2.0)
   - pedometer (0.0.1):
     - Flutter
   - permission_handler_apple (9.3.0):
@@ -17,6 +21,7 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_jailbreak_detection (from `.symlinks/plugins/flutter_jailbreak_detection/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_ringtone_player (from `.symlinks/plugins/flutter_ringtone_player/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
@@ -25,9 +30,15 @@ DEPENDENCIES:
   - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
   - torch_light (from `.symlinks/plugins/torch_light/ios`)
 
+SPEC REPOS:
+  trunk:
+    - IOSSecuritySuite
+
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_jailbreak_detection:
+    :path: ".symlinks/plugins/flutter_jailbreak_detection/ios"
   flutter_local_notifications:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_ringtone_player:
@@ -45,14 +56,16 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  flutter_jailbreak_detection: a74360daaf5cbc80639959463b4b1395873c90b5
   flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
   flutter_ringtone_player: a77c42464250845611eaa44c27e8714acc800138
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  IOSSecuritySuite: ba76f34cb367b9230934ac37904e26a40d033e3d
   pedometer: 1c5eaab0c6bce8eb7651f7095553b5081c9d06ed
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   sensors_plus: 1c5f0a01ce21c609a4df404c4e6879d62bce287f
   torch_light: d093d579a221a59ef8a6b8c0eca20d52f7178087
 
-PODFILE CHECKSUM: 3ba3a73b1b12adcf321a227a745625fe0888cc82
+PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1
 
 COCOAPODS: 1.16.2
