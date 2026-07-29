@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST TAMAMLANDI** (güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm + ödeme/abonelik + offline + **yerelleştirme** + **hukuki/KVKK**).
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST TAMAMLANDI** + yeni özellikler (commit 736a68b, telefonda).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -198,6 +198,16 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `countries_stay_screen.dart:33` + `cities_stay_screen.dart:12` — `final _dateFmt` → `DateFormat _dateFmt()` fonksiyon (ilk re-test'te gözden kaçan iki dosya)
 - DÜŞÜK: `onboarding_screen.dart:631` — `onSelect(country.code, country.name)` → `onSelect(country.code, _isTr ? (country.nameTr ?? country.name) : country.name)` (settings/profil ekranı TR modda "Türkiye" yerine "Turkey" gösteriyordu)
 
+**Yeni Özellikler (2026-07-29 — commit 736a68b, telefonda):**
+- `welcome_tour_screen.dart`: Her açılışta tur göster; "Bir daha gösterme" → `markTourSeen()` (kalıcı), "Atla" / "Hadi Başlayalım!" → sadece navigate (markTourSeen çağrılmaz). Settings'ten push ile açılırsa `context.pop()` geri döner.
+- 6. slayt eklendi: Seyahat Profili Setup (orange, `Icons.manage_accounts_outlined`) — uygulama için zorunlu profil kurulumunu vurgular. Slayt sırası: Schengen → Profili → AI → SOS → 23+ Ülke → Premium.
+- Slayt 1 (Schengen) auto-location metni güncellendi: GPS ile otomatik kayıt, "uygulama kapalıyken takip yok" açıkça belirtildi.
+- `settings_screen.dart` Tercihler bölümü: "Uygulama Turu" tile eklendi (`Icons.slideshow_outlined`) — `?from=profile` ile `showDismiss:true` turu açar.
+- `location_proof_screen.dart`: `isPremiumProvider` gate eklendi — premium değilse `_buildPremiumGate()` gösterilir, bottomBar gizlenir.
+- `assistant_screen.dart:594-621`: "Yakınımdaki döviz bürosu nerede?" + "Find a currency exchange office nearby" kaldırıldı → gerçekçi sorular eklendi.
+- `assistant_controller.dart` system prompt: `NEARBY SEARCHES` bölümü eklendi — yakın yer sorularına `maps://?q=SEARCH_TERM` Apple Maps linki döndürülür.
+- `saved_places_screen.dart`: Maps icon `Icons.navigation_outlined` → `Icons.map_outlined`, tooltip "Git"→"Haritada Aç" / "Navigate"→"Open in Maps".
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
@@ -223,7 +233,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 | 10 | Seyahat Takvimi | `features/travel_calendar/` | `/travel-calendar` |
 | 11 | Derin Bilgi | `features/location_proof/` | `/location-proof` |
 | 12 | Güvenlik Tarayıcı | `features/security_scanner/` | `/security-scanner` |
-| 13 | Karşılama Turu (5 slayt) | `features/welcome_tour/` | `/welcome-tour` |
+| 13 | Karşılama Turu (6 slayt; her açılışta) | `features/welcome_tour/` | `/welcome-tour` |
 | 14 | KVKK Onay (4 checkbox, bilingual) | `screens/consent_gate_screen.dart` | `/consent-gate` |
 
 **Güvenlik Tarayıcı detayı:**
@@ -238,7 +248,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - Claude proxy + rate-limit + KV + Apple receipt doğrulama + Telegram bildirim.
 - **İstemci → Worker context:** Her istekte `context.kvkkConsent: true` zorunlu. Worker 403 döner yoksa.
 - **Hassas veri:** Premium txId `flutter_secure_storage` → iOS Keychain.
-- **Premium gate:** Tax-Free + Güvenlik Tarayıcı `isPremiumProvider` ile korumalı.
+- **Premium gate:** Tax-Free + Güvenlik Tarayıcı + **Derin Bilgi** `isPremiumProvider` ile korumalı.
 - **AI Asistan:** 3 ücretsiz soru (SharedPrefs 'free_ai_questions_used') → sonra paywall.
 
 ## Önemli Sabitler
