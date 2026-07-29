@@ -7,7 +7,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
 - Flutter: Keychain txId, premium gate'ler, AppLifecycle ekran gizleme, Random.secure(), jailbreak hard-block, gerçek expiresDate
-- Worker deploy: `08fe2b7b-9493-4d6a-9fe8-0be4fb740542`
+- Worker deploy: `4a1e2be4-ce19-4080-af48-cbccb6cd3bcb` (Sonnet 5 modeli aktif)
 
 **Fonksiyonel Düzeltmeler (2026-07-29):**
 - KRİTİK: `/paywall` → `/subscription` (Tax-Free + Güvenlik Tarayıcı premium butonu)
