@@ -48,9 +48,9 @@ int _schengenDaysUsedFromStays(List<StayRecord> allStays) {
     // Overlap with [cutoff, now]
     final from = entry.isAfter(cutoff) ? entry : cutoff;
     final to = exit;
-    if (to.isAfter(from)) {
+    if (!to.isBefore(from)) {
       // +1: entry and exit days both count as Schengen presence days
-      // (matches the main Radar calculation).
+      // (matches the main Radar calculation). Also handles same-day stays (to==from = 1 day).
       total += to.difference(from).inDays + 1;
     }
   }

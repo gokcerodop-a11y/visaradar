@@ -85,12 +85,11 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
       _errorText = null;
     });
 
+    final proxy = AnthropicProxy(
+      originalTransactionId: bearer,
+      language: isTr ? 'tr' : 'en',
+    );
     try {
-      final proxy = AnthropicProxy(
-        originalTransactionId: bearer,
-        language: isTr ? 'tr' : 'en',
-      );
-
       final systemPrompt = isTr
           ? 'Sen uzman bir yapay zeka tur rehberisin. Fotoğraftaki anıtı, '
               'yapıyı, müzeyi veya sanat eserini tanımla. Şunları sun: adı, '
@@ -146,6 +145,8 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
             ? 'Bir hata oluştu. Lütfen tekrar deneyin.'
             : 'Something went wrong. Please try again.';
       });
+    } finally {
+      proxy.dispose();
     }
   }
 

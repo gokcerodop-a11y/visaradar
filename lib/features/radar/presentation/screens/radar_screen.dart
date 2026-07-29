@@ -199,7 +199,7 @@ class _RadarHeader extends StatelessWidget {
               color: AppColors.textSecondary,
               size: 22,
             ),
-            tooltip: 'Country Stays',
+            tooltip: L.isTr ? 'Kalışlar' : 'Country Stays',
             onPressed: () => context.push(AppRoutes.stays),
             padding: const EdgeInsets.all(8),
             constraints: const BoxConstraints(),

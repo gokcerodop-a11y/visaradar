@@ -27,7 +27,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 | # | Özellik | Dosya | Rota |
 |---|---------|-------|------|
 | 1 | Schengen / Radar | `features/radar/` | `/main/radar` |
-| 2 | 42 Ülke Rehberi | `features/countries/` | `/main/countries` |
+| 2 | 23+ Ülke Rehberi | `features/countries/` | `/main/countries` |
 | 3 | AI Asistan + TTS | `features/assistant/` | `/main/assistant` |
 | 4 | Acil SOS | `features/sos/` | `/sos` |
 | 5 | Tax-Free Rehberi | `features/tax_free/` | `/tax-free` |
