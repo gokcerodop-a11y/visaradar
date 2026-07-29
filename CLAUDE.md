@@ -208,6 +208,13 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - `assistant_controller.dart` system prompt: `NEARBY SEARCHES` bölümü eklendi — yakın yer sorularına `maps://?q=SEARCH_TERM` Apple Maps linki döndürülür.
 - `saved_places_screen.dart`: Maps icon `Icons.navigation_outlined` → `Icons.map_outlined`, tooltip "Git"→"Haritada Aç" / "Navigate"→"Open in Maps".
 
+**Özellik Düzeltmeleri — Batch 3 (2026-07-29):**
+- `profile_screen.dart`: Derin Bilgi tile "Yerlerim" bölümünden kaldırıldı (yalnızca Settings > Premium Araçlar'da olmalı)
+- `legal.ts` privacy: KVKK haklar maddesinden "gokcerodop@gmail.com adresine başvurabilirsiniz" kaldırıldı — genel yönlendirme bırakıldı
+- `legal.ts` terms: "Ömür Boyu Premium — 59,99 USD" satırı kaldırıldı; support FAQ'tan da lifetime planı silindi
+- `welcome_tour_screen.dart`: Güvenlik Tarayıcı slaydı eklendi (8. slayt, 23+ Ülke ile Premium arasında) — 3 özellik + kesin güvenilmemesi uyarısı
+- Worker deploy: `37577b66` (2026-07-29)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)

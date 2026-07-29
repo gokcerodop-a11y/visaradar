@@ -120,7 +120,20 @@ final _slides = <_Slide>[
     bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Acil numaralar ve para birimi'],
     bulletsEn: ['Driving rules (DRL, winter tyres, vest)', 'City guide & street food', 'Emergency numbers and currency'],
   ),
-  // 7 — Premium özellikleri (overview)
+  // 7 — Güvenlik Tarayıcı
+  _Slide(
+    icon: Icons.security_outlined,
+    color: const Color(0xFFEA580C),
+    titleTr: 'Güvenlik Tarayıcı',
+    titleEn: 'Security Scanner',
+    bodyTr: 'Konakladığınız odada gizli cihaz şüphesi mi var? Manyetometre ve mikrofon sensörleriyle tarama yapın. Kesin sonuç vermez; yalnızca fikir vermesi amacıyla tasarlanmıştır.',
+    bodyEn: 'Suspect hidden devices in your room? Scan with magnetometer and microphone sensors. Results are indicative only — not a guarantee of detection.',
+    bulletsTr: ['Gizli Kamera — manyetometre ile metal izi tespiti', 'Ses Dinleme Cihazı — RF/elektromanyetik anomali tespiti', 'Gaz/Alarm — mikrofon ile anormal ses seviyesi tespiti', '⚠️ Sonuçlara kesinlikle güvenilmemelidir; uzman yardımı alın'],
+    bulletsEn: ['Hidden Camera — metal trace detection via magnetometer', 'Audio Bug — RF/electromagnetic anomaly detection', 'Gas/Alarm — abnormal sound level via microphone', '⚠️ Results must NOT be fully trusted; consult a professional'],
+    premiumNoteTr: 'Premium özellik',
+    premiumNoteEn: 'Premium feature',
+  ),
+  // 8 — Premium özellikleri (overview)
   _Slide(
     icon: Icons.workspace_premium_outlined,
     color: const Color(0xFF10B981),

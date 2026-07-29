@@ -96,12 +96,6 @@ class ProfileScreen extends ConsumerWidget {
             isTr ? 'Seyahat Takvimi' : 'Travel Calendar',
             () => context.push(AppRoutes.travelCalendar),
           ),
-          _tile(
-            context,
-            Icons.verified_outlined,
-            isTr ? 'Derin Bilgi — Konum Kanıtı' : 'Deep Intel — Location Proof',
-            () => context.push(AppRoutes.locationProof),
-          ),
           const SizedBox(height: 16),
 
           // ── Settings ──────────────────────────────────────────────

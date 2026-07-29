@@ -86,7 +86,7 @@ export function privacyPage(): Response {
   <li>Kanun'un 7. maddesinde öngörülen şartlar çerçevesinde kişisel verilerinizin silinmesini veya yok edilmesini isteme,</li>
   <li>Kişisel verilerinizin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme.</li>
 </ul>
-<p>Bu haklarınızı kullanmak için <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> adresine başvurabilirsiniz.</p>
+<p>Bu haklarınızı kullanmak için destek sayfamız üzerinden bize ulaşabilirsiniz.</p>
 
 <h2>4. GDPR — Avrupa Birliği</h2>
 <p>AB/AEA vatandaşları için GDPR kapsamında: işleme hukuki dayanağı <em>meşru menfaat</em> ve <em>sözleşme ifası</em>dır (abonelik hizmetinin sunulması). Verilerinize erişim, düzeltme, silme veya taşınabilirlik taleplerinizi e-posta yoluyla iletebilirsiniz. Şikâyetlerinizi yerel veri koruma otoritenize iletebilirsiniz.</p>
@@ -119,8 +119,8 @@ export function supportPage(): Response {
 <h2>Sık Sorulan Sorular / FAQ</h2>
 <ul>
   <li><strong>Otomatik takip nasıl çalışır?</strong> Uygulama, izninizle cihaz konumunuzu kullanarak hangi ülkede/şehirde olduğunuzu tespit eder ve Schengen 90/180 günlük kalışınızı otomatik hesaplar.<br><em>How does automatic tracking work? The app uses your device location (with your permission) to detect your country/city and automatically calculates your Schengen 90/180-day usage.</em></li>
-  <li><strong>VisaRadar Premium:</strong> AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modu içerir. Planlar: Aylık (4,99 USD), Yıllık (34,99 USD), Ömür boyu (59,99 USD). Ayarlar → Adınız → Abonelikler'den yönetip iptal edebilirsiniz.</li>
-  <li><strong>VisaRadar Premium (EN):</strong> Includes AI travel assistant, document scanner, AI tour guide, and border mode. Plans: Monthly ($4.99/mo), Annual ($34.99/yr), Lifetime ($59.99 one-time). Manage or cancel via Settings → Your Name → Subscriptions.</li>
+  <li><strong>VisaRadar Premium:</strong> AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modu içerir. Planlar: Aylık (4,99 USD), Yıllık (34,99 USD). Ayarlar → Adınız → Abonelikler'den yönetip iptal edebilirsiniz.</li>
+  <li><strong>VisaRadar Premium (EN):</strong> Includes AI travel assistant, document scanner, AI tour guide, and border mode. Plans: Monthly ($4.99/mo), Annual ($34.99/yr). Manage or cancel via Settings → Your Name → Subscriptions.</li>
   <li><strong>Satın alma geri yükleme:</strong> Premium ekranında "Satın Almaları Geri Yükle" seçeneğine dokunun.<br><em>To restore purchases: tap "Restore Purchases" on the Premium screen.</em></li>
 </ul>
 
@@ -141,7 +141,6 @@ export function termsPage(): Response {
 <ul>
   <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
   <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD.</li>
-  <li><strong>Ömür Boyu Premium</strong> — Tek seferlik satın alma, 59,99 USD (tükenmeyen).</li>
 </ul>
 <p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
 
