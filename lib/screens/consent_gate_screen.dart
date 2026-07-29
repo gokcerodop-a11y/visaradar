@@ -1,6 +1,9 @@
 // consent_gate_screen.dart — KVKK + 3. taraf AI veri onay kapısı (TR/EN).
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../core/constants/app_constants.dart';
 import '../core/localization/locale.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
@@ -111,14 +114,10 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
                         'veya büyükelçilikleri teyit edin.',
                       )),
                       const Divider(height: 32, color: AppColors.divider),
-                      _checkTile(
+                      _checkTileWithLinks(
                         value: _termsAccepted,
                         onChanged: (v) =>
                             setState(() => _termsAccepted = v ?? false),
-                        label: L.t(
-                          'I have read and accept the Privacy Policy and Terms of Use.',
-                          'Gizlilik Politikası ve Kullanım Koşulları\'nı okudum, kabul ediyorum.',
-                        ),
                       ),
                       _checkTile(
                         value: _aiConsent,
@@ -196,6 +195,49 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
   Widget _body(String text) => Text(text,
       style: AppTextStyles.bodySmall
           .copyWith(height: 1.6, color: AppColors.textSecondary));
+
+  Widget _checkTileWithLinks(
+          {required bool value, required ValueChanged<bool?> onChanged}) =>
+      CheckboxListTile(
+        value: value,
+        onChanged: onChanged,
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        activeColor: AppColors.brandTeal,
+        checkColor: AppColors.brandNavy,
+        title: RichText(
+          text: TextSpan(
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textPrimary),
+            children: [
+              TextSpan(text: L.t('I have read and accept the ', 'Okudum ve kabul ediyorum: ')),
+              TextSpan(
+                text: L.t('Privacy Policy', 'Gizlilik Politikası'),
+                style: const TextStyle(
+                    color: AppColors.brandTeal,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.brandTeal),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => launchUrl(
+                      Uri.parse(AppConstants.privacyPolicyUrl),
+                      mode: LaunchMode.externalApplication),
+              ),
+              TextSpan(text: L.t(' and ', ' ve ')),
+              TextSpan(
+                text: L.t('Terms of Use', 'Kullanım Koşulları'),
+                style: const TextStyle(
+                    color: AppColors.brandTeal,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.brandTeal),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => launchUrl(
+                      Uri.parse(AppConstants.termsUrl),
+                      mode: LaunchMode.externalApplication),
+              ),
+              const TextSpan(text: '.'),
+            ],
+          ),
+        ),
+      );
 
   Widget _checkTile(
           {required bool value,

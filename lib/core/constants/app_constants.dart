@@ -18,11 +18,6 @@ class AppConstants {
   static const int schengenMaxDays = 90;
   static const int schengenWindowDays = 180;
 
-  // Subscription placeholders
-  static const double priceEurMonthly = 4.99;
-  static const double priceTryMonthly = 200.0;
-  static const int trialDays = 7;
-
   // SharedPreferences keys
   static const String keyOnboardingDone = 'onboarding_done';
   static const String keyInstallDate = 'install_date_v1'; // ISO8601, first run

@@ -125,7 +125,7 @@ export function termsPage(): Response {
 <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Lisanslı Uygulama Son Kullanıcı Lisans Sözleşmesi</a>'ni kabul etmiş olursunuz.</p>
 
 <h2>Abonelikler ve Satın Almalar</h2>
-<p>VisaRadar Travel, AI seyahat asistanı, belge tarayıcı, AI tur rehberi ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
+<p>VisaRadar Travel, AI seyahat asistanı, Tax-Free Rehberi, AI tur rehberi, belge tarayıcı, güvenlik tarayıcı ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
 <ul>
   <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
   <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD; 3 günlük deneme süresi ile.</li>

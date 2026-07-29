@@ -87,8 +87,8 @@ final _slides = <_Slide>[
     titleEn: '23+ Countries, One App',
     bodyTr: 'Her ülke için hız limitleri, vize kuralları, acil numaralar, para birimi, kültür ve pratik seyahat bilgisi.',
     bodyEn: 'Speed limits, visa rules, emergency numbers, currency, culture and practical tips for every country.',
-    bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Anlık hava ve UV endeksi'],
-    bulletsEn: ['Driving rules (DRL, winter tyres, vest)', 'City guide & street food', 'Live weather and UV index'],
+    bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Acil numaralar ve para birimi'],
+    bulletsEn: ['Driving rules (DRL, winter tyres, vest)', 'City guide & street food', 'Emergency numbers and currency'],
   ),
   // 5 — Premium özellikleri (overview)
   _Slide(

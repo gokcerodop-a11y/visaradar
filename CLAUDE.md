@@ -47,6 +47,9 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: STT `listenFor` 1 saat → 15 dakika, `pauseFor` 30 dk → 5 dk
 - DÜŞÜK: Countries screen `ListView(children:)` → `ListView.builder` (lazy)
 - DÜŞÜK: `pubspec.yaml` `assets/icons/` bundle'dan çıkarıldı (~300 KB IPA tasarrufu)
+- DÜŞÜK: Saved Places `ListView(children:)` → `ListView.builder` (lazy)
+- DÜŞÜK: TTS cache-hit playback try/catch ile sarıldı (_playing sızıntısı engellendi)
+- DÜŞÜK: Splash yorum "~1.5s" → "~0.8s" (doğru değer)
 
 **Re-test Düzeltmeleri (2026-07-29 — commit sonrası):**
 - KRİTİK: Worker free-trial bypass — `Bearer free-trial` → IP tabanlı 3 soru limiti (KV); Apple doğrulama atlanır
@@ -55,6 +58,17 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: Welcome Tour slayt 1 "gerçek zamanlı" → "uygulama açıkken otomatik"
 - ORTA: EES/ETIAS içerik düzeltmesi: doğru tarih (Ekim 2024), doğru URL (travel-europe.europa.eu/etias), "vizesi" → "seyahat izni", BG+HR ülkelerine eklendi
 - ORTA: Country detail ekranında "Türk standart pasaportu için" disclaimer eklendi
+
+**Store Uyumluluk Düzeltmeleri (2026-07-29 — commit sonrası):**
+- ORTA: ConsentGate 1. checkbox → Gizlilik Politikası + Kullanım Koşulları tıklanabilir RichText linkleri
+- DÜŞÜK: `subscription_screen.dart` silindi (ölü kod — sahte fiyat/trialDays + "Google Play" metni)
+- DÜŞÜK: `AppConstants` sahte fiyat sabitleri kaldırıldı (`priceEurMonthly`, `priceTryMonthly`, `trialDays`)
+- DÜŞÜK: Welcome Tour slayt 4 "Anlık hava ve UV endeksi" → "Acil numaralar ve para birimi" (country_info "Coming Soon" tutarsızlık giderildi)
+- DÜŞÜK: `legal.ts` terms → Tax-Free Rehberi + Güvenlik Tarayıcı premium listesine eklendi
+- DÜŞÜK: `docs/APP_STORE_METADATA.md` tamamen güncellendi (v0.1.0 → v1.3.0, gerçek URL'ler, 12+ yaş, Google Play todo listesi)
+- DÜŞÜK: Android adaptive icon — `pubspec.yaml` + flutter_launcher_icons → `mipmap-anydpi-v26/ic_launcher.xml`
+- Worker deploy: `a09e9656` (legal.ts güncellemesi)
+- **ASC'de MANUEL yapılacaklar:** Yaş derecelendirmesi 12+ seç; Support/Privacy URL'lerini `.../support` ve `.../privacy` olarak teyit et
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
