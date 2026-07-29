@@ -76,6 +76,12 @@ class ProfileScreen extends ConsumerWidget {
             isTr ? 'AI Tur Rehberi' : 'AI Tour Guide',
             () => context.push(AppRoutes.touristGuide),
           ),
+          _tile(
+            context,
+            Icons.verified_outlined,
+            isTr ? 'Derin Bilgi — Konum Kanıtı' : 'Deep Record — Location Proof',
+            () => context.push(AppRoutes.locationProof),
+          ),
           const SizedBox(height: 16),
 
           // ── My places ─────────────────────────────────────────────
