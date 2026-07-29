@@ -7,7 +7,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
-const _tourSeenKey = 'visaradar.tour.seen.v1';
+const _tourSeenKey = 'visaradar.tour.skip_always';
 
 Future<bool> isTourSeen() async {
   final prefs = await SharedPreferences.getInstance();
@@ -30,6 +30,8 @@ class _Slide {
   final List<String> bulletsEn;
   final String? premiumNoteTr;
   final String? premiumNoteEn;
+  final String? infoTr;
+  final String? infoEn;
 
   const _Slide({
     required this.icon,
@@ -42,6 +44,8 @@ class _Slide {
     this.bulletsEn = const [],
     this.premiumNoteTr,
     this.premiumNoteEn,
+    this.infoTr,
+    this.infoEn,
   });
 }
 
@@ -56,6 +60,8 @@ final _slides = <_Slide>[
     bodyEn: 'Track your remaining days in the 90/180-day rolling window. Your country is detected and recorded automatically via GPS whenever the app is open — no action needed.',
     bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Bulunduğunuz ülke GPS ile otomatik algılanır', 'Uygulama kapalıyken konum kaydı yapılmaz', 'Tüm Schengen ülkeleri destekleniyor'],
     bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Country auto-detected via GPS when app is open', 'No background tracking when app is closed', 'All Schengen countries supported'],
+    infoTr: 'Uygulamanın sağlıklı çalışabilmesi için Bildirimlere ve Konum erişimine izin verin.',
+    infoEn: 'Allow Notifications and Location access for the best experience.',
   ),
   // 2 — Seyahat Profili (critical setup)
   _Slide(
@@ -76,12 +82,23 @@ final _slides = <_Slide>[
     color: const Color(0xFFF59E0B),
     titleTr: 'AI Seyahat Asistanı',
     titleEn: 'AI Travel Assistant',
-    bodyTr: 'Aklınıza gelen her soruyu sorun. Vize, gümrük, döviz, vergi iadesi, yerel lezzetler…',
-    bodyEn: 'Ask anything. Visas, customs, currency, tax-free, local food — Claude answers instantly.',
-    bulletsTr: ['"Aldığım bilgisayarı Türkiye\'ye götürebilir miyim?"', '"Roma\'da nerede kalayım, hangi mahalle?"', '"Schengen vizesi nasıl alınır?"', '"E-SIM nereden bulabilirim?"'],
-    bulletsEn: ['"Can I bring the laptop I bought back to Turkey?"', '"Where to stay in Rome — which neighbourhood?"', '"How do I apply for a Schengen visa?"', '"Where can I get an eSIM?"'],
+    bodyTr: 'Aklınıza gelen her soruyu sorun. Vize, gümrük, döviz, vergi iadesi, yerel lezzetler… Yakınımdaki döviz bürosu, otel, lokanta, havaalanı gibi sorular için Haritalar\'a yönlendirme.',
+    bodyEn: 'Ask anything. Visas, customs, currency, tax-free, local food. For nearby places like hotels, restaurants, currency exchange — we guide you to Maps.',
+    bulletsTr: ['"Aldığım bilgisayarı Türkiye\'ye götürebilir miyim?"', '"Schengen vizesi nasıl alınır?"', '"Yakınımdaki otel nerede?" → Haritalar\'da aç', '"Hırvatistan gümrüğünden kaç kilo geçebilirim?"'],
+    bulletsEn: ['"Can I bring the laptop I bought back home?"', '"How do I apply for a Schengen visa?"', '"Hotel near me?" → Opens in Maps', '"How much can I bring through Croatian customs?"'],
   ),
-  // 3 — Acil SOS (unique feature)
+  // 4 — Kayıtlı Yerler (saved places — o sahile/o dağlara)
+  _Slide(
+    icon: Icons.push_pin_outlined,
+    color: const Color(0xFF8B5CF6),
+    titleTr: 'O Yere Her Zaman Dön',
+    titleEn: 'Always Find Your Way Back',
+    bodyTr: 'Unutamadığınız o sahili, o dağ yolunu, o sokak kafesini kaydedin. Yıllar sonra bile aynı noktaya nokta atışı geri dönün.',
+    bodyEn: 'Save that beach, that mountain trail, that street café you\'ll never forget. Navigate back to the exact same spot — even years later.',
+    bulletsTr: ['Tam GPS koordinatı ile kayıt', 'Tek dokunuşla Haritalar\'da aç', 'Radar ekranından "Konumu Kaydet" ile ekleyin'],
+    bulletsEn: ['Saved with exact GPS coordinates', 'Open in Maps with one tap', 'Add from Radar › "Save Location"'],
+  ),
+  // 5 — Acil SOS (unique feature)
   _Slide(
     icon: Icons.emergency,
     color: const Color(0xFFEF4444),
@@ -92,7 +109,7 @@ final _slides = <_Slide>[
     bulletsTr: ['Yüksek sesli alarm sireni', 'SOS Mors kodu ışık sinyali', '2 kişiye konum/güvende mesajı', 'Ayarlar sayfası Acil Kişilerden belirleyin'],
     bulletsEn: ['Loud alarm siren', 'SOS Morse code torch signal', 'Location/safe message to 2 contacts', 'Set contacts in Settings › Emergency Contacts'],
   ),
-  // 4 — 23+ Ülke Rehberi
+  // 6 — 23+ Ülke Rehberi
   _Slide(
     icon: Icons.map_outlined,
     color: const Color(0xFF6366F1),
@@ -103,18 +120,18 @@ final _slides = <_Slide>[
     bulletsTr: ['Sürüş kuralları (DRL, kış lastiği, yelek)', 'Şehir rehberi & sokak lezzetleri', 'Acil numaralar ve para birimi'],
     bulletsEn: ['Driving rules (DRL, winter tyres, vest)', 'City guide & street food', 'Emergency numbers and currency'],
   ),
-  // 5 — Premium özellikleri (overview)
+  // 7 — Premium özellikleri (overview)
   _Slide(
     icon: Icons.workspace_premium_outlined,
     color: const Color(0xFF10B981),
     titleTr: 'Premium ile Daha Fazlası',
     titleEn: 'More with Premium',
-    bodyTr: 'Premium; Tax-Free Rehberi, AI Tur Rehberi, Belge Tarayıcı ve Güvenlik Tarayıcı gibi güçlü özelliklerin kilidini açar.',
-    bodyEn: 'Premium unlocks powerful features like the Tax-Free Guide, AI Tour Guide, Document Scanner and Security Scanner.',
-    bulletsTr: ['Tax-Free Rehberi — vergi iadesi adım adım', 'AI Tur Rehberi — fotoğrafla tarihi anlatım', 'Belge Tarayıcı — tüm evraklar tek yerde', 'Güvenlik Tarayıcı — gizli kamera & dinleme tespiti'],
-    bulletsEn: ['Tax-Free Guide — VAT refund step by step', 'AI Tour Guide — photo-based narration', 'Document Scanner — all documents in one place', 'Security Scanner — hidden camera & bug detection'],
-    premiumNoteTr: 'Ayarlar Sayfası Premium Bölümünde',
-    premiumNoteEn: 'Available in Settings › Premium',
+    bodyTr: 'Premium; Tax-Free Rehberi, AI Tur Rehberi, Belge Tarayıcı, Güvenlik Tarayıcı ve Derin Bilgi gibi güçlü özelliklerin kilidini açar.',
+    bodyEn: 'Premium unlocks Tax-Free Guide, AI Tour Guide, Document Scanner, Security Scanner and Deep Record.',
+    bulletsTr: ['Tax-Free Rehberi — vergi iadesi adım adım', 'AI Tur Rehberi — fotoğrafla tarihi anlatım', 'Belge Tarayıcı — tüm evraklar tek yerde', 'Güvenlik Tarayıcı — gizli kamera & dinleme tespiti', 'Derin Bilgi — SHA-256 konum kanıtı zinciri'],
+    bulletsEn: ['Tax-Free Guide — VAT refund step by step', 'AI Tour Guide — photo-based narration', 'Document Scanner — all documents in one place', 'Security Scanner — hidden camera & bug detection', 'Deep Record — SHA-256 location proof chain'],
+    premiumNoteTr: 'Ayarlar Sayfası › Premium Araçlar',
+    premiumNoteEn: 'Settings › Premium Tools',
   ),
 ];
 
@@ -277,6 +294,7 @@ class _SlidePage extends StatelessWidget {
     final body = isTr ? slide.bodyTr : slide.bodyEn;
     final bullets = isTr ? slide.bulletsTr : slide.bulletsEn;
     final premiumNote = isTr ? slide.premiumNoteTr : slide.premiumNoteEn;
+    final infoNote = isTr ? slide.infoTr : slide.infoEn;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
@@ -345,6 +363,32 @@ class _SlidePage extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+          if (infoNote != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.brandTeal.withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.brandTeal.withAlpha(60)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline,
+                      size: 14, color: AppColors.brandTeal),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      infoNote,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.brandTeal,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

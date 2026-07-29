@@ -132,6 +132,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             'Tax-Free Rehberi',
             'AI Tur Rehberi',
             'Belge Tarayıcı (pasaport, vize ve izin belgeleri)',
+            'Derin Bilgi — SHA-256 konum kanıtı zinciri',
             'Türkiye kara sınırı modu',
             'Seyahat tarzına özel akıllı ipuçları',
           ]
@@ -141,6 +142,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             'Tax-Free Guide',
             'AI Tour Guide',
             'Document Scanner (passport, visa & permits)',
+            'Deep Record — SHA-256 location proof chain',
             'Turkey land border mode',
             'Smart tips tailored to your travel style',
           ];
@@ -167,19 +169,14 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   Widget _planCard(ProductDetails p, bool isTr) {
     final selected = _selected == p.id;
     final isAnnual = p.id == SubscriptionService.productAnnual;
-    final isLifetime = p.id == SubscriptionService.productLifetime;
 
-    final title = isLifetime
-        ? (isTr ? 'Ömür Boyu' : 'Lifetime')
-        : isAnnual
-            ? (isTr ? 'Yıllık' : 'Annual')
-            : (isTr ? 'Aylık' : 'Monthly');
+    final title = isAnnual
+        ? (isTr ? 'Yıllık' : 'Annual')
+        : (isTr ? 'Aylık' : 'Monthly');
 
     final subtitle = isAnnual
         ? (isTr ? 'En avantajlı · yıllık' : 'Best value · annual')
-        : isLifetime
-            ? (isTr ? 'Tek seferlik ödeme' : 'One-time payment')
-            : (isTr ? 'Aylık yenilenir' : 'Renews monthly');
+        : (isTr ? 'Aylık yenilenir' : 'Renews monthly');
 
     return Semantics(
       button: true,

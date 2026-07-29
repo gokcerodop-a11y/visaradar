@@ -90,6 +90,25 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
+            // ── Premium Araçlar ───────────────────────────────────────────
+            _SettingsSection(
+              title: isTr ? 'Premium Araçlar' : 'Premium Tools',
+              items: [
+                _SettingsTile(
+                  icon: Icons.workspace_premium_outlined,
+                  iconColor: AppColors.brandTeal,
+                  title: isTr ? 'Premium\'a Geç' : 'Upgrade to Premium',
+                  onTap: () => context.push(AppRoutes.subscription),
+                ),
+                _SettingsTile(
+                  icon: Icons.location_on_outlined,
+                  title: isTr ? 'Derin Bilgi (Konum Kanıtı)' : 'Deep Record (Location Proof)',
+                  onTap: () => context.push(AppRoutes.locationProof),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
             // ── Privacy & Legal ───────────────────────────────────────────
             _SettingsSection(
               title: isTr ? 'Gizlilik ve Yasal' : 'Privacy & Legal',

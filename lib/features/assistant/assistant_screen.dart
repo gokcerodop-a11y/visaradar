@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/localization/locale.dart';
 import '../../core/router/app_router.dart';
@@ -108,6 +109,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     _input.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  static String? _extractMapsUrl(String text) {
+    final match = RegExp(
+      r'https://maps\.google\.com/maps[^\s)>\]"]+|'
+      r'https://www\.google\.com/maps[^\s)>\]"]+|'
+      r'maps://[^\s)>\]"]+',
+    ).firstMatch(text);
+    return match?.group(0);
   }
 
   void _send() {
@@ -372,6 +382,42 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
         ),
         if (!isUser) ...[
+          if (_extractMapsUrl(m.text) case final mapsUrl?)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                onTap: () => launchUrl(
+                  Uri.parse(mapsUrl),
+                  mode: LaunchMode.externalApplication,
+                ),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandTeal.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                    border:
+                        Border.all(color: AppColors.brandTeal.withAlpha(80)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.map_outlined,
+                          size: 14, color: AppColors.brandTeal),
+                      const SizedBox(width: 6),
+                      Text(
+                        isTr ? 'Haritada Aç' : 'Open in Maps',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.brandTeal,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: InkWell(

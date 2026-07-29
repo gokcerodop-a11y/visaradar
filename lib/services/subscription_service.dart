@@ -30,8 +30,7 @@ class SubscriptionService extends ChangeNotifier {
   static const productAnnual = 'com.visaradar.premium.annual';
   static const productLifetime = 'com.visaradar.premium.lifetime';
 
-  static Set<String> get productIds =>
-      {productMonthly, productAnnual, productLifetime};
+  static Set<String> get productIds => {productMonthly, productAnnual};
 
   static const _kCachedTxId = 'visaradar.premium.txId';
   static const _kCachedExpiresAt = 'visaradar.premium.expiresAt'; // epoch ms
