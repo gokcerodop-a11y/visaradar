@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/locale.dart';
@@ -42,16 +41,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _controller.forward();
-
-    // Request location permission early (non-blocking — dialog shown after UI).
-    Future.microtask(() async {
-      try {
-        final perm = await Geolocator.checkPermission();
-        if (perm == LocationPermission.denied) {
-          await Geolocator.requestPermission();
-        }
-      } catch (_) {}
-    });
 
     // Hold the welcome for ~1.5s total, then route based on onboarding state.
     Future.delayed(const Duration(milliseconds: 1500), _route);

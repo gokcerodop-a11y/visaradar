@@ -52,10 +52,10 @@ final _slides = <_Slide>[
     color: AppColors.brandTeal,
     titleTr: 'Schengen Sayacınız',
     titleEn: 'Your Schengen Counter',
-    bodyTr: '90/180 günlük pencerede kalan hakkınızı gerçek zamanlı takip edin. Süresi dolmadan uyarı alın.',
-    bodyEn: 'Track your remaining days in the 90/180-day rolling window in real time.',
-    bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Otomatik sınır geçişi tespiti', 'Tüm Schengen ülkeleri destekleniyor'],
-    bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Automatic border crossing detection', 'All Schengen countries supported'],
+    bodyTr: '90/180 günlük pencerede kalan hakkınızı takip edin. Uygulama açıkken otomatik ülke algılama. Süresi dolmadan uyarı alın.',
+    bodyEn: 'Track your remaining days in the 90/180-day rolling window. Auto country detection when the app is open. Get alerted before you run out.',
+    bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Uygulama açıkken otomatik ülke tespiti', 'Tüm Schengen ülkeleri destekleniyor'],
+    bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Auto country detection when app is open', 'All Schengen countries supported'],
   ),
   // 2 — AI Seyahat Asistanı (key differentiator)
   _Slide(

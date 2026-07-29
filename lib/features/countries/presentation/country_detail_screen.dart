@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../profile/domain/models/user_profile.dart';
 import '../../profile/presentation/providers/profile_provider.dart';
+import '../domain/country_data.dart' show visaDataDisclaimer;
 import '../domain/visa_country.dart';
 import '../domain/country_enrichment.dart';
 
@@ -183,6 +184,11 @@ class CountryDetailScreen extends ConsumerWidget {
                     style: AppTextStyles.bodyMedium.copyWith(color: color)),
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            visaDataDisclaimer,
+            style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
           ),
           if (capital != null || c.officialLanguage != null) ...[
             const SizedBox(height: 10),

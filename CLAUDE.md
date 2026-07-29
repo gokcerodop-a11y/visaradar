@@ -7,7 +7,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
 - Flutter: Keychain txId, premium gate'ler, AppLifecycle ekran gizleme, Random.secure(), jailbreak hard-block, gerçek expiresDate
-- Worker deploy: `4a1e2be4-ce19-4080-af48-cbccb6cd3bcb` (Sonnet 5 modeli aktif)
+- Worker deploy: `3497463f-aad2-418a-9408-2a206edeef50` (free-trial bypass + Sonnet 5)
 
 **Fonksiyonel Düzeltmeler (2026-07-29):**
 - KRİTİK: `/paywall` → `/subscription` (Tax-Free + Güvenlik Tarayıcı premium butonu)
@@ -39,6 +39,14 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: Worker chat modeli Opus 4.8 → Sonnet 5 (maliyet optimizasyonu)
 - ORTA: nextResetDate metni → kayan 180-gün penceresi açıklaması
 - ORTA: Paywall fayda listesi tam: AI Asistan, Güvenlik Tarayıcı, Tax-Free, AI Tur Rehberi, Belge Tarayıcı
+
+**Re-test Düzeltmeleri (2026-07-29 — commit sonrası):**
+- KRİTİK: Worker free-trial bypass — `Bearer free-trial` → IP tabanlı 3 soru limiti (KV); Apple doğrulama atlanır
+- YÜKSEK: Splash'tan konum izni isteği kaldırıldı (geolocator import temizlendi); izin artık radar'da pre-permission kart ile isteniyor
+- ORTA: assistant_screen.dart "unlimited AI assistant" → "40 questions/day" (2 yer)
+- ORTA: Welcome Tour slayt 1 "gerçek zamanlı" → "uygulama açıkken otomatik"
+- ORTA: EES/ETIAS içerik düzeltmesi: doğru tarih (Ekim 2024), doğru URL (travel-europe.europa.eu/etias), "vizesi" → "seyahat izni", BG+HR ülkelerine eklendi
+- ORTA: Country detail ekranında "Türk standart pasaportu için" disclaimer eklendi
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)

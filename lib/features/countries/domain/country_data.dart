@@ -7,16 +7,22 @@ const String visaDataDisclaimer =
     'Visa data applies to Turkish standard passport holders.';
 
 /// EES/ETIAS note appended to Schengen-zone visa guidance (TR).
+/// EES: Ekim 2024'ten itibaren aktif. ETIAS: 2026'da hayata geçmesi bekleniyor.
+/// ETIAS yalnızca Schengen'e vizesiz girebilen ülke vatandaşlarına uygulanır
+/// (Türk bordo pasaport sahiplerine şu an uygulanmaz — bilgilendirme amaçlıdır).
 const String _eesEtiasTr =
-    '\n\n🔷 EES/ETIAS: 2024\'ten itibaren Schengen bölgesine girişte EES kayıt '
-    'sistemi (biyometrik) ve ETIAS vizesi gereklidir. Önceden www.etias.com '
-    'adresinden başvurun.';
+    '\n\n🔷 EES (Ekim 2024\'ten itibaren): Schengen\'e her girişte parmak izi '
+    've yüz taraması zorunlu. ETIAS seyahat izni 2026\'da başlayacak; '
+    'başvuru için travel-europe.europa.eu/etias adresini takip edin.';
 
 /// EES/ETIAS note appended to Schengen-zone visa guidance (EN).
+/// EES: active since October 2024. ETIAS: expected 2026.
+/// ETIAS applies only to visa-exempt travellers (not to Turkish bordo passport
+/// holders who need a Schengen visa — included here for informational purposes).
 const String _eesEtiasEn =
-    '\n\n🔷 EES/ETIAS: Since 2024, entry to the Schengen zone requires EES '
-    'biometric registration and ETIAS authorization. Apply in advance at '
-    'www.etias.com.';
+    '\n\n🔷 EES (since October 2024): Fingerprint and facial scan required on '
+    'every Schengen entry. ETIAS travel authorisation launches in 2026; '
+    'see travel-europe.europa.eu/etias for updates.';
 
 final List<VisaCountry> kVisaCountries = [
   // ── Home country ────────────────────────────────────────────────────────────
@@ -155,10 +161,12 @@ final List<VisaCountry> kVisaCountries = [
     officialLanguage: 'Bulgarian',
     visaEn:
         'Full Schengen member since 2025 — a Schengen visa is required for '
-        'Turkish citizens. Days here count toward your 90/180 Schengen total.',
+        'Turkish citizens. Days here count toward your 90/180 Schengen total.'
+        '$_eesEtiasEn',
     visaTr:
         '2025\'ten beri tam Schengen üyesi — Türk vatandaşları için Schengen '
-        'vizesi gerekir. Buradaki günler 90/180 Schengen toplamınıza sayılır.',
+        'vizesi gerekir. Buradaki günler 90/180 Schengen toplamınıza sayılır.'
+        '$_eesEtiasTr',
     driveEn:
         'Motorways require an electronic vignette (toll sticker), purchasable '
         'online or at borders. Drive on the right.',
@@ -387,10 +395,10 @@ final List<VisaCountry> kVisaCountries = [
     officialLanguage: 'Croatian',
     visaEn:
         'Schengen member since 2023 and uses the euro. Schengen visa required '
-        'for Turkish citizens. Counts toward 90/180.',
+        'for Turkish citizens. Counts toward 90/180.$_eesEtiasEn',
     visaTr:
         '2023\'ten beri Schengen üyesi ve euro kullanıyor. Türk vatandaşları '
-        'için Schengen vizesi gerekir. 90/180 hesabına sayılır.',
+        'için Schengen vizesi gerekir. 90/180 hesabına sayılır.$_eesEtiasTr',
     driveEn:
         'Drive on the right. Motorway tolls paid at booths (no vignette). '
         'Daytime headlights required in winter.',

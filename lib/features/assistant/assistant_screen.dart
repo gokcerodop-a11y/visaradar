@@ -252,10 +252,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
               Expanded(
                 child: Text(
                   isTr
-                      ? 'Ücretsiz deneme sona erdi. Sınırsız AI asistan için '
+                      ? 'Ücretsiz deneme sona erdi. Günde 40 soruluk AI asistan için '
                           'Premium\'a geçin!'
-                      : 'Free trial ended. Upgrade to Premium for unlimited '
-                          'AI assistant!',
+                      : 'Free trial ended. Upgrade to Premium for 40 AI questions/day!',
                   style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.textPrimary),
                 ),
@@ -496,8 +495,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ? 'Premium aboneliği gerekiyor.'
           : 'A Premium subscription is required.',
       'free_limit_reached' => isTr
-          ? 'Ücretsiz deneme sona erdi. Sınırsız AI asistan için Premium\'a geçin!'
-          : 'Free trial ended. Upgrade to Premium for unlimited AI assistant!',
+          ? 'Ücretsiz deneme sona erdi. Günde 40 soruluk AI asistan için Premium\'a geçin!'
+          : 'Free trial ended. Upgrade to Premium for 40 AI questions/day!',
       'rate-limit' => isTr
           ? 'Günlük soru limitine ulaştın. Yarın tekrar dene.'
           : 'You\'ve reached today\'s question limit. Try again tomorrow.',

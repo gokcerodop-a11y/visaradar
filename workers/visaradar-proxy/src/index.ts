@@ -87,7 +87,57 @@ interface VisionBody {
   context?: { language?: string; systemPrompt?: string; kvkkConsent?: boolean };
 }
 
+// Free-trial sentinel — no Apple subscription yet; max 3 total questions per IP.
+const FREE_TRIAL_SENTINEL = "free-trial";
+const FREE_TRIAL_LIMIT = 3;
+
 async function handleChat(request: Request, env: Env): Promise<Response> {
+  const authHeader = request.headers.get("Authorization") ?? "";
+  const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/);
+  const token = tokenMatch?.[1]?.trim() ?? "";
+
+  // ── Free-trial path (no Apple subscription yet) ───────────────────────────
+  if (token === FREE_TRIAL_SENTINEL) {
+    const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+    const freeKey = `freetrial:chat:${ip}`;
+    const usedStr = await env.USAGE.get(freeKey) ?? "0";
+    const used = parseInt(usedStr, 10);
+    if (used >= FREE_TRIAL_LIMIT) {
+      return jsonResponse({ error: "unauthorized", reason: "free-trial-exhausted" }, 402);
+    }
+
+    const body = await parseJsonBody<ChatBody>(request);
+    if (!body?.context?.kvkkConsent) {
+      return jsonResponse({ error: "kvkk-consent-required" }, 403);
+    }
+    if (!body?.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+      return jsonResponse({ error: "messages-required" }, 400);
+    }
+    if (body.messages.length > 12) {
+      return jsonResponse({ error: "messages-too-many" }, 400);
+    }
+    const last = body.messages[body.messages.length - 1];
+    if (!last?.content || last.content.length > 4000) {
+      return jsonResponse({ error: "message-content-invalid" }, 400);
+    }
+    const sanitized = sanitizeMessages(body.messages);
+    if (sanitized.length === 0) {
+      return jsonResponse({ error: "messages-required" }, 400);
+    }
+    try {
+      const result = await runChat(env, {
+        messages: sanitized,
+        systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 2000) : undefined,
+      });
+      // Increment on success only — failed requests don't consume trial quota.
+      await env.USAGE.put(freeKey, String(used + 1), { expirationTtl: 30 * 24 * 3600 });
+      return jsonResponse({ text: result.text, model: result.model });
+    } catch (e) {
+      return jsonResponse({ error: "internal" }, 500);
+    }
+  }
+
+  // ── Premium path (Apple-validated subscription) ───────────────────────────
   const receipt = await validateAppleReceipt(request, env);
   if (!receipt.active) {
     const status = receipt.reason === "subscription-expired" ? 402 : 401;
