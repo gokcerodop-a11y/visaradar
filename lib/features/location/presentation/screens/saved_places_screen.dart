@@ -109,8 +109,8 @@ class _SavedTile extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.navigation_outlined, size: 20),
-                tooltip: L.t('Navigate', 'Git'),
+                icon: const Icon(Icons.map_outlined, size: 20),
+                tooltip: L.t('Open in Maps', 'Haritada Aç'),
                 onPressed: () => _openInMaps(p.lat, p.lng, p.name),
               ),
               IconButton(

@@ -79,6 +79,13 @@ class SettingsScreen extends ConsumerWidget {
                   title: isTr ? 'Bildirimler' : 'Notifications',
                   onTap: () => context.push(AppRoutes.notificationSettings),
                 ),
+                _SettingsTile(
+                  icon: Icons.slideshow_outlined,
+                  title: isTr ? 'Uygulama Turu' : 'App Tour',
+                  onTap: () => context.push(
+                    '${AppRoutes.welcomeTour}?from=profile',
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),

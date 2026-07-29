@@ -52,12 +52,25 @@ final _slides = <_Slide>[
     color: AppColors.brandTeal,
     titleTr: 'Schengen Sayacınız',
     titleEn: 'Your Schengen Counter',
-    bodyTr: '90/180 günlük pencerede kalan hakkınızı takip edin. Uygulama açıkken otomatik ülke algılama. Süresi dolmadan uyarı alın.',
-    bodyEn: 'Track your remaining days in the 90/180-day rolling window. Auto country detection when the app is open. Get alerted before you run out.',
-    bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Uygulama açıkken otomatik ülke tespiti', 'Tüm Schengen ülkeleri destekleniyor'],
-    bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Auto country detection when app is open', 'All Schengen countries supported'],
+    bodyTr: '90/180 günlük pencerede kalan hakkınızı takip edin. GPS ile bulunduğunuz ülke uygulama açıkken otomatik olarak algılanır ve kaydedilir — siz hiçbir şey yapmanıza gerek yok.',
+    bodyEn: 'Track your remaining days in the 90/180-day rolling window. Your country is detected and recorded automatically via GPS whenever the app is open — no action needed.',
+    bulletsTr: ['30, 15, 7, 3 ve 1 gün kala bildirim', 'Bulunduğunuz ülke GPS ile otomatik algılanır', 'Uygulama kapalıyken konum kaydı yapılmaz', 'Tüm Schengen ülkeleri destekleniyor'],
+    bulletsEn: ['Alerts at 30, 15, 7, 3 and 1 days left', 'Country auto-detected via GPS when app is open', 'No background tracking when app is closed', 'All Schengen countries supported'],
   ),
-  // 2 — AI Seyahat Asistanı (key differentiator)
+  // 2 — Seyahat Profili (critical setup)
+  _Slide(
+    icon: Icons.manage_accounts_outlined,
+    color: const Color(0xFFF97316),
+    titleTr: 'Profilinizi Ayarlayın',
+    titleEn: 'Set Up Your Profile',
+    bodyTr: 'Uygulamanın size özel çalışabilmesi için seyahat profilinizi doldurun. Schengen sayacı, vize hesaplamaları ve AI önerileri bu bilgilere göre yapılır.',
+    bodyEn: 'Complete your travel profile so the app works accurately for you. Your Schengen counter, visa calculations and AI recommendations are all based on this.',
+    bulletsTr: ['Milliyetiniz ve pasaport tipiniz', 'Tercih ettiğiniz uygulama dili', 'Ayarlar › Seyahat Profili\'nden her zaman düzenleyebilirsiniz'],
+    bulletsEn: ['Your nationality and passport type', 'Your preferred app language', 'Edit anytime from Settings › Travel Profile'],
+    premiumNoteTr: 'Ayarlar Sayfası › Seyahat Profili',
+    premiumNoteEn: 'Settings › Travel Profile',
+  ),
+  // 3 — AI Seyahat Asistanı (key differentiator)
   _Slide(
     icon: Icons.bolt,
     color: const Color(0xFFF59E0B),
@@ -65,8 +78,8 @@ final _slides = <_Slide>[
     titleEn: 'AI Travel Assistant',
     bodyTr: 'Aklınıza gelen her soruyu sorun. Vize, gümrük, döviz, vergi iadesi, yerel lezzetler…',
     bodyEn: 'Ask anything. Visas, customs, currency, tax-free, local food — Claude answers instantly.',
-    bulletsTr: ['"Change office bul"', '"Aldığım bilgisayarı ülkeme götürebilir miyim?"', '"Romada nerede kalayım?"', '"E-sim nereden bulabilirim?"'],
-    bulletsEn: ['"Find a change office nearby"', '"Can I bring the laptop I bought home?"', '"Where to stay in Rome?"', '"Where can I get an eSIM?"'],
+    bulletsTr: ['"Aldığım bilgisayarı Türkiye\'ye götürebilir miyim?"', '"Roma\'da nerede kalayım, hangi mahalle?"', '"Schengen vizesi nasıl alınır?"', '"E-SIM nereden bulabilirim?"'],
+    bulletsEn: ['"Can I bring the laptop I bought back to Turkey?"', '"Where to stay in Rome — which neighbourhood?"', '"How do I apply for a Schengen visa?"', '"Where can I get an eSIM?"'],
   ),
   // 3 — Acil SOS (unique feature)
   _Slide(
@@ -136,8 +149,12 @@ class _WelcomeTourScreenState extends State<WelcomeTourScreen>
   }
 
   Future<void> _done() async {
-    if (!widget.showDismiss) await markTourSeen();
-    if (mounted) context.go(AppRoutes.radar);
+    if (!mounted) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.radar);
+    }
   }
 
   Future<void> _neverShow() async {

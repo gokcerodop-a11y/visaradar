@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../services/premium_providers.dart';
 import '../../data/services/location_proof_service.dart';
 import '../../domain/models/location_proof_entry.dart';
 
@@ -130,6 +132,8 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
   Widget build(BuildContext context) {
     // Rebuild on locale change so L.t strings refresh.
     ref.watch(isTurkishProvider);
+    final isPremium = ref.watch(isPremiumProvider);
+    final isTr = L.isTr;
     final entries = _entries;
 
     return Scaffold(
@@ -143,40 +147,85 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      body: SafeArea(
-        bottom: false,
-        child: entries == null
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.brandTeal),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: entries.isEmpty ? 3 : 2 + _dayGroups.length,
-                itemBuilder: (context, i) {
-                  if (i == 0) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(entries),
-                        const SizedBox(height: 16),
-                      ],
-                    );
-                  }
-                  if (i == 1) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInfoCard(),
-                        const SizedBox(height: 20),
-                      ],
-                    );
-                  }
-                  if (entries.isEmpty) return _buildEmptyState();
-                  return _buildDayGroupItem(_dayGroups[i - 2]);
-                },
+      body: !isPremium
+          ? SafeArea(child: _buildPremiumGate(context, isTr))
+          : SafeArea(
+              bottom: false,
+              child: entries == null
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.brandTeal),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      itemCount: entries.isEmpty ? 3 : 2 + _dayGroups.length,
+                      itemBuilder: (context, i) {
+                        if (i == 0) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHeader(entries),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }
+                        if (i == 1) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInfoCard(),
+                              const SizedBox(height: 20),
+                            ],
+                          );
+                        }
+                        if (entries.isEmpty) return _buildEmptyState();
+                        return _buildDayGroupItem(_dayGroups[i - 2]);
+                      },
+                    ),
+            ),
+      bottomNavigationBar: isPremium ? _buildBottomBar() : null,
+    );
+  }
+
+  Widget _buildPremiumGate(BuildContext context, bool isTr) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline, size: 64, color: AppColors.brandTeal),
+            const SizedBox(height: 16),
+            Text(
+              isTr ? 'Bu Özellik Premium' : 'Premium Feature',
+              style: AppTextStyles.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isTr
+                  ? 'Derin Bilgi — konum kanıtı zincirine erişmek için Premium abonelik gerekir.'
+                  : 'A Premium subscription is required to access Deep Record location proof.',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.push('/subscription'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandTeal,
+                foregroundColor: AppColors.brandNavy,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
+              child: Text(isTr ? 'Premium\'a Geç' : 'Upgrade to Premium'),
+            ),
+          ],
+        ),
       ),
-      bottomNavigationBar: _buildBottomBar(),
     );
   }
 

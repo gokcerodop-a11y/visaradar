@@ -593,9 +593,8 @@ class _AiExamplesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final examples = isTr
         ? const [
-            'Yakınımdaki döviz bürosu nerede?',
-            'eSIM satan bayi bul',
-            'Buradan Milano kaç km?',
+            'Aldığım bilgisayarı Türkiye\'ye götürebilir miyim?',
+            'eSIM nasıl alınır, nereden bulabilirim?',
             'Mayorka plajı UV endeksi ve nem oranı nedir?',
             'Paris hava kirliliği ve yağmur tahmini?',
             'Hırvatistan gümrüğünden kaç kilo çikolata geçebilirim?',
@@ -605,20 +604,21 @@ class _AiExamplesCard extends StatelessWidget {
             'Schengen vizesi nasıl alınır?',
             'Fransa\'da tax-free için minimum ne kadar harcamam lazım?',
             'Bu ürün için gümrükte ne kadar vergi öderim?',
+            'Hollanda\'da araç kiralayabilir miyim?',
           ]
         : const [
-            'Find a currency exchange office nearby',
-            'Find an eSIM provider near me',
-            'How far is Milan from here?',
+            'Can I bring the laptop I bought back home?',
+            'How do I get an eSIM — where can I buy one?',
             'UV index and humidity at Mallorca beach?',
             'Paris air quality and rain forecast?',
             'How much chocolate can I bring through Croatian customs?',
-            'What to eat in Madrid - what is famous?',
-            'Where to stay in Rome - which neighbourhood?',
+            'What to eat in Madrid — what is famous?',
+            'Where to stay in Rome — which neighbourhood?',
             'What are speed limits in Germany?',
             'How do I get a Schengen visa?',
             'Minimum spend for tax-free shopping in France?',
             'How much import tax for this item entering Turkey?',
+            'Can I rent a car in the Netherlands?',
           ];
 
     return Container(
