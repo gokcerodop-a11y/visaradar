@@ -73,7 +73,7 @@ final _slides = <_Slide>[
     bodyEn: 'Complete your travel profile so the app works accurately for you. Your Schengen counter, visa calculations and AI recommendations are all based on this.',
     bulletsTr: ['Milliyetiniz ve pasaport tipiniz', 'Tercih ettiğiniz uygulama dili', 'Ayarlar › Seyahat Profili\'nden her zaman düzenleyebilirsiniz'],
     bulletsEn: ['Your nationality and passport type', 'Your preferred app language', 'Edit anytime from Settings › Travel Profile'],
-    premiumNoteTr: 'Ayarlar Sayfası › Seyahat Profili',
+    premiumNoteTr: 'Ayarlar Sayfası › Seyahat profili',
     premiumNoteEn: 'Settings › Travel Profile',
   ),
   // 3 — AI Seyahat Asistanı (key differentiator)
@@ -143,7 +143,7 @@ final _slides = <_Slide>[
     bodyEn: 'Premium unlocks Tax-Free Guide, AI Tour Guide, Document Scanner, Security Scanner and Deep Record.',
     bulletsTr: ['Tax-Free Rehberi — vergi iadesi adım adım', 'AI Tur Rehberi — fotoğrafla tarihi anlatım', 'Belge Tarayıcı — tüm evraklar tek yerde', 'Güvenlik Tarayıcı — gizli kamera & dinleme tespiti', 'Derin Bilgi — SHA-256 konum kanıtı zinciri'],
     bulletsEn: ['Tax-Free Guide — VAT refund step by step', 'AI Tour Guide — photo-based narration', 'Document Scanner — all documents in one place', 'Security Scanner — hidden camera & bug detection', 'Deep Record — SHA-256 location proof chain'],
-    premiumNoteTr: 'Ayarlar Sayfası › Premium Araçlar',
+    premiumNoteTr: 'Ayarlar Sayfası › Premium araçları',
     premiumNoteEn: 'Settings › Premium Tools',
   ),
 ];

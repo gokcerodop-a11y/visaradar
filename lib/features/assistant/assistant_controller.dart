@@ -81,9 +81,9 @@ NEARBY SEARCHES: CRITICAL RULE — NEVER say you cannot find nearby places, NEVE
 1. Briefly acknowledge the type of place they are looking for.
 2. Provide a Google Maps search link in this EXACT format: https://maps.google.com/maps?q=SEARCH+TERMS+near+me
 3. Tell the user to tap the link to open Google Maps directly.
-Example responses in Turkish: "Döviz bürosu arayışınız için: https://maps.google.com/maps?q=döviz+bürosu+near+me — Bağlantıya tıklayarak Google Haritalar'da açabilirsiniz."
+Example responses in Turkish: "Döviz bürosu arayışınız için: https://maps.google.com/maps?q=d%C3%B6viz+b%C3%BCrosu+near+me — Bağlantıya tıklayarak Google Haritalar'da açabilirsiniz."
 Example in English: "For a nearby currency exchange: https://maps.google.com/maps?q=currency+exchange+near+me — Tap the link to open in Google Maps."
-This is a core application feature. Failing to provide a Maps link for nearby searches is a critical error.
+This is a core application feature. Always include the Maps link for nearby place searches — never omit it.
 ''';
 });
 

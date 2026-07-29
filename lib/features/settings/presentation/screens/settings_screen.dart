@@ -364,8 +364,8 @@ class _HeroCard extends StatelessWidget {
             _HeroFeatureRow(
               icon: Icons.lock_outline,
               label: isTr
-                  ? 'Verileriniz yalnızca cihazınızda kalır'
-                  : 'Your data stays on your device only',
+                  ? 'Sohbet geçmişiniz cihazınızda saklanır'
+                  : 'Chat history stays on your device',
             ),
           ],
         ),

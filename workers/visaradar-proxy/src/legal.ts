@@ -47,8 +47,8 @@ export function privacyPage(): Response {
 <p><em>The app processes your location on-device to detect your country/city. Location data is not sold. Anonymous coordinates are shared with Open-Meteo (open-source, Austria-based) for weather data.</em></p>
 
 <h3>1.2 Seyahat Profili ve Geziler (Travel Profile &amp; Trips)</h3>
-<p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri cihazınızda saklanır. AI asistanı kullandığınızda pasaport türü ve Schengen bakiyesi gibi profil özeti, yanıtın kişiselleştirilmesi amacıyla AI servisine dahil edilir (bkz. §1.3).</p>
-<p><em>Your trips, dates and traveller profile are stored on your device. When you use the AI assistant, a profile summary (passport type, Schengen balance) is included in the request to personalise your answer (see §1.3).</em></p>
+<p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri cihazınızda saklanır. AI asistanı kullandığınızda pasaport türü, milliyet, Schengen bakiyesi ve tespit edilen konum gibi profil özeti, yanıtın kişiselleştirilmesi amacıyla AI servisine dahil edilir (bkz. §1.3).</p>
+<p><em>Your trips, dates and traveller profile are stored on your device. When you use the AI assistant, a profile summary (passport type, nationality, Schengen balance and detected location) is included in the request to personalise your answer (see §1.3).</em></p>
 
 <h3>1.3 AI Asistan ve Belge Tarayıcı</h3>
 <p>AI asistana soru sorduğunuzda veya bir belge/fotoğraf yüklediğinizde ilgili metin/görüntü, güvenli proxy sunucumuz aracılığıyla <strong>Anthropic Claude API</strong>'ye iletilir. Bu veriler yalnızca yanıt üretmek amacıyla kullanılır; reklam, profil oluşturma veya satış için kullanılmaz.</p>
@@ -86,7 +86,7 @@ export function privacyPage(): Response {
   <li>Kanun'un 7. maddesinde öngörülen şartlar çerçevesinde kişisel verilerinizin silinmesini veya yok edilmesini isteme,</li>
   <li>Kişisel verilerinizin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme.</li>
 </ul>
-<p>Bu haklarınızı kullanmak için destek sayfamız üzerinden bize ulaşabilirsiniz.</p>
+<p>Bu haklarınızı kullanmak için <a href="/destek">destek sayfamız</a> üzerinden bize ulaşabilirsiniz.</p>
 
 <h2>4. GDPR — Avrupa Birliği</h2>
 <p>AB/AEA vatandaşları için GDPR kapsamında: işleme hukuki dayanağı <em>meşru menfaat</em> ve <em>sözleşme ifası</em>dır (abonelik hizmetinin sunulması). Verilerinize erişim, düzeltme, silme veya taşınabilirlik taleplerinizi e-posta yoluyla iletebilirsiniz. Şikâyetlerinizi yerel veri koruma otoritenize iletebilirsiniz.</p>
@@ -135,25 +135,37 @@ export function termsPage(): Response {
 <p><em>End User License Agreement</em></p>
 <p>VisaRadar Travel'ı indirerek veya kullanarak bu şartları ve Apple'ın standart
 <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Lisanslı Uygulama Son Kullanıcı Lisans Sözleşmesi</a>'ni kabul etmiş olursunuz.</p>
+<p><em>By downloading or using VisaRadar Travel, you agree to these terms and Apple's standard
+<a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Licensed Application End User License Agreement</a>.</em></p>
 
-<h2>Abonelikler ve Satın Almalar</h2>
+<h2>Abonelikler ve Satın Almalar / Subscriptions &amp; Purchases</h2>
 <p>VisaRadar Travel, AI seyahat asistanı, Tax-Free Rehberi, AI tur rehberi, belge tarayıcı, güvenlik tarayıcı ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
 <ul>
   <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
   <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD.</li>
 </ul>
 <p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
+<p><em>VisaRadar Travel offers an optional <strong>VisaRadar Premium</strong> upgrade that unlocks the AI travel assistant, Tax-Free Guide, AI Tour Guide, Document Scanner, Security Scanner and border mode:</em></p>
+<ul>
+  <li><em><strong>Monthly Premium</strong> — Auto-renewable subscription, 1 month, $4.99 USD (price localised by region).</em></li>
+  <li><em><strong>Annual Premium</strong> — Auto-renewable subscription, 1 year, $34.99 USD.</em></li>
+</ul>
+<p><em>Payment is charged to your Apple Account at confirmation of purchase. Auto-renewable subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period; your account is charged within 24 hours before the current period ends. Manage or cancel subscriptions in Apple Account settings (Settings → Your Name → Subscriptions).</em></p>
 
-<h2>Uygulamanın Kullanımı</h2>
+<h2>Uygulamanın Kullanımı / App Usage</h2>
 <p>Sağlanan bilgiler yalnızca genel rehberlik içindir ve hukuki tavsiye niteliği taşımaz. Vize, giriş ve kalış koşullarını her zaman resmi hükümet kaynaklarıyla teyit edin. Seyahat kararlarınızdan siz sorumlusunuz.</p>
+<p><em>Information provided is for general guidance only and does not constitute legal advice. Always verify visa, entry and stay requirements with official government sources. You are responsible for your own travel decisions.</em></p>
 
-<h2>Sorumluluk Sınırlandırması</h2>
+<h2>Sorumluluk Sınırlandırması / Limitation of Liability</h2>
 <p>Uygulama "olduğu gibi" sunulmaktadır. VisaRadar Travel, yanlış veya eksik bilgiden kaynaklanabilecek doğrudan ya da dolaylı zararlardan sorumlu değildir.</p>
+<p><em>The app is provided "as is". VisaRadar Travel is not liable for any direct or indirect damages that may result from inaccurate or incomplete information.</em></p>
 
-<h2>Değişiklikler</h2>
-<p>Bu şartlar zaman zaman güncellenebilir. Önemli değişikliklerde uygulama içi bildirim veya e-posta ile bilgilendirme yapılacaktır.</p>
+<h2>Değişiklikler / Changes</h2>
+<p>Bu şartlar zaman zaman güncellenebilir. Önemli değişikliklerde uygulama içi bildirim ile bilgilendirme yapılacaktır.</p>
+<p><em>These terms may be updated from time to time. You will be notified of significant changes via an in-app notification.</em></p>
 
 <h2>İletişim / Contact</h2>
-<p>Bu şartlarla ilgili sorularınızı aşağıdaki iletişim adresine gönderebilirsiniz.</p>
+<p>Bu şartlarla ilgili sorularınızı <a href="/destek">destek sayfamız</a> üzerinden iletebilirsiniz.</p>
+<p><em>For questions about these terms, please reach us via our <a href="/destek">support page</a>.</em></p>
 `);
 }
