@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu + **ödeme/abonelik** — **TÜM TESTLER TAMAMLANDI** (Test 1–8).
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST TAMAMLANDI** (güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm + ödeme/abonelik + offline + **yerelleştirme** + **hukuki/KVKK**).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -142,6 +142,31 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: `TravelLogService._writeStore()` → statik `_writeChain` mutex; GPS + pedometer eşzamanlı yazma önlendi
 - Worker deploy: `a8bb5116` (2026-07-29)
 
+**Yerelleştirme Düzeltmeleri (2026-07-29 — Test #10, commit c647b49):**
+- K-1: `crossing_suggestion_card.dart` tam bilingual — başlık, açıklama, buton (isTr), "Şimdi değil"
+- Y-1: `app.dart` — `Intl.defaultLocale = localeCode == 'tr' ? 'tr_TR' : 'en_US'` (DateFormat otomatik TR/EN)
+- O-1: Ölü ARB/l10n sistemi silindi — `lib/l10n/`, `l10n.yaml`, `pubspec.yaml` `generate: true`
+- D-1: `location_proof_screen.dart` "Visa başvuruları" → "Vize başvuruları" (TR yazım)
+- D-2: `security_scanner_screen.dart` "sigara yaklamayın" → "sigara yakmayın" (TR yazım)
+- D-3: `onboarding_screen.dart` "Hoşgeldiniz" → "Hoş Geldiniz" (TDK imla kuralı)
+- D-5: `app_router.dart` errorBuilder route-not-found bilingual (L.isTr)
+- D-6: `lib/core/errors/failures.dart` silindi (ölü kod)
+
+**Hukuki / KVKK Düzeltmeleri (2026-07-29 — Test #11, commit c647b49):**
+- K1: `legal_screen.dart` "Data Storage" düzeltildi — AI/Open-Meteo iletim dürüstçe belirtildi
+- K2: `legal.ts` terms — yıllık plan "3 günlük deneme" ibaresi kaldırıldı (App Store 3.1.2(c))
+- Y1: `legal.ts` — Veri Sorumlusu bölümü eklendi (Gökçe Rodop, e-posta)
+- Y2: `legal.ts` — Veri Saklama Süresi bölümü eklendi (cihaz: app silinene dek; Anthropic: max 30 gün)
+- Y3: `legal.ts §1.1` — Open-Meteo anonim koordinat iletimi eklendi (önceki mutlak "cihazda kalır" iddiası düzeltildi)
+- Y4: `radar_screen.dart` — "Never overstay again" → "Stay informed and avoid overstays" (mutlak garanti kaldırıldı)
+- Y5: `radar_screen.dart` Schengen kartı — "Hesaplama referans amaçlıdır; resmi kayıtlar esas alınır" eklendi
+- O1: `consent_gate_screen.dart` — işlevsiz `_tipsOptIn` checkbox kaldırıldı
+- O4: `consent_gate_screen.dart` — "İşlenen veriler" listesine fotoğraf (belge tarayıcı), TTS metin, Open-Meteo anonim konum eklendi
+- O6: `legal_screen.dart` tarih "May 2026" → "July 2026" güncellendi
+- D2: `consent_gate_screen.dart` `_consentVersion` 2 → 3 (metin değişti; güncelleme sonrası yeniden onay)
+- D3: `legal.ts` supportPage FAQ — TR sorulara EN yanıtlar eklendi (bilingual)
+- Worker deploy: `aa975c0a` (2026-07-29)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
@@ -190,7 +215,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - Worker chat modeli: `claude-sonnet-5` (deploy: `3497463f`, 2026-07-29 — Opus 4.8'den düşürüldü)
 - ASC key: `~/.private_keys/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
 - ASC otomasyonu: `tool/asc_visaradar.mjs` (status/verify/shots/builds)
-- IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99 +3g deneme, lifetime $59.99}`
+- IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99, lifetime $59.99}`
 - Yasal (canlı, worker): `…workers.dev/privacy` ve `…workers.dev/terms` · Kaynak: `workers/visaradar-proxy/src/legal.ts`
 - ElevenLabs: voice `JBFqnCBsd6RMkjVDRZzb`, model `eleven_multilingual_v2` (wrangler.toml [vars])
 
@@ -217,7 +242,7 @@ flutter_local_notifications: ^18.0.1  # Schengen uyarı bildirimleri
 2. **Onboarding** (2 adım): Adım 1 = Dil, Adım 2 = Vatandaşlık
    - Pasaport türü ve seyahat şekli artık onboarding'de YOK; varsayılanlar (ordinary, plane) otomatik
    - Ayarlar > Seyahat Profili'nden değiştirilebilir
-3. **KVKK ConsentGate** (bilingual, 4 checkbox: KVKK, AI işleme, konum, bildirim[opsiyonel])
+3. **KVKK ConsentGate** (bilingual, 3 zorunlu checkbox: KVKK, AI işleme, konum; `consentVersion=3`)
 4. **Welcome Tour** (5 slayt; "Atla" + "Bir daha gösterme" mevcut)
 5. **Radar** (ana ekran)
 
