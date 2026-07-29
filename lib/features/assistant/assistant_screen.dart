@@ -394,9 +394,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     bool opened = false;
                     try {
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(
+                        opened = await launchUrl(
                             uri, mode: LaunchMode.externalApplication);
-                        opened = true;
                       }
                     } catch (_) {}
                     if (!opened && mounted) {
@@ -410,7 +409,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 15),
+                        horizontal: 12, vertical: 16),
                     decoration: BoxDecoration(
                       color: AppColors.brandTeal.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
@@ -575,7 +574,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ? 'Bir sorun oluştu. Lütfen tekrar dene.'
           : 'Something went wrong. Please try again.',
     };
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }
 

@@ -139,13 +139,13 @@ export function termsPage(): Response {
 <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Licensed Application End User License Agreement</a>.</em></p>
 
 <h2>Abonelikler ve Satın Almalar / Subscriptions &amp; Purchases</h2>
-<p>VisaRadar Travel, AI seyahat asistanı, Tax-Free Rehberi, AI tur rehberi, belge tarayıcı, güvenlik tarayıcı ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
+<p>VisaRadar Travel, AI seyahat asistanı, Tax-Free Rehberi, AI tur rehberi, belge tarayıcı, güvenlik tarayıcı, Derin Bilgi (konum kanıtı) ve border modunu açan isteğe bağlı bir <strong>VisaRadar Premium</strong> yükseltmesi sunar:</p>
 <ul>
   <li><strong>Aylık Premium</strong> — Otomatik yenilenen abonelik, 1 ay, 4,99 USD (bölgeye göre yerelleştirilmiş fiyat).</li>
   <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD.</li>
 </ul>
 <p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
-<p><em>VisaRadar Travel offers an optional <strong>VisaRadar Premium</strong> upgrade that unlocks the AI travel assistant, Tax-Free Guide, AI Tour Guide, Document Scanner, Security Scanner and border mode:</em></p>
+<p><em>VisaRadar Travel offers an optional <strong>VisaRadar Premium</strong> upgrade that unlocks the AI travel assistant, Tax-Free Guide, AI Tour Guide, Document Scanner, Security Scanner, Deep Record (location proof) and border mode:</em></p>
 <ul>
   <li><em><strong>Monthly Premium</strong> — Auto-renewable subscription, 1 month, $4.99 USD (price localised by region).</em></li>
   <li><em><strong>Annual Premium</strong> — Auto-renewable subscription, 1 year, $34.99 USD.</em></li>
