@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 24 TOPLAM BULGU DÜZELTİLDİ** (commit 7580430, Worker 2e484934).
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 30 TOPLAM BULGU DÜZELTİLDİ** (commit 6dc7d30, Worker 3410ca31).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -238,6 +238,16 @@ DÜŞÜK:
 - `welcome_tour_screen.dart`: "Premium Araçlar"→"Premium araçları"; "Seyahat Profili"→"Seyahat profili"
 - `legal.ts §1.2`: milliyet ve tespit edilen konum ifşaatı eklendi (sistem promptuyla uyum)
 
+**Test-Round-4 Bulgular — 6/6 Düzeltildi (2026-07-29 — commit 6dc7d30, Worker 3410ca31):**
+ORTA:
+- `legal.ts termsPage()`: TR+EN listesine "Derin Bilgi (konum kanıtı) / Deep Record" eklendi (7 özellik tam)
+DÜŞÜK:
+- `assistant_screen.dart`: `opened = await launchUrl()` (false dönüşte SnackBar doğru)
+- `assistant_screen.dart`: `_showError()` mounted kontrolü eklendi
+- `assistant_screen.dart`: "Haritada Aç" vertical:15→16 (46pt, +2pt marj)
+- `Info.plist`: LSApplicationQueriesSchemes'ten kullanılmayan comgooglemaps kaldırıldı
+- `welcome_tour_screen.dart`: EN premiumNote "Travel profile"→"Travel Profile"
+
 **Test-Round-3 Bulgular — 8/8 Düzeltildi (2026-07-29 — commit 7580430, Worker 2e484934):**
 YÜKSEK:
 - `workers/.../index.ts:130,186`: sanitizeString maxLen 2000→6000; sistem promptu (~3424 ch) artık tam iletiliyor; NEARBY SEARCHES özelliği çalışıyor
@@ -297,7 +307,7 @@ DÜŞÜK:
 ## Önemli Sabitler
 - Bundle id: `com.visaradar.visaradar` · App id: `6761065257` · Team: `V8CC8CQG3W`
 - Worker: `visaradar-proxy.gokcerodop.workers.dev`
-- Worker chat modeli: `claude-sonnet-5` (son deploy: `2e484934`, 2026-07-29)
+- Worker chat modeli: `claude-sonnet-5` (son deploy: `3410ca31`, 2026-07-29)
 - ASC key: `~/.private_keys/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
 - ASC otomasyonu: `tool/asc_visaradar.mjs` (status/verify/shots/builds)
 - IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99}` — lifetime kaldırıldı (2026-07-29)
