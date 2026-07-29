@@ -69,14 +69,14 @@ PREMIUM FEATURES
 • AI Tour Guide — photo-based cultural narration with audio
 • Document Scanner — keep all travel documents in one place
 • Security Scanner — hidden camera and listening device detection
-• Turkey Land Border Mode — land crossing checklist for 50+ border gates
+• Turkey Land Border Mode — Bulgaria & Greece crossing checklist (5 gates)
 • 40 AI questions/day
 
 IMPORTANT
 VisaRadar Travel is not an official visa advisory service. AI responses may be out of date due to changing regulations. Always verify visa and entry rules with official government sources before travelling. Visa data applies to Turkish standard passport holders.
 
 PRICING
-VisaRadar Premium: Monthly $4.99 · Annual $34.99 (3-day free trial) · Lifetime $59.99. Manage or cancel anytime in Settings → Your Name → Subscriptions.
+VisaRadar Premium: Monthly $4.99 · Annual $34.99. Manage or cancel anytime in Settings → Your Name → Subscriptions.
 ```
 
 ### Keywords *(100 chars max)*
@@ -142,9 +142,9 @@ VisaRadar Premium: Monthly $4.99 · Annual $34.99 (3-day free trial) · Lifetime
 - [x] Privacy Policy URL canlı
 - [x] Support URL canlı
 - [x] Terms of Use URL canlı
-- [x] IAP ürünleri: monthly $4.99, annual $34.99+3g, lifetime $59.99
+- [x] IAP ürünleri: monthly $4.99, annual $34.99 (trial yok, lifetime yok)
 - [x] Jailbreak detection (güvenlik)
-- [x] KVKK ConsentGate (4 checkbox, bilingual)
+- [x] KVKK ConsentGate (3 checkbox, bilingual)
 - [ ] ASC → App Information → Support URL: `.../support` olduğunu teyit et
 - [ ] ASC → App Information → Privacy Policy URL: `.../privacy` olduğunu teyit et
 - [x] ASC → Age Rating: 9+ (API ile ayarlandı 2026-07-29)
@@ -166,7 +166,7 @@ VisaRadar Premium: Monthly $4.99 · Annual $34.99 (3-day free trial) · Lifetime
 |---|---|
 | Privacy Policy | ✅ Canlı: `.../privacy` |
 | Terms of Use | ✅ Canlı: `.../terms` |
-| KVKK | ✅ ConsentGate 4 checkbox, bilingual |
+| KVKK | ✅ ConsentGate 3 checkbox, bilingual |
 | GDPR | ✅ Veri cihaz-yerel; AI sorular Anthropic'e iletilir (açıklandı) |
 | Hesap silme | ✅ Muaf (hesap sistemi yok) |
 | IAP doğrulama | ✅ Apple JWS ES256 gerçek doğrulama |

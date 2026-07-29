@@ -64,3 +64,7 @@ node_modules/
 *.mobileprovision
 .env
 **/.env
+google-services.json
+**/google-services.json
+GoogleService-Info.plist
+**/GoogleService-Info.plist

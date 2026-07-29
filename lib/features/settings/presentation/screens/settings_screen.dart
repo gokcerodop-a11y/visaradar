@@ -154,7 +154,7 @@ class SettingsScreen extends ConsumerWidget {
                 _SettingsTile(
                   icon: Icons.delete_outline,
                   iconColor: AppColors.warning,
-                  title: isTr ? 'Verilerimi Sil' : 'Request Data Deletion',
+                  title: isTr ? 'Veri Silme Talebi' : 'Request Data Deletion',
                   onTap: () => _requestDataDeletion(context, isTr),
                 ),
                 _SettingsTile(

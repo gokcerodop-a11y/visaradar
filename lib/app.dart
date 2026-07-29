@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +18,11 @@ class VisaRadarApp extends ConsumerStatefulWidget {
 
 class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
     with WidgetsBindingObserver {
+  // Shown while the app is inactive/paused so the iOS App Switcher snapshot
+  // does not capture passport/SOS data. Must be a widget overlay (not just
+  // SystemChrome) for the snapshot to actually be obscured.
+  bool _obscured = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,11 +39,9 @@ class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
-      // iOS App Switcher snapshot'ında hassas verilerin görünmemesi için
-      // arka plana alındığında siyah overlay göster.
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+      setState(() => _obscured = true);
     } else if (state == AppLifecycleState.resumed) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      setState(() => _obscured = false);
       SubscriptionService.instance.refreshExpiry();
     }
   }
@@ -55,23 +57,28 @@ class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
     L.code = localeCode;
     Intl.defaultLocale = localeCode == 'tr' ? 'tr_TR' : 'en_US';
 
-    return MaterialApp.router(
-      title: 'VisaRadar Travel',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
-      // Drive Material/Cupertino localizations and intl date formatting from the
-      // resolved app language (device-detected unless the user overrode it).
-      locale: Locale(localeCode),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+    return Stack(
+      children: [
+        MaterialApp.router(
+          title: 'VisaRadar Travel',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark,
+          // Drive Material/Cupertino localizations and intl date formatting from
+          // the resolved app language (device-detected unless user overrode it).
+          locale: Locale(localeCode),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('tr'),
+            Locale('en'),
+          ],
+          routerConfig: router,
+        ),
+        if (_obscured) const Positioned.fill(child: ColoredBox(color: Colors.black)),
       ],
-      supportedLocales: const [
-        Locale('tr'),
-        Locale('en'),
-      ],
-      routerConfig: router,
     );
   }
 }

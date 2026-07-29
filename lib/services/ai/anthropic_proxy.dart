@@ -15,6 +15,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/constants/app_constants.dart';
 import 'ai_message.dart';
 
 String _base64Isolate(Uint8List bytes) => base64Encode(bytes);
@@ -69,6 +70,7 @@ class AnthropicProxy {
         'authorization': 'Bearer $originalTransactionId',
         'content-type': 'application/json',
         'x-client-version': '1.0.0',
+        if (AppConstants.deviceId.isNotEmpty) 'x-device-id': AppConstants.deviceId,
       };
 
   /// Text chat. Sends full history; the system prompt is composed server-side
@@ -81,7 +83,7 @@ class AnthropicProxy {
       'messages': history
           .map((m) => {'role': m.role.name, 'content': m.text})
           .toList(),
-      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': true},
+      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': AppConstants.kvkkConsentGranted},
     };
     return _post('/v1/chat', body);
   }
@@ -97,7 +99,7 @@ class AnthropicProxy {
       'imageBase64': encoded,
       'imageMediaType': image.mediaType,
       'userPrompt': userPrompt,
-      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': true},
+      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': AppConstants.kvkkConsentGranted},
     };
     return _post('/v1/vision', body);
   }

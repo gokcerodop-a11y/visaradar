@@ -7,10 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
+import 'dart:math';
+
 import 'app.dart';
+import 'core/constants/app_constants.dart';
 import 'core/localization/locale.dart';
 import 'features/notifications/services/local_notification_service.dart';
 import 'features/profile/presentation/providers/profile_provider.dart';
+import 'screens/consent_gate_screen.dart' show isConsentGiven;
 
 void main() {
   // Catch every uncaught error in the zone so a single plugin failure on
@@ -97,10 +101,25 @@ Future<void> _bootstrap() async {
   // (VisaRadarApp refines it from the saved profile preference on build).
   L.code = deviceLanguageCode();
 
-  // Record first-run date once — drives the "lifetime offer after 3 days" rule.
+  // Record first-run date once — used for telemetry and first-run detection.
   if (prefs.getString('install_date_v1') == null) {
     await prefs.setString('install_date_v1', DateTime.now().toIso8601String());
   }
+
+  // Restore KVKK consent status so proxy classes have the accurate value even
+  // before the consent gate widget is mounted.
+  AppConstants.kvkkConsentGranted = await isConsentGiven();
+
+  // Ensure a stable device ID exists for Worker free-trial rate limiting.
+  // Using a device-scoped ID avoids shared-IP (hotel/airport Wi-Fi) exhausting
+  // the trial quota for unrelated users on the same network.
+  String deviceId = prefs.getString(AppConstants.keyDeviceId) ?? '';
+  if (deviceId.length < 16) {
+    final rng = Random.secure();
+    deviceId = List.generate(32, (_) => rng.nextInt(16).toRadixString(16)).join();
+    await prefs.setString(AppConstants.keyDeviceId, deviceId);
+  }
+  AppConstants.deviceId = deviceId;
 
   runApp(
     ProviderScope(

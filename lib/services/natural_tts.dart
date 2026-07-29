@@ -10,6 +10,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/constants/app_constants.dart';
+
 class NaturalTts {
   final AudioPlayer _player = AudioPlayer();
   StreamSubscription<void>? _sub;
@@ -72,7 +74,7 @@ class NaturalTts {
               'authorization': 'Bearer $token',
               'content-type': 'application/json',
             },
-            body: jsonEncode({'text': text, 'context': {'kvkkConsent': true}}),
+            body: jsonEncode({'text': text, 'context': {'kvkkConsent': AppConstants.kvkkConsentGranted}}),
           )
           .timeout(const Duration(seconds: 30));
       if (gen != _generation) return false; // kullanıcı durdurdu

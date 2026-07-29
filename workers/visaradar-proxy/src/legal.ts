@@ -43,8 +43,8 @@ export function privacyPage(): Response {
 <h2>1. Toplanan Veriler / Data We Collect</h2>
 
 <h3>1.1 Konum Verisi (Location)</h3>
-<p>Uygulama, konumunuzu cihazınızda işleyerek hangi ülke/şehirde olduğunuzu belirler ve size doğru vize ve kalış bilgisi sunar. Konum verisi satılmaz. Hava durumu için anonim koordinatlar açık kaynaklı <strong>Open-Meteo</strong> servisine (Avusturya merkezli) iletilir.</p>
-<p><em>The app processes your location on-device to detect your country/city. Location data is not sold. Anonymous coordinates are shared with Open-Meteo (open-source, Austria-based) for weather data.</em></p>
+<p>Uygulama, konumunuzu algılamak için cihaz GPS'ini kullanır ve ülke/şehir tespiti için koordinatlarınızı <strong>Apple'ın ters geokodlama servisi</strong>ne (platform API) iletir. Hava durumu için anonim koordinatlar açık kaynaklı <strong>Open-Meteo</strong> servisine (Avusturya merkezli) iletilir. Konum verisi satılmaz.</p>
+<p><em>The app uses device GPS to detect your location and forwards coordinates to <strong>Apple's reverse geocoding service</strong> (platform API) for country/city lookup. Anonymous coordinates are also shared with Open-Meteo (open-source, Austria-based) for weather data. Location data is never sold.</em></p>
 
 <h3>1.2 Seyahat Profili ve Geziler (Travel Profile &amp; Trips)</h3>
 <p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri cihazınızda saklanır. AI asistanı kullandığınızda pasaport türü, milliyet, Schengen bakiyesi ve tespit edilen konum gibi profil özeti, yanıtın kişiselleştirilmesi amacıyla AI servisine dahil edilir (bkz. §1.3).</p>
@@ -95,6 +95,7 @@ export function privacyPage(): Response {
 <ul>
   <li><strong>Anthropic Claude API</strong> — AI yanıtları için. <a href="https://www.anthropic.com/privacy">Anthropic Gizlilik Politikası</a></li>
   <li><strong>Apple App Store / StoreKit</strong> — Satın alma doğrulaması.</li>
+  <li><strong>Apple Geocoding Service</strong> — Koordinatlardan ülke/şehir tespiti (platform API).</li>
   <li><strong>Open-Meteo</strong> — Hava durumu verileri (anonim konum koordinatı).</li>
   <li><strong>ElevenLabs</strong> — Sesli anlatım (TTS); yalnızca AI yanıt metni iletilir.</li>
   <li><strong>Cloudflare</strong> — Güvenli API proxy altyapısı; gelen istekleri doğrular ve rate-limit uygular. <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare Gizlilik Politikası</a></li>

@@ -56,6 +56,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_consentKey, _consentVersion);
     await prefs.setString(_consentDateKey, DateTime.now().toIso8601String());
+    AppConstants.kvkkConsentGranted = true;
     widget.onAccepted();
   }
 
@@ -273,6 +274,9 @@ Future<bool> isConsentGiven() async {
 
 Future<void> resetConsent() async {
   final prefs = await SharedPreferences.getInstance();
+  // Save withdrawal timestamp for KVKK audit trail before removing consent keys.
+  await prefs.setString('visaradar.consent.withdrawnAt', DateTime.now().toIso8601String());
   await prefs.remove(_consentKey);
   await prefs.remove(_consentDateKey);
+  AppConstants.kvkkConsentGranted = false;
 }

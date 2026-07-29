@@ -2,6 +2,17 @@
 class AppConstants {
   AppConstants._();
 
+  // Set to true once the KVKK consent gate is accepted; initialized from
+  // SharedPreferences at startup. Worker also validates server-side — this
+  // ensures the client accurately reflects the user's current consent status.
+  static bool kvkkConsentGranted = false;
+
+  // Ephemeral device identifier for free-trial rate limiting (Worker).
+  // Generated once on first run, stored in SharedPreferences.
+  // Using a device-scoped ID instead of IP avoids shared-IP (hotel/airport
+  // Wi-Fi / carrier NAT) from exhausting the trial quota for many users at once.
+  static String deviceId = '';
+
   static const String appName = 'VisaRadar Travel';
   static const String appVersion = '1.3.0';
 
@@ -35,6 +46,7 @@ class AppConstants {
   // Notification preferences
   static const String keyNotificationPreferences = 'notification_prefs_v1';
   static const String keyLastDismissedSuggestionAt = 'last_dismissed_suggestion_at';
+  static const String keyDeviceId = 'visaradar.device_id';
 
   // Notification IDs — fixed per category to allow targeted cancel/replace
   static const int notifIdSchengen30 = 1001;

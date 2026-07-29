@@ -2,12 +2,13 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 30 TOPLAM BULGU DÜZELTİLDİ** (son commit 8cbc03d, Worker 3410ca31).
+**App Store durumu (2026-07-30):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 5 YENİ TEST TURU (30 Tem) 47 TOPLAM BULGU DÜZELTİLDİ** (Worker f5148cf0).
 
-**Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
-- Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
-- Flutter: Keychain txId, premium gate'ler, AppLifecycle ekran gizleme, Random.secure(), jailbreak hard-block, gerçek expiresDate
-- Worker deploy: `3410ca31` (son deploy 2026-07-29; free-trial bypass + Sonnet 5 + maxLen 6000)
+**Güvenlik Durumu (2026-07-30 — TÜM BULGULAR DÜZELTİLDİ):**
+- Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c **+ Root CA G3 SHA-256 parmak izi**), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme, **vision sanitize + uzunluk sınırı**
+- Flutter: Keychain txId, premium gate'ler, **App Switcher opaque overlay** (setState, Stack/ColoredBox), kvkkConsent **AppConstants.kvkkConsentGranted** (gerçek onay durumundan), Random.secure(), jailbreak hard-block, gerçek expiresDate
+- Android: **android:allowBackup="false"** + fullBackupContent="false" eklendi
+- Worker deploy: `f5148cf0` (2026-07-30; vision sanitize + device-UUID free-trial + Root CA G3 + Apple geocoding ifşaatı)
 
 **Fonksiyonel Düzeltmeler (2026-07-29):**
 - KRİTİK: `/paywall` → `/subscription` (Tax-Free + Güvenlik Tarayıcı premium butonu)

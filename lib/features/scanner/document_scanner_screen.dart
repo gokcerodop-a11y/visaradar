@@ -173,8 +173,8 @@ class _DocumentScannerScreenState
         const SizedBox(height: 16),
         Text(
           isTr
-              ? 'Belgeler cihazında işlenir ve saklanmaz; sonuçları kendin '
-                  'doğrula.'
+              ? 'Belgeler güvenli sunucumuz aracılığıyla AI servisine iletilir '
+                  've saklanmaz; sonuçları kendin doğrula.'
               : 'Documents are processed on the fly and not stored; verify '
                   'results yourself.',
           style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),

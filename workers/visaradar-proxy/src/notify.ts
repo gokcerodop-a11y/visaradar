@@ -40,14 +40,34 @@ function _decodeJws<T>(jws: string): T | null {
   }
 }
 
-/** Apple ES256 JWS imzasını x5c leaf sertifikasıyla doğrular. */
+// Apple Root CA G3 — the anchor cert at the end of every App Store Server
+// Notifications V2 x5c chain. Verifying against this fingerprint prevents
+// an attacker from forging notifications with their own self-signed chain.
+// Source: https://www.apple.com/certificateauthority/
+const APPLE_ROOT_CA_G3_SHA256 = "63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f5b00f6db1e0c53efb3d0f3";
+
+async function _sha256Hex(data: ArrayBuffer): Promise<string> {
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Apple ES256 JWS imzasını doğrular: leaf imza + Apple Root CA G3 parmak izi. */
 async function _verifyAppleJws(jws: string): Promise<boolean> {
   try {
     const parts = jws.split(".");
     if (parts.length !== 3) return false;
     const headerJson = atob(parts[0]!.replace(/-/g, "+").replace(/_/g, "/"));
     const header = JSON.parse(headerJson) as { alg?: string; x5c?: string[] };
-    if (header.alg !== "ES256" || !header.x5c || header.x5c.length < 2) return false;
+    // Require full 3-cert chain: leaf → intermediate → Apple Root CA G3
+    if (header.alg !== "ES256" || !header.x5c || header.x5c.length < 3) return false;
+
+    // Verify that the root cert is the known Apple Root CA G3
+    const rootBase64 = header.x5c[header.x5c.length - 1]!;
+    const rootDer = Uint8Array.from(atob(rootBase64), (c) => c.charCodeAt(0));
+    const rootFingerprint = await _sha256Hex(rootDer.buffer);
+    if (rootFingerprint !== APPLE_ROOT_CA_G3_SHA256) return false;
+
+    // Verify JWS signature with leaf cert public key
     const lines = header.x5c[0]!.match(/.{1,64}/g) ?? [header.x5c[0]!];
     const leafPem = `-----BEGIN CERTIFICATE-----\n${lines.join("\n")}\n-----END CERTIFICATE-----`;
     const publicKey = await importX509(leafPem, "ES256");

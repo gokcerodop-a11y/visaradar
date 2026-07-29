@@ -87,7 +87,7 @@ interface VisionBody {
   context?: { language?: string; systemPrompt?: string; kvkkConsent?: boolean };
 }
 
-// Free-trial sentinel — no Apple subscription yet; max 3 total questions per IP.
+// Free-trial sentinel — no Apple subscription yet; max 3 total questions per device.
 const FREE_TRIAL_SENTINEL = "free-trial";
 const FREE_TRIAL_LIMIT = 3;
 
@@ -98,8 +98,14 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
   // ── Free-trial path (no Apple subscription yet) ───────────────────────────
   if (token === FREE_TRIAL_SENTINEL) {
+    // Use a stable device-scoped ID when available; fall back to IP.
+    // IP-based limiting can falsely exhaust the trial for many users sharing
+    // the same carrier NAT or hotel/airport Wi-Fi.
+    const deviceId = request.headers.get("x-device-id")?.trim() ?? "";
     const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-    const freeKey = `freetrial:chat:${ip}`;
+    const freeKey = deviceId.length >= 16
+      ? `freetrial:chat:dev:${deviceId}`
+      : `freetrial:chat:ip:${ip}`;
     const usedStr = await env.USAGE.get(freeKey) ?? "0";
     const used = parseInt(usedStr, 10);
     if (used >= FREE_TRIAL_LIMIT) {
@@ -225,12 +231,16 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
     );
   }
 
+  if (body.userPrompt && body.userPrompt.length > 4000) {
+    return jsonResponse({ error: "prompt-too-long" }, 400);
+  }
+
   try {
     const result = await runVision(env, {
       imageBase64: body.imageBase64,
       imageMediaType: body.imageMediaType,
-      userPrompt: body.userPrompt ?? "Analyse this travel document.",
-      systemPrompt: body.context?.systemPrompt,
+      userPrompt: body.userPrompt ? sanitizeString(body.userPrompt, 4000) : "Analyse this travel document.",
+      systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 6000) : undefined,
     });
     await incrementUsage(env, receipt.originalTransactionId, "vision");
     return jsonResponse({ text: result.text, model: result.model });

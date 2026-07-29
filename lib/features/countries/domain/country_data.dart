@@ -7,21 +7,23 @@ const String visaDataDisclaimer =
     'Visa data applies to Turkish standard passport holders.';
 
 /// EES/ETIAS note appended to Schengen-zone visa guidance (TR).
-/// EES: Ekim 2024'ten itibaren aktif. ETIAS: 2026'da hayata geçmesi bekleniyor.
+/// EES: Ekim 2025'ten itibaren kademeli, Nisan 2026'dan beri tam kapsamda aktif.
 /// ETIAS yalnızca Schengen'e vizesiz girebilen ülke vatandaşlarına uygulanır
 /// (Türk bordo pasaport sahiplerine şu an uygulanmaz — bilgilendirme amaçlıdır).
 const String _eesEtiasTr =
-    '\n\n🔷 EES (Ekim 2024\'ten itibaren): Schengen\'e her girişte parmak izi '
-    've yüz taraması zorunlu. ETIAS seyahat izni 2026\'da başlayacak; '
+    '\n\n🔷 EES (Ekim 2025\'ten itibaren, Nisan 2026\'dan beri tam kapsamda): '
+    'Schengen\'e her girişte parmak izi ve yüz taraması zorunlu. '
+    'ETIAS seyahat izni 2026\'da başlayacak; '
     'başvuru için travel-europe.europa.eu/etias adresini takip edin.';
 
 /// EES/ETIAS note appended to Schengen-zone visa guidance (EN).
-/// EES: active since October 2024. ETIAS: expected 2026.
+/// EES: rolling out since October 2025, fully operational since April 2026.
 /// ETIAS applies only to visa-exempt travellers (not to Turkish bordo passport
 /// holders who need a Schengen visa — included here for informational purposes).
 const String _eesEtiasEn =
-    '\n\n🔷 EES (since October 2024): Fingerprint and facial scan required on '
-    'every Schengen entry. ETIAS travel authorisation launches in 2026; '
+    '\n\n🔷 EES (since October 2025, fully operational April 2026): '
+    'Fingerprint and facial scan required on every Schengen entry. '
+    'ETIAS travel authorisation launches in 2026; '
     'see travel-europe.europa.eu/etias for updates.';
 
 final List<VisaCountry> kVisaCountries = [
