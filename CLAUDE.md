@@ -181,6 +181,11 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `paywall_screen.dart:179` — yıllık plan "Free trial included · best value" → "Best value · annual" (hardcoded trial claim temizlendi)
 - Worker deploy: `bbb3f0f3` (2026-07-29)
 
+**Yerelleştirme RE-TEST #2 Düzeltmeleri (2026-07-29 — commit 9bf5b92):**
+- DÜŞÜK: `country_enrichment.dart:44` TR `foodHighlightsTr` — "Iskender"→"İskender" (EN doğruydu, TR'de gözden kaçmıştı)
+- DÜŞÜK: `countries_stay_screen.dart:33` + `cities_stay_screen.dart:12` — `final _dateFmt` → `DateFormat _dateFmt()` fonksiyon (ilk re-test'te gözden kaçan iki dosya)
+- DÜŞÜK: `onboarding_screen.dart:631` — `onSelect(country.code, country.name)` → `onSelect(country.code, _isTr ? (country.nameTr ?? country.name) : country.name)` (settings/profil ekranı TR modda "Türkiye" yerine "Turkey" gösteriyordu)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
