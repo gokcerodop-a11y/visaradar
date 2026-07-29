@@ -31,7 +31,7 @@ class NaturalTts {
               'authorization': 'Bearer $token',
               'content-type': 'application/json',
             },
-            body: jsonEncode({'text': text}),
+            body: jsonEncode({'text': text, 'context': {'kvkkConsent': true}}),
           )
           .timeout(const Duration(seconds: 30));
       if (resp.statusCode != 200) return false;

@@ -9,7 +9,7 @@ import type { Env } from "./env.js";
 import { validateAppleReceipt } from "./auth.js";
 import { runChat, runVision } from "./llm.js";
 import { checkAndIncrementLimit } from "./rate-limit.js";
-import { jsonResponse, parseJsonBody } from "./utils.js";
+import { jsonResponse, parseJsonBody, sanitizeMessages, sanitizeString, SECURITY_HEADERS } from "./utils.js";
 import { handleAppleNotify, handleFinTest, sendDailyReport } from "./notify.js";
 import { trDay } from "./finance.js";
 import { privacyPage, termsPage, supportPage } from "./legal.js";
@@ -34,7 +34,7 @@ export default {
         return new Response(null, { status: 204, headers: CORS });
       }
       if (method === "GET" && path === "/healthz") {
-        return jsonResponse({ status: "ok", appleEnv: env.APPLE_ENV });
+        return jsonResponse({ status: "ok" });
       }
       // Public legal pages — App Store metadata links to these (Guideline 3.1.2).
       if (method === "GET" && (path === "/privacy" || path === "/privacy/")) {
@@ -65,7 +65,7 @@ export default {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       console.error("[fetch:unhandled]", message);
-      return _cors(jsonResponse({ error: "internal", message: message.slice(0, 200) }, 500));
+      return _cors(jsonResponse({ error: "internal" }, 500));
     }
   },
 
@@ -77,14 +77,14 @@ export default {
 
 interface ChatBody {
   messages?: Array<{ role: string; content: string }>;
-  context?: { language?: string; systemPrompt?: string };
+  context?: { language?: string; systemPrompt?: string; kvkkConsent?: boolean };
 }
 
 interface VisionBody {
   imageBase64?: string;
   imageMediaType?: string;
   userPrompt?: string;
-  context?: { language?: string; systemPrompt?: string };
+  context?: { language?: string; systemPrompt?: string; kvkkConsent?: boolean };
 }
 
 async function handleChat(request: Request, env: Env): Promise<Response> {
@@ -94,7 +94,12 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "unauthorized", reason: receipt.reason }, status);
   }
 
+  // KVKK consent zorunlu (CLAUDE.md §4)
   const body = await parseJsonBody<ChatBody>(request);
+  if (!body?.context?.kvkkConsent) {
+    return jsonResponse({ error: "kvkk-consent-required" }, 403);
+  }
+
   if (!body?.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
     return jsonResponse({ error: "messages-required" }, 400);
   }
@@ -104,6 +109,11 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   const last = body.messages[body.messages.length - 1];
   if (!last?.content || last.content.length > 4000) {
     return jsonResponse({ error: "message-content-invalid" }, 400);
+  }
+
+  const sanitized = sanitizeMessages(body.messages);
+  if (sanitized.length === 0) {
+    return jsonResponse({ error: "messages-required" }, 400);
   }
 
   const limit = await checkAndIncrementLimit(
@@ -121,12 +131,12 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
   try {
     const result = await runChat(env, {
-      messages: body.messages,
-      systemPrompt: body.context?.systemPrompt,
+      messages: sanitized,
+      systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 2000) : undefined,
     });
     return jsonResponse({ text: result.text, model: result.model });
   } catch (e) {
-    return jsonResponse({ error: "upstream", message: String(e).slice(0, 200) }, 500);
+    return jsonResponse({ error: "internal" }, 500);
   }
 }
 
@@ -138,8 +148,15 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
   }
 
   const body = await parseJsonBody<VisionBody>(request);
+  if (!body?.context?.kvkkConsent) {
+    return jsonResponse({ error: "kvkk-consent-required" }, 403);
+  }
   if (!body?.imageBase64 || !body.imageMediaType) {
     return jsonResponse({ error: "image-required" }, 400);
+  }
+  const ALLOWED_MEDIA = new Set(["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]);
+  if (!ALLOWED_MEDIA.has(body.imageMediaType)) {
+    return jsonResponse({ error: "unsupported-media-type" }, 400);
   }
 
   const limit = await checkAndIncrementLimit(
@@ -164,12 +181,15 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
     });
     return jsonResponse({ text: result.text, model: result.model });
   } catch (e) {
-    return jsonResponse({ error: "upstream", message: String(e).slice(0, 200) }, 500);
+    return jsonResponse({ error: "internal" }, 500);
   }
 }
 
 function _cors(r: Response): Response {
   const headers = new Headers(r.headers);
   headers.set("access-control-allow-origin", "*");
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    headers.set(k, v);
+  }
   return new Response(r.body, { status: r.status, headers });
 }

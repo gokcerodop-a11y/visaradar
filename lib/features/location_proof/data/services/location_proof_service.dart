@@ -32,7 +32,7 @@ class LocationProofService {
       '0000000000000000000000000000000000000000000000000000000000000000';
 
   SharedPreferences? _prefs;
-  final Random _random = Random();
+  final Random _random = Random.secure();
 
   Future<SharedPreferences> _sp() async =>
       _prefs ??= await SharedPreferences.getInstance();

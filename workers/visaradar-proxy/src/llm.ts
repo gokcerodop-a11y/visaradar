@@ -5,6 +5,14 @@
 import type { Env } from "./env.js";
 import { recordClaudeUsage, maybeAlertBilling } from "./finance.js";
 
+const ALLOWED_MEDIA_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+]);
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 
@@ -64,12 +72,14 @@ export async function runChat(
     systemPrompt?: string;
   },
 ): Promise<{ text: string; model: string }> {
+  const SAFE_ROLES = new Set(["user", "assistant"]);
+  const safeMessages = opts.messages.filter(m => SAFE_ROLES.has(m.role));
   const model = env.CHAT_MODEL;
   const text = await callAnthropic(
     env,
     model,
     opts.systemPrompt || DEFAULT_SYSTEM,
-    opts.messages,
+    safeMessages,
     2048,
   );
   return { text, model };
@@ -84,6 +94,9 @@ export async function runVision(
     systemPrompt?: string;
   },
 ): Promise<{ text: string; model: string }> {
+  if (!ALLOWED_MEDIA_TYPES.has(opts.imageMediaType)) {
+    throw new Error(`unsupported-media-type: ${opts.imageMediaType}`);
+  }
   const model = env.CLAUDE_MODEL;
   const isPdf = opts.imageMediaType === "application/pdf";
   const messages = [

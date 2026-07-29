@@ -66,10 +66,7 @@ export async function validateAppleReceipt(
   }
 
   if (!resp) {
-    return _fail(
-      transactionId,
-      `apple-api-${lastStatus}: ${lastErrText.slice(0, 100)}`,
-    );
+    return _fail(transactionId, `apple-api-error-${lastStatus}`);
   }
 
   const data = (await resp.json()) as { signedTransactionInfo: string };
@@ -103,13 +100,10 @@ function _interpretTransaction(
   env: Env,
 ): ValidatedReceipt {
   if (tx.bundleId !== env.APPLE_BUNDLE_ID) {
-    return _fail(
-      tx.originalTransactionId,
-      `bundle-id-mismatch: got ${tx.bundleId}`,
-    );
+    return _fail(tx.originalTransactionId, "bundle-id-mismatch");
   }
   if (!VALID_PRODUCT_IDS.has(tx.productId)) {
-    return _fail(tx.originalTransactionId, `unknown-product-id: ${tx.productId}`);
+    return _fail(tx.originalTransactionId, "unknown-product-id");
   }
   if (tx.revocationDate && tx.revocationDate > 0) {
     return {

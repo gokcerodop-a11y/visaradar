@@ -16,6 +16,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,6 +36,10 @@ class SubscriptionService extends ChangeNotifier {
   static const _kCachedTxId = 'visaradar.premium.txId';
   static const _kCachedExpiresAt = 'visaradar.premium.expiresAt'; // epoch ms
   static const _kCachedPlan = 'visaradar.premium.plan';
+
+  static const _storage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
 
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
@@ -225,14 +230,22 @@ class SubscriptionService extends ChangeNotifier {
 
   Future<void> _loadCachedState() async {
     final prefs = await SharedPreferences.getInstance();
-    final tx = prefs.getString(_kCachedTxId);
+    // txId Keychain'den oku (güvenli depolama)
+    final tx = await _storage.read(key: _kCachedTxId);
+    // Eski SharedPreferences'tan migration: varsa sil ve Keychain'e taşı
+    final legacyTx = prefs.getString(_kCachedTxId);
+    if (tx == null && legacyTx != null && legacyTx.isNotEmpty) {
+      await _storage.write(key: _kCachedTxId, value: legacyTx);
+      await prefs.remove(_kCachedTxId);
+    }
+    final effectiveTx = tx ?? legacyTx;
     final exp = prefs.getInt(_kCachedExpiresAt);
     final planName = prefs.getString(_kCachedPlan);
-    if (tx != null && tx.isNotEmpty) {
+    if (effectiveTx != null && effectiveTx.isNotEmpty) {
       // Migrate: if cached value is a JWS, decode it to the numeric transaction ID.
-      final decoded = _extractTxIdFromJws(tx) ?? tx;
+      final decoded = _extractTxIdFromJws(effectiveTx) ?? effectiveTx;
       _originalTransactionId = decoded;
-      if (decoded != tx) await prefs.setString(_kCachedTxId, decoded);
+      if (decoded != effectiveTx) await _storage.write(key: _kCachedTxId, value: decoded);
     }
     _plan = PremiumPlan.values.firstWhere(
       (e) => e.name == planName,
@@ -248,10 +261,12 @@ class SubscriptionService extends ChangeNotifier {
   }
 
   Future<void> _saveCachedState() async {
-    final prefs = await SharedPreferences.getInstance();
+    // txId (Bearer token) → iOS Keychain (şifreli)
     if (_originalTransactionId != null) {
-      await prefs.setString(_kCachedTxId, _originalTransactionId!);
+      await _storage.write(key: _kCachedTxId, value: _originalTransactionId!);
     }
+    // Plan ve bitiş tarihi SharedPreferences'ta (kişisel olmayan veri)
+    final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kCachedPlan, _plan.name);
     if (_expiresAt != null) {
       await prefs.setInt(_kCachedExpiresAt, _expiresAt!.millisecondsSinceEpoch);
@@ -263,7 +278,8 @@ class SubscriptionService extends ChangeNotifier {
   /// Debug only — clears cached entitlement.
   Future<void> debugReset() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kCachedTxId);
+    await _storage.delete(key: _kCachedTxId);
+    await prefs.remove(_kCachedTxId); // legacy migration temizliği
     await prefs.remove(_kCachedExpiresAt);
     await prefs.remove(_kCachedPlan);
     _originalTransactionId = null;

@@ -70,7 +70,7 @@ class AnthropicProxy {
       'messages': history
           .map((m) => {'role': m.role.name, 'content': m.text})
           .toList(),
-      'context': {'language': language, 'systemPrompt': systemPrompt},
+      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': true},
     };
     return _post('/v1/chat', body);
   }
@@ -85,7 +85,7 @@ class AnthropicProxy {
       'imageBase64': base64Encode(image.bytes),
       'imageMediaType': image.mediaType,
       'userPrompt': userPrompt,
-      'context': {'language': language, 'systemPrompt': systemPrompt},
+      'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': true},
     };
     return _post('/v1/vision', body);
   }

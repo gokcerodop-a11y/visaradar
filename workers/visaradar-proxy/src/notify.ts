@@ -3,6 +3,7 @@
 //   POST /v1/apple-notify   Apple subscription events → Telegram + revenue counters
 //   GET  /v1/fin-test?t=<chatId>   send today's finance report now (test)
 
+import { importX509, flattenedVerify } from "jose";
 import type { Env } from "./env.js";
 import { jsonResponse, parseJsonBody } from "./utils.js";
 import { recordRevenue, buildReport, trDay } from "./finance.js";
@@ -39,6 +40,27 @@ function _decodeJws<T>(jws: string): T | null {
   }
 }
 
+/** Apple ES256 JWS imzasını x5c leaf sertifikasıyla doğrular. */
+async function _verifyAppleJws(jws: string): Promise<boolean> {
+  try {
+    const parts = jws.split(".");
+    if (parts.length !== 3) return false;
+    const headerJson = atob(parts[0]!.replace(/-/g, "+").replace(/_/g, "/"));
+    const header = JSON.parse(headerJson) as { alg?: string; x5c?: string[] };
+    if (header.alg !== "ES256" || !header.x5c || header.x5c.length < 2) return false;
+    const lines = header.x5c[0]!.match(/.{1,64}/g) ?? [header.x5c[0]!];
+    const leafPem = `-----BEGIN CERTIFICATE-----\n${lines.join("\n")}\n-----END CERTIFICATE-----`;
+    const publicKey = await importX509(leafPem, "ES256");
+    await flattenedVerify(
+      { protected: parts[0]!, payload: parts[1]!, signature: parts[2]! },
+      publicKey,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const TYPE_TR: Record<string, string> = {
   SUBSCRIBED: "🟢 Yeni abonelik",
   DID_RENEW: "🔁 Abonelik yenilendi",
@@ -55,6 +77,11 @@ const TYPE_TR: Record<string, string> = {
 export async function handleAppleNotify(request: Request, env: Env): Promise<Response> {
   const body = await parseJsonBody<{ signedPayload?: string }>(request);
   if (!body?.signedPayload) return jsonResponse({ error: "signedPayload-missing" }, 400);
+
+  // Apple ES256 JWS imzası doğrula
+  if (!(await _verifyAppleJws(body.signedPayload))) {
+    return jsonResponse({ error: "invalid-signature" }, 401);
+  }
 
   const payload = _decodeJws<{
     notificationType?: string;
@@ -78,6 +105,13 @@ export async function handleAppleNotify(request: Request, env: Env): Promise<Res
       await recordRevenue(env, tx, payload.notificationType);
     } catch {
       /* finance non-critical */
+    }
+    // İptal/iade durumunda receipt cache'i temizle
+    if (
+      tx?.originalTransactionId &&
+      (payload.notificationType === "REVOKE" || payload.notificationType === "REFUND" || payload.notificationType === "EXPIRED")
+    ) {
+      await env.RECEIPTS.delete(`receipt:${tx.originalTransactionId}`).catch(() => {});
     }
   }
 

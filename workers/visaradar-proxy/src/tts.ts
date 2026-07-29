@@ -2,7 +2,8 @@
 
 import type { Env } from "./env.js";
 import { validateAppleReceipt } from "./auth.js";
-import { jsonResponse, parseJsonBody } from "./utils.js";
+import { jsonResponse, parseJsonBody, SECURITY_HEADERS } from "./utils.js";
+import { checkAndIncrementLimit } from "./rate-limit.js";
 
 export async function handleTts(request: Request, env: Env): Promise<Response> {
   const receipt = await validateAppleReceipt(request, env);
@@ -19,7 +20,24 @@ export async function handleTts(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "tts-disabled" }, 503);
   }
 
-  const body = await parseJsonBody<{ text?: string }>(request);
+  const body = await parseJsonBody<{ text?: string; context?: { kvkkConsent?: boolean } }>(request);
+  if (!body?.context?.kvkkConsent) {
+    return jsonResponse({ error: "kvkk-consent-required" }, 403);
+  }
+
+  const limit = await checkAndIncrementLimit(
+    env,
+    receipt.originalTransactionId,
+    "questions",
+    receipt.isTrial,
+  );
+  if (!limit.ok) {
+    return jsonResponse(
+      { error: "too-many-requests", reason: limit.reason, resetAt: limit.resetAt },
+      429,
+    );
+  }
+
   const text = (body?.text ?? "").trim();
   if (!text) return jsonResponse({ error: "text-required" }, 400);
   // Maliyet tavanı: tek seferde en fazla ~5000 karakter seslendir.
@@ -51,14 +69,14 @@ export async function handleTts(request: Request, env: Env): Promise<Response> {
   );
 
   if (!r.ok || !r.body) {
-    const t = await r.text().catch(() => "");
-    return jsonResponse({ error: "tts-upstream", message: t.slice(0, 200) }, 502);
+    return jsonResponse({ error: "tts-upstream" }, 502);
   }
 
   return new Response(r.body, {
     headers: {
       "content-type": "audio/mpeg",
       "cache-control": "no-store",
+      ...SECURITY_HEADERS,
     },
   });
 }

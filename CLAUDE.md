@@ -2,17 +2,12 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-12):** v1.2.0+6 **WAITING_FOR_REVIEW** — submission `a76d0c61-dcfe-40bf-ad5c-9c7b3713864f`. Apple onayı bekleniyor.
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik yaması + telefonda test build.
 
-**Sonraki build için hazırlanan değişiklikler (telefonda test edildi, GitHub'da hazır):**
-1. ElevenLabs TTS "Dinle" butonu — AI Asistan + AI Tur Rehberi
-2. 14 slaytlı Karşılama Turu (8→14 slayt)
-3. Asistan metin güncellemesi ("Soracaklarınızdan Bazıları")
-4. Şehir Keşfi bug fix (subscription hatası doğru mesaj)
-5. KVKK tile Ayarlar'a eklendi; kapsamlı legal.ts (TR+EN)
-6. **Derin Bilgi** — SHA-256 hash zincirli konum kanıtı
-7. **Seyahat Takvimi** — günlük km/adım/şehir/ülke/not; pedometer
-8. **Güvenlik Tarayıcı** — 3 kaydırmalı sayfa; gizli kamera / ses böceği / gaz alarm
+**Güvenlik Durumu (2026-07-29 — Güvenlik Denetimi sonrası tam yama uygulandı):**
+- Worker: KVKK consent enforcement, 6 güvenlik header, sanitizeString/sanitizeMessages, Apple JWS doğrulama, TTS rate limit, body boyut sınırı, imageMediaType allowlist, role validation, KV cache temizleme (revoke/refund)
+- Flutter: Premium txId iOS Keychain'de (flutter_secure_storage), Tax-Free + Güvenlik Tarayıcı premium gate, AppLifecycleState ekran gizleme, Random.secure()
+- Worker deploy edildi: `08fe2b7b-9493-4d6a-9fe8-0be4fb740542`
 
 ## Mevcut Özellikler (tüm liste)
 
@@ -41,6 +36,9 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - **İstemci:** Flutter (iOS birincil). Ana app `lib/`. i18n yok — `L.isTr` / `isTurkishProvider` ile TR/EN.
 - **Backend:** Cloudflare Worker `workers/visaradar-proxy` (TS). Endpoint'ler: `/v1/chat`, `/v1/vision`, `/v1/tts`.
 - Claude proxy + rate-limit + KV + Apple receipt doğrulama + Telegram bildirim.
+- **İstemci → Worker context:** Her istekte `context.kvkkConsent: true` zorunlu (anthropic_proxy.dart + natural_tts.dart). Worker 403 döner yoksa.
+- **Hassas veri:** Premium txId `flutter_secure_storage` → iOS Keychain. GPS zinciri + takvim SharedPreferences (büyük veri).
+- **Premium gate:** Tax-Free + Güvenlik Tarayıcı `isPremiumProvider` ile korumalı.
 
 ## Önemli Sabitler
 - Bundle id: `com.visaradar.visaradar` · App id: `6761065257` · Team: `V8CC8CQG3W`

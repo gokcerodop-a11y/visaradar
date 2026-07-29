@@ -3,12 +3,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../services/premium_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Thresholds (all tunable)
@@ -200,14 +203,15 @@ Color _statusColor(_Status s, Color accentColor) => switch (s) {
 // Screen
 // ---------------------------------------------------------------------------
 
-class SecurityScannerScreen extends StatefulWidget {
+class SecurityScannerScreen extends ConsumerStatefulWidget {
   const SecurityScannerScreen({super.key});
 
   @override
-  State<SecurityScannerScreen> createState() => _SecurityScannerScreenState();
+  ConsumerState<SecurityScannerScreen> createState() =>
+      _SecurityScannerScreenState();
 }
 
-class _SecurityScannerScreenState extends State<SecurityScannerScreen>
+class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
     with TickerProviderStateMixin {
   final _pageCtrl = PageController();
   int _page = 0;
@@ -433,7 +437,52 @@ class _SecurityScannerScreenState extends State<SecurityScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isTr = L.isTr;
+    final isTr = ref.watch(isTurkishProvider);
+    final isPremium = ref.watch(isPremiumProvider);
+    if (!isPremium) {
+      return Scaffold(
+        backgroundColor: AppColors.brandNavy,
+        appBar: AppBar(
+          backgroundColor: AppColors.brandNavy,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline, size: 64, color: AppColors.brandTeal),
+                const SizedBox(height: 16),
+                Text(
+                  isTr ? 'Bu özellik Premium' : 'Premium Feature',
+                  style: AppTextStyles.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isTr
+                      ? 'Güvenlik Tarayıcı\'ya erişmek için Premium abonelik gerekir.'
+                      : 'A Premium subscription is required to use the Security Scanner.',
+                  style: AppTextStyles.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.push('/paywall'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandTeal,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(isTr ? 'Premium\'a Geç' : 'Upgrade to Premium'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.brandNavy,
       appBar: AppBar(

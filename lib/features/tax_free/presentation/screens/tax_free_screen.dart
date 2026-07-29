@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../../core/localization/locale.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../services/premium_providers.dart';
 import '../../domain/tax_free_data.dart';
 
 /// Tax-Free shopping guide: searchable country list with expandable
@@ -41,6 +44,7 @@ class _TaxFreeScreenState extends ConsumerState<TaxFreeScreen> {
   @override
   Widget build(BuildContext context) {
     final isTr = ref.watch(isTurkishProvider);
+    final isPremium = ref.watch(isPremiumProvider);
     final countries = _filtered(isTr);
 
     return Scaffold(
@@ -54,7 +58,9 @@ class _TaxFreeScreenState extends ConsumerState<TaxFreeScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
-      body: SafeArea(
+      body: !isPremium
+          ? _buildPremiumGate(context, isTr)
+          : SafeArea(
         child: Column(
           children: [
             Padding(
@@ -132,6 +138,43 @@ class _TaxFreeScreenState extends ConsumerState<TaxFreeScreen> {
                         );
                       },
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumGate(BuildContext context, bool isTr) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline, size: 64, color: AppColors.brandTeal),
+            const SizedBox(height: 16),
+            Text(
+              isTr ? 'Bu özellik Premium' : 'Premium Feature',
+              style: AppTextStyles.headlineMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isTr
+                  ? 'Tax-Free Rehberi\'ne erişmek için Premium abonelik gerekir.'
+                  : 'A Premium subscription is required to access the Tax-Free Guide.',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.push('/paywall'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandTeal,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isTr ? 'Premium\'a Geç' : 'Upgrade to Premium'),
             ),
           ],
         ),

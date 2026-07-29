@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,11 +8,41 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/notifications/providers/notification_coordinator_provider.dart';
 
-class VisaRadarApp extends ConsumerWidget {
+class VisaRadarApp extends ConsumerStatefulWidget {
   const VisaRadarApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VisaRadarApp> createState() => _VisaRadarAppState();
+}
+
+class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      // iOS App Switcher snapshot'ında hassas verilerin görünmemesi için
+      // arka plana alındığında siyah overlay göster.
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+    } else if (state == AppLifecycleState.resumed) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Warm the notification coordinator so it begins listening to state changes.
     ref.watch(notificationCoordinatorProvider);
 
