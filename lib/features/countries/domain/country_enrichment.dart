@@ -41,7 +41,7 @@ const Map<String, CountryEnrichment> kCountryEnrichment = {
     winterTiresEn: 'Winter tyres required Nov–Apr in designated mountain roads. Check with local authorities.',
     winterTiresTr: 'Kasım–Nisan arası belirli dağ yollarında kış lastiği zorunlu. Yerel makamları kontrol edin.',
     foodHighlightsEn: 'Turkish cuisine is one of the world\'s richest: döner, köfte, kebab, lahmacun, menemen, meze spreads, baklava, Turkish delight. Must-try: İskender kebab in Bursa, balık ekmek by the Bosphorus.',
-    foodHighlightsTr: 'Türk mutfağı dünyanın en zenginlerindendir: döner, köfte, kebap, lahmacun, menemen, meze, baklava. Mutlaka: Bursa\'da Iskender kebap, Boğaz\'da balık ekmek.',
+    foodHighlightsTr: 'Türk mutfağı dünyanın en zenginlerindendir: döner, köfte, kebap, lahmacun, menemen, meze, baklava. Mutlaka: Bursa\'da İskender kebap, Boğaz\'da balık ekmek.',
     streetFoodEn: 'Simit (sesame bagel), midye dolma (stuffed mussels), kumpir (jacket potato), kokoreç, gözleme, balık ekmek.',
     streetFoodTr: 'Simit, midye dolma, kumpir, kokoreç, gözleme, balık ekmek.',
     cityGuideEn: 'Istanbul: Stay in Sultanahmet (historic) or Beyoğlu/Taksim (modern). Eat in Karaköy, Kadıköy market. Ankara: Kızılay for nightlife, Ulus for history.',

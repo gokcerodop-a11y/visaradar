@@ -9,7 +9,7 @@ import '../../../../features/countries/domain/country_data.dart';
 import '../../domain/stay_record.dart';
 import '../stays_provider.dart';
 
-final _dateFmt = DateFormat('d MMM yyyy');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
 
 // ---------------------------------------------------------------------------
 // Grouped city data
@@ -239,7 +239,7 @@ class _CityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateRange =
-        '${_dateFmt.format(group.earliestEntry)} – ${group.latestExit != null ? _dateFmt.format(group.latestExit!) : (isTr ? 'Devam ediyor' : 'Ongoing')}';
+        '${_dateFmt().format(group.earliestEntry)} – ${group.latestExit != null ? _dateFmt().format(group.latestExit!) : (isTr ? 'Devam ediyor' : 'Ongoing')}';
 
     return Container(
       decoration: BoxDecoration(

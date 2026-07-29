@@ -628,7 +628,7 @@ class _NationalityPageState extends State<_NationalityPage> {
                   return _CountryRow(
                     country: country,
                     isSelected: isSelected,
-                    onTap: () => widget.onSelect(country.code, country.name),
+                    onTap: () => widget.onSelect(country.code, _isTr ? (country.nameTr ?? country.name) : country.name),
                   );
                 },
               ),

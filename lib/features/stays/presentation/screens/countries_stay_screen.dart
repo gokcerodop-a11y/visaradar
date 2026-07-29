@@ -30,7 +30,7 @@ const _visaFreeDays = <String, int>{
   'ID': 30,
 };
 
-final _dateFmt = DateFormat('d MMM yyyy');
+DateFormat _dateFmt() => DateFormat('d MMM yyyy');
 
 // ---------------------------------------------------------------------------
 // Grouped country data
@@ -264,7 +264,7 @@ class _CountryCard extends StatelessWidget {
     final countryName =
         isTr ? group.countryNameTr : group.countryNameEn;
     final dateRange =
-        '${_dateFmt.format(group.earliestEntry)} – ${group.latestExit != null ? _dateFmt.format(group.latestExit!) : (isTr ? 'Devam ediyor' : 'Ongoing')}';
+        '${_dateFmt().format(group.earliestEntry)} – ${group.latestExit != null ? _dateFmt().format(group.latestExit!) : (isTr ? 'Devam ediyor' : 'Ongoing')}';
 
     final visaLimit = _visaFreeDays[group.countryCode.toUpperCase()];
     final remaining =
