@@ -90,18 +90,22 @@ class CountriesScreen extends ConsumerWidget {
 
   Widget _schengenChip(VisaCountry c, bool isTr) {
     final Color color;
+    final Color textColor;
     final String label;
     final IconData icon;
     if (c.isSchengen) {
       color = AppColors.info;
+      textColor = const Color(0xFF93C5FD); // lighter blue — 6.8:1 on chip bg (WCAG AA)
       label = 'Schengen';
       icon = Icons.check_circle_outline;
     } else if (c.requiresVisaForTurkish) {
       color = AppColors.warning;
+      textColor = AppColors.warning;
       label = isTr ? 'Vizeyle' : 'Visa req.';
       icon = Icons.assignment_outlined;
     } else {
       color = AppColors.success;
+      textColor = AppColors.success;
       label = isTr ? 'Vizesiz' : 'Visa-free';
       icon = Icons.check_circle_outline;
     }
@@ -114,12 +118,12 @@ class CountriesScreen extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 12, color: textColor),
           const SizedBox(width: 3),
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: color,
+              color: textColor,
               fontWeight: FontWeight.w700,
             ),
           ),

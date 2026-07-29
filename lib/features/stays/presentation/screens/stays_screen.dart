@@ -500,6 +500,7 @@ class _StayCard extends StatelessWidget {
               size: 20,
               color: AppColors.textMuted,
             ),
+            tooltip: L.isTr ? 'Kaydı sil' : 'Delete record',
             onPressed: onDelete,
             padding: const EdgeInsets.all(10),
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),

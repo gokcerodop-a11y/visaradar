@@ -89,6 +89,11 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: SecurityScanner nokta dokunma 10pt → 44pt; CrossingCard butonlar 38pt → 44pt
 - DÜŞÜK: Countries chip ikonları (check/assignment), 6 TextField `labelText`, sayfa göstergeleri `Semantics(label:)`
 
+**Erişilebilirlik RE-TEST Düzeltmeleri (2026-07-29):**
+- ORTA: Countries Schengen chip metin `#3B82F6` (3.3:1) → `#93C5FD` (6.8:1, WCAG AA)
+- DÜŞÜK: Stays silme IconButton `tooltip: 'Kaydı sil'/'Delete record'` eklendi
+- DÜŞÜK: SecurityScanner nokta `horizontal:5→17` (44pt yatay hedef) + `Semantics(button, label)`
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)

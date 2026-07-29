@@ -821,21 +821,25 @@ class _PageDots extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(count, (i) {
         final active = i == current;
-        return GestureDetector(
-          onTap: () => onDotTap(i),
-          behavior: HitTestBehavior.opaque,
-          // 44pt minimum dokunma alanı: 10px nokta + 17px dikey padding x2.
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 17),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              width: active ? 28 : 10,
-              height: 10,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5),
-                color: active
-                    ? pages[i].color
-                    : AppColors.textMuted.withValues(alpha: 0.4),
+        return Semantics(
+          button: true,
+          label: '${i + 1}. sayfa',
+          child: GestureDetector(
+            onTap: () => onDotTap(i),
+            behavior: HitTestBehavior.opaque,
+            // 44pt minimum dokunma alanı: 10px nokta + 17px padding × 2 (yatay+dikey).
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 17),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                width: active ? 28 : 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: active
+                      ? pages[i].color
+                      : AppColors.textMuted.withValues(alpha: 0.4),
+                ),
               ),
             ),
           ),
