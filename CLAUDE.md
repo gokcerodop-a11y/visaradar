@@ -167,6 +167,12 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - D3: `legal.ts` supportPage FAQ — TR sorulara EN yanıtlar eklendi (bilingual)
 - Worker deploy: `aa975c0a` (2026-07-29)
 
+**Hukuki / KVKK RE-TEST Düzeltmeleri (2026-07-29 — commit 310582c):**
+- ORTA: `legal.ts §1.2` — "sunucuya gönderilmez" mutlak iddiası kaldırıldı; AI asistanında pasaport türü + Schengen bakiyesinin Anthropic'e iletildiği bilingual belirtildi
+- DÜŞÜK: `legal.ts terms` — "ücretsiz denemenin kullanılmamış kısmı iptal edilir" kaldırıldı (intro offer yok; proje trial-ban kuralı)
+- DÜŞÜK: `paywall_screen.dart:179` — yıllık plan "Free trial included · best value" → "Best value · annual" (hardcoded trial claim temizlendi)
+- Worker deploy: `bbb3f0f3` (2026-07-29)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
