@@ -47,6 +47,8 @@ class WeatherService {
     );
   }
 
+  void close() => _client.close();
+
   Future<Map<String, dynamic>> _fetchForecast(double lat, double lng) async {
     try {
       final uri = Uri.parse(

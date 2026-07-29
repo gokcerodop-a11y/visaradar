@@ -39,14 +39,18 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   }
 
   Future<void> _initSpeech() async {
-    _speechAvailable = await _speech.initialize(
-      onError: (_) => setState(() => _isListening = false),
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          setState(() => _isListening = false);
-        }
-      },
-    );
+    try {
+      _speechAvailable = await _speech.initialize(
+        onError: (_) => setState(() => _isListening = false),
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            setState(() => _isListening = false);
+          }
+        },
+      );
+    } catch (_) {
+      _speechAvailable = false;
+    }
     if (mounted) setState(() {});
   }
 

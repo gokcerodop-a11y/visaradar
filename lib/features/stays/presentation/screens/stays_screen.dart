@@ -163,7 +163,7 @@ class _CountriesTab extends ConsumerWidget {
       },
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + MediaQuery.paddingOf(context).bottom),
         itemCount: codes.length,
         itemBuilder: (_, i) {
           final code = codes[i];
@@ -322,7 +322,7 @@ class _CitiesTab extends ConsumerWidget {
       },
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 32 + MediaQuery.paddingOf(context).bottom),
         itemCount: keys.length,
         itemBuilder: (_, i) {
           final key = keys[i];

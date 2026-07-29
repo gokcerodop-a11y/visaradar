@@ -35,7 +35,7 @@ class CountryDetailScreen extends ConsumerWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 28 + MediaQuery.paddingOf(context).bottom),
         children: [
           _visaBanner(c, isTr),
           const SizedBox(height: 16),

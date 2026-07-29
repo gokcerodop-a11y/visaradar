@@ -24,7 +24,7 @@ class NaturalTts {
   /// Session-scoped TTS audio cache keyed by normalised text.
   /// Capped at 20 entries to bound memory; LRU approximated by insert order.
   static final Map<String, Uint8List> _cache = {};
-  static const int _cacheMax = 20;
+  static const int _cacheMax = 5;
 
   bool get isPlaying => _playing;
 
@@ -119,7 +119,8 @@ class NaturalTts {
   }
 
   void dispose() {
-    _sub?.cancel();
+    _generation++;
+    _finish();
     _player.dispose();
   }
 }

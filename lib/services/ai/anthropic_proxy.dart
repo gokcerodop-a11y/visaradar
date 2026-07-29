@@ -16,6 +16,8 @@ import 'package:http/http.dart' as http;
 
 import 'ai_message.dart';
 
+String _base64Isolate(Uint8List bytes) => base64Encode(bytes);
+
 /// Premium not active or receipt invalid.
 class ProxySubscriptionRequiredException implements Exception {
   final String reason;
@@ -81,8 +83,9 @@ class AnthropicProxy {
     required String userPrompt,
     required String systemPrompt,
   }) async {
+    final encoded = await compute(_base64Isolate, image.bytes);
     final body = {
-      'imageBase64': base64Encode(image.bytes),
+      'imageBase64': encoded,
       'imageMediaType': image.mediaType,
       'userPrompt': userPrompt,
       'context': {'language': language, 'systemPrompt': systemPrompt, 'kvkkConsent': true},

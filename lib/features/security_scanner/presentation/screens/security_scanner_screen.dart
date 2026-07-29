@@ -550,7 +550,7 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
     final isThisScanning = idx == _page && _isScanning();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.paddingOf(context).bottom),
       child: Column(
         children: [
           // ── Header ───────────────────────────────────────────────────────

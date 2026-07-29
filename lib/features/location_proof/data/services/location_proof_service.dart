@@ -1,12 +1,43 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/localization/locale.dart';
 import '../../domain/models/location_proof_entry.dart';
+
+// Top-level helpers for compute() — run JSON heavy-lifting off the main thread.
+List<LocationProofEntry> _parseEntriesIsolate(String raw) {
+  final list = jsonDecode(raw) as List<dynamic>;
+  return list
+      .map((e) => LocationProofEntry.fromJson(e as Map<String, dynamic>))
+      .toList();
+}
+
+String _encodeEntriesIsolate(List<Map<String, dynamic>> jsonList) =>
+    jsonEncode(jsonList);
+
+bool _verifyChainIsolate(String raw) {
+  if (raw.isEmpty) return true;
+  try {
+    final list = jsonDecode(raw) as List<dynamic>;
+    final entries = list
+        .map((e) => LocationProofEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+    for (var i = 0; i < entries.length; i++) {
+      if (!entries[i].isSelfConsistent) return false;
+      if (i > 0 && entries[i].previousHash != entries[i - 1].hash) {
+        return false;
+      }
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Riverpod handle for [LocationProofService].
 final locationProofServiceProvider = Provider<LocationProofService>((ref) {
@@ -43,13 +74,8 @@ class LocationProofService {
     final raw = prefs.getString(storageKey);
     if (raw == null || raw.isEmpty) return <LocationProofEntry>[];
     try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => LocationProofEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return await compute(_parseEntriesIsolate, raw);
     } catch (_) {
-      // Corrupt payload: surface as an empty (and therefore unbroken) chain
-      // rather than crashing the caller.
       return <LocationProofEntry>[];
     }
   }
@@ -114,19 +140,12 @@ class LocationProofService {
 
   /// Verifies the integrity of the whole chain.
   ///
-  /// Checks that every record's hash matches its recomputed canonical hash,
-  /// and that every record (after the first stored one) links to its
-  /// predecessor's hash. The first stored record is only checked for
-  /// self-consistency, because the head of the chain may have been evicted by
-  /// the [maxEntries] cap. An empty chain is valid.
+  /// Parse + hash verification run in a background isolate so the main thread
+  /// is not blocked even when the chain approaches [maxEntries].
   Future<bool> verifyChain() async {
-    final entries = await getEntries();
-    for (var i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      if (!entry.isSelfConsistent) return false;
-      if (i > 0 && entry.previousHash != entries[i - 1].hash) return false;
-    }
-    return true;
+    final prefs = await _sp();
+    final raw = prefs.getString(storageKey) ?? '';
+    return compute(_verifyChainIsolate, raw);
   }
 
   /// Builds a human-readable, shareable text report for [entries].
@@ -187,10 +206,9 @@ class LocationProofService {
 
   Future<void> _save(List<LocationProofEntry> entries) async {
     final prefs = await _sp();
-    await prefs.setString(
-      storageKey,
-      jsonEncode(entries.map((e) => e.toJson()).toList()),
-    );
+    final jsonList = entries.map((e) => e.toJson()).toList();
+    final encoded = await compute(_encodeEntriesIsolate, jsonList);
+    await prefs.setString(storageKey, encoded);
   }
 
   /// Timestamp-derived id with a random suffix to avoid collisions when two

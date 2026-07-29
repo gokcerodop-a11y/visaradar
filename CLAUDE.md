@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik — **TÜM TESTLER TAMAMLANDI** (Test 1–6). Son commit: `46299bf`.
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu — **TÜM TESTLER TAMAMLANDI** (Test 1–7). Son commit: TBD.
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -93,6 +93,18 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - ORTA: Countries Schengen chip metin `#3B82F6` (3.3:1) → `#93C5FD` (6.8:1, WCAG AA)
 - DÜŞÜK: Stays silme IconButton `tooltip: 'Kaydı sil'/'Delete record'` eklendi
 - DÜŞÜK: SecurityScanner nokta `horizontal:5→17` (44pt yatay hedef) + `Semantics(button, label)`
+
+**Cihaz/Sürüm Uyumluluk Düzeltmeleri (2026-07-29 — Test #7, 11 bulgu):**
+- YÜKSEK: Paywall alt link satırı `Row` → `Wrap` — 320pt (iPhone SE 1. nesil) RenderFlex taşması engellendi
+- YÜKSEK: `LocationProofService.getEntries()` + `_save()` + `verifyChain()` → `compute()` (isolate) — 5000 kayıt JSON decode/encode artık main thread'i kilitlemez
+- YÜKSEK: `location_proof_screen.dart` `ListView(children:)` → `ListView.builder` + `_groupByDay()` — 5000 kayıt eager render yerine günlük gruplar lazy
+- ORTA: `AnthropicProxy.vision()` `base64Encode(image.bytes)` → `compute(_base64Isolate, ...)` — belge tarayıcı base64 artık isolate'te
+- ORTA: `NaturalTts._cacheMax` 20 → 5 (teorik tavan 100 MB → 25 MB, düşük RAM cihazlar için)
+- DÜŞÜK: `NaturalTts.dispose()` → `_generation++; _finish(); _player.dispose()` — bekleyen completer artık tamamlanır
+- DÜŞÜK: `ios/Podfile` platform satırı yorumdan çıkarıldı (`platform :ios, '15.0'`) — pod derleme uyarıları giderildi
+- DÜŞÜK: `assistant_screen.dart _initSpeech()` → try/catch sarmalayıcı (STT PlatformException yakalandı)
+- DÜŞÜK: `security_scanner_screen.dart`, `country_detail_screen.dart`, `stays_screen.dart` (×2) — alt padding `+ MediaQuery.paddingOf(context).bottom` (home indicator örtüşmesi engellendi)
+- DÜŞÜK: `WeatherService.close()` metodu eklendi (http.Client kaynak serbest bırakma)
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)

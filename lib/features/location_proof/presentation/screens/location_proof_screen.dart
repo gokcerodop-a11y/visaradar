@@ -34,6 +34,7 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
   );
 
   List<LocationProofEntry>? _entries;
+  List<({DateTime day, List<LocationProofEntry> entries})> _dayGroups = [];
   bool? _chainValid;
   bool _busy = false;
 
@@ -50,8 +51,25 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
     if (!mounted) return;
     setState(() {
       _entries = entries;
+      _dayGroups = _groupByDay(entries);
       _chainValid = valid;
     });
+  }
+
+  List<({DateTime day, List<LocationProofEntry> entries})> _groupByDay(
+      List<LocationProofEntry> entries) {
+    final map = <DateTime, List<LocationProofEntry>>{};
+    for (final e in entries) {
+      final local = e.timestamp.toLocal();
+      final day = DateTime(local.year, local.month, local.day);
+      map.putIfAbsent(day, () => <LocationProofEntry>[]).add(e);
+    }
+    final days = map.keys.toList()..sort((a, b) => b.compareTo(a));
+    return days.map((d) {
+      final dayEntries = map[d]!
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return (day: d, entries: dayEntries);
+    }).toList();
   }
 
   Future<void> _verify() async {
@@ -131,18 +149,31 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
             ? const Center(
                 child: CircularProgressIndicator(color: AppColors.brandTeal),
               )
-            : ListView(
+            : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  _buildHeader(entries),
-                  const SizedBox(height: 16),
-                  _buildInfoCard(),
-                  const SizedBox(height: 20),
-                  if (entries.isEmpty)
-                    _buildEmptyState()
-                  else
-                    ..._buildTimeline(entries),
-                ],
+                itemCount: entries.isEmpty ? 3 : 2 + _dayGroups.length,
+                itemBuilder: (context, i) {
+                  if (i == 0) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(entries),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }
+                  if (i == 1) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInfoCard(),
+                        const SizedBox(height: 20),
+                      ],
+                    );
+                  }
+                  if (entries.isEmpty) return _buildEmptyState();
+                  return _buildDayGroupItem(_dayGroups[i - 2]);
+                },
               ),
       ),
       bottomNavigationBar: _buildBottomBar(),
@@ -325,48 +356,35 @@ class _LocationProofScreenState extends ConsumerState<LocationProofScreen> {
 
   // ── Timeline ──────────────────────────────────────────────────────────
 
-  /// Groups entries by local calendar day, newest day (and newest record)
-  /// first, and renders one header + rows per day.
-  List<Widget> _buildTimeline(List<LocationProofEntry> entries) {
-    final groups = <DateTime, List<LocationProofEntry>>{};
-    for (final e in entries) {
-      final local = e.timestamp.toLocal();
-      final day = DateTime(local.year, local.month, local.day);
-      groups.putIfAbsent(day, () => <LocationProofEntry>[]).add(e);
-    }
-    final days = groups.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    final widgets = <Widget>[];
-    for (final day in days) {
-      final dayEntries = groups[day]!
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      widgets
-        ..add(_buildDayHeader(day, dayEntries.length))
-        ..add(const SizedBox(height: 8))
-        ..add(
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surfaceCard,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              children: [
-                for (var i = 0; i < dayEntries.length; i++) ...[
-                  if (i > 0)
-                    Container(
-                      height: 1,
-                      margin: const EdgeInsets.only(left: 44),
-                      color: AppColors.divider,
-                    ),
-                  _buildEntryRow(dayEntries[i]),
-                ],
-              ],
-            ),
+  Widget _buildDayGroupItem(
+      ({DateTime day, List<LocationProofEntry> entries}) group) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildDayHeader(group.day, group.entries.length),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(14),
           ),
-        )
-        ..add(const SizedBox(height: 18));
-    }
-    return widgets;
+          child: Column(
+            children: [
+              for (var i = 0; i < group.entries.length; i++) ...[
+                if (i > 0)
+                  Container(
+                    height: 1,
+                    margin: const EdgeInsets.only(left: 44),
+                    color: AppColors.divider,
+                  ),
+                _buildEntryRow(group.entries[i]),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+      ],
+    );
   }
 
   Widget _buildDayHeader(DateTime day, int count) {
