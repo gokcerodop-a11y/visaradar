@@ -6,6 +6,7 @@ import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../screens/consent_gate_screen.dart';
 import '../../../../services/premium_providers.dart';
 import '../../../assistant/assistant_controller.dart';
 import '../../../location/domain/saved_places.dart';
@@ -157,6 +158,12 @@ class ProfileScreen extends ConsumerWidget {
             Icons.slideshow_outlined,
             isTr ? 'Uygulama Turu' : 'App Tour',
             () => context.push('${AppRoutes.welcomeTour}?from=profile'),
+          ),
+          _dangerTile(
+            context,
+            Icons.cancel_outlined,
+            isTr ? 'Rızamı Geri Çek' : 'Withdraw Consent',
+            () => _withdrawConsent(context, isTr),
           ),
           const SizedBox(height: 24),
           Center(
@@ -316,5 +323,56 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _dangerTile(
+      BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(14),
+        child: ListTile(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          leading: Icon(icon, color: AppColors.danger),
+          title: Text(label,
+              style:
+                  AppTextStyles.bodyLarge.copyWith(color: AppColors.danger)),
+          trailing:
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _withdrawConsent(BuildContext context, bool isTr) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isTr ? 'Rızamı Geri Çek' : 'Withdraw Consent'),
+        content: Text(isTr
+            ? 'KVKK onaylarınız sıfırlanacak. Uygulamayı kullanmaya devam etmek için onay ekranını tekrar doldurmanız gerekecek.'
+            : 'Your KVKK consents will be reset. You will need to complete the consent screen again to continue.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(isTr ? 'İptal' : 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              isTr ? 'Geri Çek' : 'Withdraw',
+              style: const TextStyle(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await resetConsent();
+      if (context.mounted) context.go(AppRoutes.consentGate);
+    }
   }
 }
