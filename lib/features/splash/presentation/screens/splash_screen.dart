@@ -13,7 +13,7 @@ import '../../../../screens/consent_gate_screen.dart' show isConsentGiven;
 
 /// Brief bilingual welcome shown on every cold launch.
 ///
-/// Animates in, holds for ~1.5s, then redirects based on onboarding state.
+/// Animates in, holds for ~0.8s, then redirects based on onboarding state.
 /// Crash-safe: any failure reading profile state falls back to onboarding,
 /// matching the router's defensive redirect logic.
 class SplashScreen extends ConsumerStatefulWidget {
@@ -42,7 +42,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
     _controller.forward();
 
-    // Hold the welcome for ~1.5s total, then route based on onboarding state.
+    // Hold the welcome for ~0.8s, then route based on onboarding state.
     Future.delayed(const Duration(milliseconds: 800), _route);
   }
 

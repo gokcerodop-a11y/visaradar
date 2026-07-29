@@ -48,13 +48,19 @@ class NaturalTts {
     final cached = _cache[key];
     if (cached != null) {
       if (gen != _generation) return false;
-      await stop();
-      _completer = Completer<void>();
-      _playing = true;
-      _sub = _player.onPlayerComplete.listen((_) => _finish());
-      await _player.play(BytesSource(cached, mimeType: 'audio/mpeg'));
-      await _completer!.future;
-      return true;
+      try {
+        await stop();
+        _completer = Completer<void>();
+        _playing = true;
+        _sub = _player.onPlayerComplete.listen((_) => _finish());
+        await _player.play(BytesSource(cached, mimeType: 'audio/mpeg'));
+        await _completer!.future;
+        return true;
+      } catch (e) {
+        debugPrint('[NaturalTts] cache-hit: $e');
+        _finish();
+        return false;
+      }
     }
 
     // ── Fetch from Worker ────────────────────────────────────────────────────

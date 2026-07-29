@@ -21,21 +21,26 @@ class SavedPlacesScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(L.t('Saved places', 'Kayıtlı yerlerim'))),
       body: saved.isEmpty
           ? _empty()
-          : ListView(
+          : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-              children: [
-                Text(
-                  L.t(
-                      'The exact spots you saved. Re-open any of them in Maps to '
-                          'navigate back — even years later.',
-                      'Kaydettiğin tam noktalar. İstediğini Haritalar\'da açıp '
-                          'yıllar sonra bile nokta atışı geri dönebilirsin.'),
-                  style:
-                      AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-                ),
-                const SizedBox(height: 14),
-                ...saved.map((p) => _SavedTile(place: p)),
-              ],
+              itemCount: saved.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(
+                      L.t(
+                          'The exact spots you saved. Re-open any of them in Maps to '
+                              'navigate back — even years later.',
+                          'Kaydettiğin tam noktalar. İstediğini Haritalar\'da açıp '
+                              'yıllar sonra bile nokta atışı geri dönebilirsin.'),
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textMuted),
+                    ),
+                  );
+                }
+                return _SavedTile(place: saved[index - 1]);
+              },
             ),
     );
   }
