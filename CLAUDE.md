@@ -121,7 +121,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 ## Önemli Sabitler
 - Bundle id: `com.visaradar.visaradar` · App id: `6761065257` · Team: `V8CC8CQG3W`
 - Worker: `visaradar-proxy.gokcerodop.workers.dev`
-- Worker chat modeli: `claude-sonnet-5` (Opus 4.8'den düşürüldü — maliyet optimizasyonu)
+- Worker chat modeli: `claude-sonnet-5` (deploy: `3497463f`, 2026-07-29 — Opus 4.8'den düşürüldü)
 - ASC key: `~/Downloads/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
 - ASC otomasyonu: `tool/asc_visaradar.mjs` (status/verify/shots/builds)
 - IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99 +3g deneme, lifetime $59.99}`
