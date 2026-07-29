@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST TAMAMLANDI** + yeni özellikler (commit 736a68b, telefonda).
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 16 POST-TEST BULGUSU TÜMÜ DÜZELTİLDİ** (commit a59154e, Worker 23eb956e).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -221,6 +221,22 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - Yeni kullanıcı (App Store): prefs boş → `0 >= 5 = false` → KVKK her zaman çıkar ✓
 - Test cihazı (önceden kabul edilmiş): Ayarlar → Hakkında → "Rızamı Geri Çek" → kapat/aç → KVKK çıkar
 - `_consentVersion` artırıldığında eski kayıt geçersiz kalır; gereksiz yere artırma — test için "Rızamı Geri Çek" kullan
+
+**Post-Test Round-2 Bulgular — 16/16 Düzeltildi (2026-07-29 — commit a59154e, Worker 23eb956e):**
+YÜKSEK:
+- `settings_screen.dart:367` "Verileriniz yalnızca cihazınızda kalır" → "Sohbet geçmişiniz cihazınızda saklanır" (KVKK uyumu)
+- `assistant_screen.dart:385` "Haritada Aç" InkWell'e `Semantics(button:true, label:)` eklendi (VoiceOver)
+ORTA:
+- `assistant_screen.dart`: dokunma hedefi `vertical:7→13` (≥44pt); `_mapsUrlRegex` static final; `launchUrl` await+try-catch+canLaunchUrl
+- `assistant_controller.dart:83`: TR URL `döviz→d%C3%B6viz`, `bürosu→b%C3%BCrosu` (URL encoding)
+- `assistant_controller.dart:86`: "critical error" → "Always include... never omit it"
+- `legal.ts termsPage()`: tam bilingual EN/TR eklendi; `termsPage()` ve `İletişim` bölümüne `/destek` bağlantısı
+- `legal.ts §3 KVKK`: `/destek` doğrudan bağlantısı eklendi
+DÜŞÜK:
+- `assistant_screen.dart`: `maps://` için `canLaunchUrl` kontrolü eklendi (ORTA ile birleştirildi)
+- `subscription_service.dart`: "Three products... and lifetime" yorumu düzeltildi → "Two products..."
+- `welcome_tour_screen.dart`: "Premium Araçlar"→"Premium araçları"; "Seyahat Profili"→"Seyahat profili"
+- `legal.ts §1.2`: milliyet ve tespit edilen konum ifşaatı eklendi (sistem promptuyla uyum)
 
 **Backlog (kapsam dışı, sonraki sürüm):**
 - **⚠️ ASC API v2 geçişi (Apple resmi email 2026-07-29):** `tool/asc_visaradar.mjs` setupIap() içindeki `subscriptionLocalizations`/`subscriptionSubmissions` çağrıları deprecated → `SubscriptionVersion` v2'ye geçilmeli. Mevcut abonelikler çalışıyor; kaldırılmadan önce bir sonraki `asc.mjs` yenilemesinde v2 yoluna geçilecek.
