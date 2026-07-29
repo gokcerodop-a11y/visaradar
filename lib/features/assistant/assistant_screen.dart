@@ -504,6 +504,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
       'rate-limit' => isTr
           ? 'Günlük soru limitine ulaştın. Yarın tekrar dene.'
           : 'You\'ve reached today\'s question limit. Try again tomorrow.',
+      'network' => isTr
+          ? 'İnternet bağlantısı yok. Bağlantını kontrol et ve tekrar dene.'
+          : 'No internet connection. Check your connection and try again.',
       _ => isTr
           ? 'Bir sorun oluştu. Lütfen tekrar dene.'
           : 'Something went wrong. Please try again.',

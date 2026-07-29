@@ -141,6 +141,14 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
             ? 'Günlük kullanım limitine ulaştın. Yarın tekrar dene.'
             : 'Daily limit reached. Try again tomorrow.';
       });
+    } on ProxyNetworkException {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorText = isTr
+            ? 'İnternet bağlantısı yok. Bağlantını kontrol et ve tekrar dene.'
+            : 'No internet connection. Check your connection and try again.';
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {

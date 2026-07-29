@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -55,6 +56,10 @@ class LocationProofService {
   /// SharedPreferences key for the JSON-encoded chain.
   static const String storageKey = 'visaradar.proof.v1';
 
+  /// Serializes all writes across all instances — prevents read-modify-write
+  /// races when radar + other callers append entries concurrently.
+  static Future<void> _writeChain = Future<void>.value();
+
   /// Hard cap on stored records; oldest records are evicted first.
   static const int maxEntries = 5000;
 
@@ -96,6 +101,27 @@ class LocationProofService {
   /// Returns the created entry. Enforces the [maxEntries] cap by evicting the
   /// oldest records (chain verification tolerates a truncated head).
   Future<LocationProofEntry> recordCurrentLocation(
+    Position pos, {
+    String? city,
+    String? country,
+    String? countryCode,
+  }) {
+    // Route through the static write chain so concurrent calls from different
+    // instances (radar + GPS-only fallback) never step on each other.
+    final completer = Completer<LocationProofEntry>();
+    _writeChain = _writeChain.then((_) async {
+      try {
+        final entry = await _doRecord(pos,
+            city: city, country: country, countryCode: countryCode);
+        completer.complete(entry);
+      } catch (e) {
+        completer.completeError(e);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<LocationProofEntry> _doRecord(
     Position pos, {
     String? city,
     String? country,

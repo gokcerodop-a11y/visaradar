@@ -193,6 +193,8 @@ class AssistantController extends StateNotifier<AssistantState> {
       state = state.copyWith(loading: false, error: 'no-subscription');
     } on ProxyRateLimitException {
       state = state.copyWith(loading: false, error: 'rate-limit');
+    } on ProxyNetworkException {
+      state = state.copyWith(loading: false, error: 'network');
     } catch (e) {
       debugPrint('[AssistantController] $e');
       state = state.copyWith(loading: false, error: 'generic');

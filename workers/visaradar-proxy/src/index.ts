@@ -8,7 +8,7 @@
 import type { Env } from "./env.js";
 import { validateAppleReceipt } from "./auth.js";
 import { runChat, runVision } from "./llm.js";
-import { checkAndIncrementLimit } from "./rate-limit.js";
+import { checkAndIncrementLimit, checkLimitOnly, incrementUsage } from "./rate-limit.js";
 import { jsonResponse, parseJsonBody, sanitizeMessages, sanitizeString, SECURITY_HEADERS } from "./utils.js";
 import { handleAppleNotify, handleFinTest, sendDailyReport } from "./notify.js";
 import { trDay } from "./finance.js";
@@ -166,15 +166,16 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "messages-required" }, 400);
   }
 
-  const limit = await checkAndIncrementLimit(
+  // Pre-flight: reject if already at limit — saves an LLM call.
+  const preCheck = await checkLimitOnly(
     env,
     receipt.originalTransactionId,
     "chat",
     receipt.isTrial,
   );
-  if (!limit.ok) {
+  if (!preCheck.ok) {
     return jsonResponse(
-      { error: "too-many-requests", reason: limit.reason, resetAt: limit.resetAt },
+      { error: "too-many-requests", reason: preCheck.reason, resetAt: preCheck.resetAt },
       429,
     );
   }
@@ -184,6 +185,8 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
       messages: sanitized,
       systemPrompt: body.context?.systemPrompt ? sanitizeString(body.context.systemPrompt, 2000) : undefined,
     });
+    // Increment only after a successful response — timeouts/errors don't burn quota.
+    await incrementUsage(env, receipt.originalTransactionId, "chat");
     return jsonResponse({ text: result.text, model: result.model });
   } catch (e) {
     return jsonResponse({ error: "internal" }, 500);
@@ -209,15 +212,15 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "unsupported-media-type" }, 400);
   }
 
-  const limit = await checkAndIncrementLimit(
+  const preCheckVision = await checkLimitOnly(
     env,
     receipt.originalTransactionId,
     "vision",
     receipt.isTrial,
   );
-  if (!limit.ok) {
+  if (!preCheckVision.ok) {
     return jsonResponse(
-      { error: "too-many-requests", reason: limit.reason, resetAt: limit.resetAt },
+      { error: "too-many-requests", reason: preCheckVision.reason, resetAt: preCheckVision.resetAt },
       429,
     );
   }
@@ -229,6 +232,7 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
       userPrompt: body.userPrompt ?? "Analyse this travel document.",
       systemPrompt: body.context?.systemPrompt,
     });
+    await incrementUsage(env, receipt.originalTransactionId, "vision");
     return jsonResponse({ text: result.text, model: result.model });
   } catch (e) {
     return jsonResponse({ error: "internal" }, 500);

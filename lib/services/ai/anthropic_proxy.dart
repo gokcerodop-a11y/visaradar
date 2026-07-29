@@ -10,6 +10,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +25,14 @@ class ProxySubscriptionRequiredException implements Exception {
   const ProxySubscriptionRequiredException(this.reason);
   @override
   String toString() => 'ProxySubscriptionRequiredException($reason)';
+}
+
+/// Network unavailable or request timed out.
+class ProxyNetworkException implements Exception {
+  const ProxyNetworkException(this.message);
+  final String message;
+  @override
+  String toString() => 'ProxyNetworkException($message)';
 }
 
 /// Daily / monthly usage cap reached.
@@ -97,13 +106,20 @@ class AnthropicProxy {
     if (!isReady) {
       throw const ProxySubscriptionRequiredException('no-subscription');
     }
-    final resp = await _client
-        .post(
-          Uri.parse('$baseUrl$path'),
-          headers: _headers(),
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 45));
+    final http.Response resp;
+    try {
+      resp = await _client
+          .post(
+            Uri.parse('$baseUrl$path'),
+            headers: _headers(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 45));
+    } on SocketException catch (e) {
+      throw ProxyNetworkException('socket: ${e.message}');
+    } on TimeoutException {
+      throw const ProxyNetworkException('timeout');
+    }
 
     if (resp.statusCode == 401 || resp.statusCode == 402) {
       throw ProxySubscriptionRequiredException(

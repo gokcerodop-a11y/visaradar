@@ -123,6 +123,56 @@ export async function checkAndIncrementLimit(
   };
 }
 
+/// Read-only limit check — does NOT increment. Use before the LLM call to
+/// reject immediately if the limit is already exhausted, then call
+/// [incrementUsage] on success.
+export async function checkLimitOnly(
+  env: Env,
+  userId: string,
+  task: TaskName,
+  isTrial = false,
+): Promise<{ ok: boolean; reason?: string; resetAt?: string }> {
+  const { daily: dailyLimits, monthly: monthlyLimits } = effectiveLimits(env, isTrial);
+  const dayK = `usage:${userId}:${_dayKey()}`;
+  const monK = `usage_month:${userId}:${_monthKey()}`;
+  const [todayRaw, monthRaw] = await Promise.all([
+    env.USAGE.get(dayK, "json"),
+    env.USAGE.get(monK, "json"),
+  ]);
+  const today: UsageCounter = (todayRaw as UsageCounter | null) ?? { ...EMPTY_COUNTER };
+  const month: UsageCounter = (monthRaw as UsageCounter | null) ?? { ...EMPTY_COUNTER };
+  if (today[task] >= dailyLimits[task]) {
+    return { ok: false, reason: `daily-${task}-limit-exceeded`, resetAt: _nextDayIso() };
+  }
+  if (month[task] >= monthlyLimits[task]) {
+    return { ok: false, reason: `monthly-${task}-cap-exceeded`, resetAt: _nextMonthIso() };
+  }
+  return { ok: true };
+}
+
+/// Increment usage counters after a successful LLM/TTS call. Pair with
+/// [checkLimitOnly] to avoid burning quota on timed-out or failed requests.
+export async function incrementUsage(
+  env: Env,
+  userId: string,
+  task: TaskName,
+): Promise<void> {
+  const dayK = `usage:${userId}:${_dayKey()}`;
+  const monK = `usage_month:${userId}:${_monthKey()}`;
+  const [todayRaw, monthRaw] = await Promise.all([
+    env.USAGE.get(dayK, "json"),
+    env.USAGE.get(monK, "json"),
+  ]);
+  const today: UsageCounter = (todayRaw as UsageCounter | null) ?? { ...EMPTY_COUNTER };
+  const month: UsageCounter = (monthRaw as UsageCounter | null) ?? { ...EMPTY_COUNTER };
+  today[task] = (today[task] ?? 0) + 1;
+  month[task] = (month[task] ?? 0) + 1;
+  await Promise.all([
+    env.USAGE.put(dayK, JSON.stringify(today), { expirationTtl: 36 * 3600 }),
+    env.USAGE.put(monK, JSON.stringify(month), { expirationTtl: 35 * 24 * 3600 }),
+  ]);
+}
+
 export async function readUsage(env: Env, userId: string): Promise<{
   today: UsageCounter;
   month: UsageCounter;

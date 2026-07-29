@@ -79,7 +79,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                   if (hasProducts)
                     ...products.map((p) => _planCard(p, isTr))
                   else
-                    _unavailableNotice(isTr),
+                    _unavailableNotice(subs, isTr),
                 ],
               ),
             ),
@@ -254,7 +254,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     );
   }
 
-  Widget _unavailableNotice(bool isTr) {
+  Widget _unavailableNotice(SubscriptionService subs, bool isTr) {
+    // When the store is reachable but products failed to load (e.g. offline at
+    // launch), show a retry button so the user doesn't need to reopen the paywall.
+    final canRetry = subs.available;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -262,20 +265,33 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              isTr
-                  ? 'Satın alma şu anda kullanılamıyor. Lütfen daha sonra '
-                      'tekrar deneyin.'
-                  : 'Purchases are currently unavailable. Please try again later.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-            ),
+          Row(
+            children: [
+              const Icon(Icons.info_outline, color: AppColors.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isTr
+                      ? 'Satın alma şu anda kullanılamıyor. İnternet bağlantını '
+                          'kontrol et.'
+                      : 'Purchases unavailable. Check your internet connection.',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
           ),
+          if (canRetry) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => subs.queryProducts(),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(isTr ? 'Tekrar Dene' : 'Retry'),
+            ),
+          ],
         ],
       ),
     );

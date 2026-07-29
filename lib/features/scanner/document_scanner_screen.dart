@@ -74,6 +74,8 @@ class _DocumentScannerScreenState
       setState(() => _error = 'no-subscription');
     } on ProxyRateLimitException {
       setState(() => _error = 'rate-limit');
+    } on ProxyNetworkException {
+      setState(() => _error = 'network');
     } catch (_) {
       setState(() => _error = 'generic');
     } finally {
@@ -188,6 +190,9 @@ class _DocumentScannerScreenState
       'rate-limit' => isTr
           ? 'Günlük tarama limitine ulaştın.'
           : 'Daily scan limit reached.',
+      'network' => isTr
+          ? 'İnternet bağlantısı yok. Bağlantını kontrol et.'
+          : 'No internet connection. Check your connection.',
       _ => isTr ? 'Tarama başarısız. Tekrar dene.' : 'Scan failed. Try again.',
     };
     return Container(

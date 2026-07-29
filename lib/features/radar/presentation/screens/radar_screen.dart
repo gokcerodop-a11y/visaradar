@@ -72,6 +72,34 @@ Future<void> _recordAutomaticCapture(DetectedCountry country) async {
   }
 }
 
+/// Records a GPS-only proof entry when reverse-geocoding fails (e.g. offline).
+/// Country/city remain null; the SHA-256 chain still links correctly.
+Future<void> _recordGpsOnlyCapture() async {
+  final Position pos;
+  try {
+    pos = await Geolocator.getLastKnownPosition() ??
+        await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+  } catch (e) {
+    debugPrint('[AutoCapture] offline GPS error: $e');
+    return;
+  }
+  try {
+    await LocationProofService().recordCurrentLocation(pos);
+  } catch (e) {
+    debugPrint('[LocationProof] offline: $e');
+  }
+  try {
+    await TravelLogService().updateFromPosition(pos, null, null);
+  } catch (e) {
+    debugPrint('[TravelLog] offline: $e');
+  }
+}
+
 /// Shows a one-time contextual notification-permission dialog right after the
 /// user saves their first travel entry. Guarded by the
 /// 'notification_permission_asked' SharedPreferences flag.
@@ -149,10 +177,15 @@ class RadarScreen extends ConsumerWidget {
     // Every successful GPS detection feeds the location-proof chain (K-2)
     // and the travel calendar (Y-3). A new DetectedCountry instance is
     // created per successful detection, so `identical` gates duplicates.
+    // When reverse-geocoding fails offline (phase → failed), GPS coordinates
+    // are still recorded in the proof chain without country/city metadata.
     ref.listen<LocationState>(locationProvider, (prev, next) {
       final country = next.detectedCountry;
       if (country != null && !identical(prev?.detectedCountry, country)) {
         _recordAutomaticCapture(country);
+      } else if (next.phase == LocationDetectionPhase.failed &&
+          prev?.phase == LocationDetectionPhase.detecting) {
+        _recordGpsOnlyCapture();
       }
     });
 
@@ -638,7 +671,27 @@ class _LocationCardState extends ConsumerState<_LocationCard> {
       );
     }
 
-    // ── Granted but idle / failed ────────────────────────────────────────────
+    // ── Failed (GPS or geocoding error — typically offline) ─────────────────
+    if (locState.phase == LocationDetectionPhase.failed) {
+      return _LocationRow(
+        iconData: Icons.location_searching,
+        iconColor: AppColors.warning,
+        iconBg: AppColors.warning.withAlpha(28),
+        label: isTr ? 'KONUM' : 'LOCATION',
+        title: isTr ? 'Konum algılanamadı' : 'Location unavailable',
+        subtitle: isTr
+            ? 'İnternet veya GPS bağlantısını kontrol edin'
+            : 'Check your internet or GPS connection',
+        subtitleColor: AppColors.warning,
+        action: _LocationAction(
+          label: isTr ? 'Tekrar Dene' : 'Retry',
+          color: AppColors.warning,
+          onTap: notifier.refreshDetection,
+        ),
+      );
+    }
+
+    // ── Granted but idle ─────────────────────────────────────────────────────
     return _LocationRow(
       iconData: Icons.gps_not_fixed,
       iconColor: AppColors.brandTeal,

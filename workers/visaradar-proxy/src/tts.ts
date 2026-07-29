@@ -3,7 +3,7 @@
 import type { Env } from "./env.js";
 import { validateAppleReceipt } from "./auth.js";
 import { jsonResponse, parseJsonBody, SECURITY_HEADERS } from "./utils.js";
-import { checkAndIncrementLimit } from "./rate-limit.js";
+import { checkLimitOnly, incrementUsage } from "./rate-limit.js";
 
 export async function handleTts(request: Request, env: Env): Promise<Response> {
   const receipt = await validateAppleReceipt(request, env);
@@ -25,15 +25,15 @@ export async function handleTts(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "kvkk-consent-required" }, 403);
   }
 
-  const limit = await checkAndIncrementLimit(
+  const preCheck = await checkLimitOnly(
     env,
     receipt.originalTransactionId,
     "questions",
     receipt.isTrial,
   );
-  if (!limit.ok) {
+  if (!preCheck.ok) {
     return jsonResponse(
-      { error: "too-many-requests", reason: limit.reason, resetAt: limit.resetAt },
+      { error: "too-many-requests", reason: preCheck.reason, resetAt: preCheck.resetAt },
       429,
     );
   }
@@ -71,6 +71,9 @@ export async function handleTts(request: Request, env: Env): Promise<Response> {
   if (!r.ok || !r.body) {
     return jsonResponse({ error: "tts-upstream" }, 502);
   }
+
+  // Increment only after ElevenLabs delivered audio — failed fetches don't burn quota.
+  await incrementUsage(env, receipt.originalTransactionId, "questions");
 
   return new Response(r.body, {
     headers: {

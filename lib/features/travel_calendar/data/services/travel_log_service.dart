@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,10 @@ import '../../domain/models/day_log.dart';
 /// (`visaradar.calendar.v1`) as a JSON map of `dateKey -> DayLog`.
 class TravelLogService {
   static const _storeKey = 'visaradar.calendar.v1';
+
+  /// Serializes all writes across instances — prevents read-modify-write races
+  /// when radar + pedometer update the calendar concurrently.
+  static Future<void> _writeChain = Future<void>.value();
 
   /// Last known GPS fix, used to derive km deltas in [updateFromPosition].
   static const _lastPositionKey = 'visaradar.calendar.lastpos.v1';
@@ -47,7 +52,20 @@ class TravelLogService {
 
   static const int _maxStoreDays = 730;
 
-  Future<void> _writeStore(Map<String, DayLog> store) async {
+  Future<void> _writeStore(Map<String, DayLog> store) {
+    final completer = Completer<void>();
+    _writeChain = _writeChain.then((_) async {
+      try {
+        await _doWrite(store);
+        completer.complete();
+      } catch (e) {
+        completer.completeError(e);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<void> _doWrite(Map<String, DayLog> store) async {
     final prefs = await _prefs;
     Map<String, DayLog> trimmed = store;
     if (store.length > _maxStoreDays) {

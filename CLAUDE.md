@@ -131,6 +131,17 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `document_scanner_screen.dart` revoke kontrolü eklendi (4. ProxySubscriptionRequiredException noktası)
 - DÜŞÜK: `debugReset()` → `_expiryTimer?.cancel()` + doc yorumu güncellendi
 
+**Offline / Zayıf Bağlantı Düzeltmeleri (2026-07-29 — Test #9, 18 bulgu):**
+- YÜKSEK: Worker kota artışı LLM/TTS çağrısından sonraya taşındı — `checkLimitOnly()` + `incrementUsage()` (timeout/bağlantı hatalarında kota yanmıyor); `rate-limit.ts`, `index.ts`, `tts.ts`
+- YÜKSEK: Paywall ürün listesi boş kaldığında (`subs.available && products.empty`) "Tekrar Dene" butonu eklendi — `_unavailableNotice(subs, isTr)` refactor
+- YÜKSEK: Offline GPS-only proof chain kaydı — ülke algılama `failed` fazına geçtiğinde `_recordGpsOnlyCapture()` çağrılır (geocode olmadan SHA-256 zinciri devam eder)
+- ORTA: Radar `LocationDetectionPhase.failed` → turuncu uyarı UI + "İnternet veya GPS bağlantısını kontrol edin" + "Tekrar Dene" butonu (önceden "Konum aktif" gösteriliyordu)
+- ORTA: `ProxyNetworkException` — `anthropic_proxy.dart`'a yeni exception; `SocketException` + `TimeoutException` → typed exception (dart:io import eklendi)
+- ORTA: Assistant controller + assistant screen, tourist guide, document scanner — `ProxyNetworkException` catch + "İnternet bağlantısı yok" mesajı (generic catch'den ayrıldı)
+- ORTA: `LocationProofService.recordCurrentLocation()` → statik `_writeChain` mutex (dart:async Completer); concurrent write yarışı önlendi
+- ORTA: `TravelLogService._writeStore()` → statik `_writeChain` mutex; GPS + pedometer eşzamanlı yazma önlendi
+- Worker deploy: `a8bb5116` (2026-07-29)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
