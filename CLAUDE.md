@@ -124,6 +124,13 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `restore()` — `_purchaseInFlight = true` busy guard eklendi
 - DÜŞÜK: Ölü l10n stringleri silindi: `subscriptionTitle`, `subscriptionTrialInfo`, `subscriptionPriceEur`, `subscriptionPriceTry`, `subscriptionStartTrial` (app_en.arb + app_tr.arb + app_localizations*.dart)
 
+**Ödeme/Abonelik RE-TEST Düzeltmeleri (2026-07-29):**
+- ORTA: `_activate()` → `_extractRevocationDateFromJws()` kontrolü — iade edilmiş lifetime cold-launch restore'da yeniden aktive olamaz (5.2 döngüsel açık kapatıldı)
+- ORTA: `_restoreInFlight` flag ayrıldı — restore 800ms penceresi içinde `buy()` başlatılamaz; `purchaseInFlight` getter `_purchaseInFlight || _restoreInFlight`
+- DÜŞÜK: `buy()` false/exception'da `_purchaseError = 'purchase-failed'` → paywall SnackBar tetikleniyor
+- DÜŞÜK: `document_scanner_screen.dart` revoke kontrolü eklendi (4. ProxySubscriptionRequiredException noktası)
+- DÜŞÜK: `debugReset()` → `_expiryTimer?.cancel()` + doc yorumu güncellendi
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)

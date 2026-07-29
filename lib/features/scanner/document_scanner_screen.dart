@@ -8,6 +8,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../services/ai/ai_message.dart';
 import '../../services/ai/anthropic_proxy.dart';
 import '../../services/premium_providers.dart';
+import '../../services/subscription_service.dart';
 import '../paywall/paywall_screen.dart';
 
 /// Premium document scanner — capture/pick a passport, visa or residence permit
@@ -66,7 +67,10 @@ class _DocumentScannerScreenState
                 'invent. Reply in English.',
       );
       setState(() => _result = text);
-    } on ProxySubscriptionRequiredException {
+    } on ProxySubscriptionRequiredException catch (e) {
+      if (e.reason == 'subscription-revoked') {
+        SubscriptionService.instance.revokeEntitlement().ignore();
+      }
       setState(() => _error = 'no-subscription');
     } on ProxyRateLimitException {
       setState(() => _error = 'rate-limit');

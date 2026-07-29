@@ -52,6 +52,7 @@ class SubscriptionService extends ChangeNotifier {
   DateTime? _expiresAt;
   List<ProductDetails> _products = const [];
   bool _purchaseInFlight = false;
+  bool _restoreInFlight = false;
   String? _purchaseError;
   bool _lastRestoreFoundPurchases = false;
   Timer? _expiryTimer;
@@ -61,7 +62,7 @@ class SubscriptionService extends ChangeNotifier {
   bool get available => _available;
   bool get isPremium => _isPremium;
   PremiumPlan get plan => _plan;
-  bool get purchaseInFlight => _purchaseInFlight;
+  bool get purchaseInFlight => _purchaseInFlight || _restoreInFlight;
   String? get currentOriginalTransactionId => _originalTransactionId;
   DateTime? get expiresAt => _expiresAt;
 
@@ -142,7 +143,7 @@ class SubscriptionService extends ChangeNotifier {
 
   /// Start a purchase. The result arrives asynchronously via [purchaseStream].
   Future<bool> buy(ProductDetails product) async {
-    if (!_available || _purchaseInFlight) return false;
+    if (!_available || _purchaseInFlight || _restoreInFlight) return false;
     _purchaseInFlight = true;
     notifyListeners();
     final param = PurchaseParam(productDetails: product);
@@ -151,12 +152,14 @@ class SubscriptionService extends ChangeNotifier {
       // (auto-renewable subscriptions included).
       final ok = await _iap.buyNonConsumable(purchaseParam: param);
       if (!ok) {
+        _purchaseError = 'purchase-failed';
         _purchaseInFlight = false;
         notifyListeners();
       }
       return ok;
     } catch (e) {
       debugPrint('[SubscriptionService] buy failed: $e');
+      _purchaseError = 'purchase-failed';
       _purchaseInFlight = false;
       notifyListeners();
       return false;
@@ -165,21 +168,21 @@ class SubscriptionService extends ChangeNotifier {
 
   /// Restore prior purchases. Returns true if at least one purchase was found.
   Future<bool> restore() async {
-    if (!_available || _purchaseInFlight) return false;
-    _purchaseInFlight = true;
+    if (!_available || _purchaseInFlight || _restoreInFlight) return false;
+    _restoreInFlight = true;
     _lastRestoreFoundPurchases = false;
     notifyListeners();
     try {
       await _iap.restorePurchases();
       // Allow stream to deliver restored events before checking the flag.
       await Future.delayed(const Duration(milliseconds: 800));
-      _purchaseInFlight = false;
+      _restoreInFlight = false;
       final found = _lastRestoreFoundPurchases;
       notifyListeners();
       return found;
     } catch (e) {
       debugPrint('[SubscriptionService] restore failed: $e');
-      _purchaseInFlight = false;
+      _restoreInFlight = false;
       notifyListeners();
       return false;
     }
@@ -250,6 +253,24 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
+  // Decodes a StoreKit 2 JWS token and extracts the revocationDate (epoch ms).
+  // Returns non-null when Apple has flagged the transaction as revoked or refunded.
+  DateTime? _extractRevocationDateFromJws(String jws) {
+    try {
+      final parts = jws.split('.');
+      if (parts.length != 3) return null;
+      String padded = parts[1];
+      padded += '=' * ((4 - padded.length % 4) % 4);
+      padded = padded.replaceAll('-', '+').replaceAll('_', '/');
+      final payload = jsonDecode(utf8.decode(base64.decode(padded))) as Map<String, dynamic>;
+      final revokeMs = payload['revocationDate'];
+      if (revokeMs == null) return null;
+      return DateTime.fromMillisecondsSinceEpoch((revokeMs as num).toInt());
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Decodes a StoreKit 2 JWS token and extracts the real expiresDate (epoch ms).
   // Returns null for lifetime products (no expiresDate field) or on decode failure.
   DateTime? _extractExpiresDateFromJws(String jws) {
@@ -277,6 +298,14 @@ class SubscriptionService extends ChangeNotifier {
       if (txId.isEmpty) txId = _extractTxIdFromJws(jws) ?? jws;
       // Use Apple's real expiresDate instead of a static duration offset.
       jwsExpiresAt = _extractExpiresDateFromJws(jws);
+      // If Apple flagged this transaction as revoked/refunded, clear entitlement
+      // and stop. Without this check, silent restore on cold launch would
+      // re-activate a refunded lifetime purchase every session.
+      if (_extractRevocationDateFromJws(jws) != null) {
+        debugPrint('[SubscriptionService] purchase revoked by Apple, clearing entitlement');
+        await revokeEntitlement();
+        return;
+      }
     }
     if (txId.isEmpty) {
       debugPrint('[SubscriptionService] purchase has no txId, skipping');
@@ -369,8 +398,10 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
-  /// Debug only — clears cached entitlement.
+  /// Clears cached entitlement from Keychain and SharedPreferences.
+  /// Called directly for debug resets and via [revokeEntitlement] for production revocations.
   Future<void> debugReset() async {
+    _expiryTimer?.cancel();
     final prefs = await SharedPreferences.getInstance();
     await _storage.delete(key: _kCachedTxId);
     await prefs.remove(_kCachedTxId); // legacy migration temizliği
