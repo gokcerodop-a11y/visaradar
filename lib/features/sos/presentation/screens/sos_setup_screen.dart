@@ -152,6 +152,7 @@ class _ContactTileState extends ConsumerState<_ContactTile> {
                 TextField(
                   controller: _nameCtrl,
                   decoration: InputDecoration(
+                    labelText: widget.isTr ? 'Ad Soyad' : 'Full Name',
                     hintText: widget.isTr ? 'Ad Soyad' : 'Full Name',
                     filled: true,
                     fillColor: AppColors.surface,
@@ -167,6 +168,7 @@ class _ContactTileState extends ConsumerState<_ContactTile> {
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
+                    labelText: widget.isTr ? 'Telefon' : 'Phone',
                     hintText: widget.isTr ? '+90 5xx ...' : '+1 555 ...',
                     filled: true,
                     fillColor: AppColors.surface,

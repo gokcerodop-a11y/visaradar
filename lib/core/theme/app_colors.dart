@@ -17,7 +17,7 @@ abstract class AppColors {
   static const Color divider = Color(0xFF243047);
   static const Color textPrimary = Color(0xFFEDF2FF);
   static const Color textSecondary = Color(0xFF8FA3BF);
-  static const Color textMuted = Color(0xFF4A607A);
+  static const Color textMuted = Color(0xFF7D9BB8);
 
   // Semantic
   static const Color success = Color(0xFF22C55E);

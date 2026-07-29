@@ -266,67 +266,74 @@ class _HoldSosButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPressStart: (_) => onHoldStart(),
-      onLongPressEnd: (_) => onHoldEnd(),
-      onLongPressCancel: onHoldEnd,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 210,
-            height: 210,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 7,
-              backgroundColor:
-                  const Color(0xFFEF4444).withAlpha(30),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFFEF4444)),
+    return Semantics(
+      button: true,
+      label: isTr
+          ? 'Acil SOS — 3 saniye basılı tutun'
+          : 'Emergency SOS — hold for 3 seconds',
+      onLongPress: onHoldStart,
+      child: GestureDetector(
+        onLongPressStart: (_) => onHoldStart(),
+        onLongPressEnd: (_) => onHoldEnd(),
+        onLongPressCancel: onHoldEnd,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 210,
+              height: 210,
+              child: CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 7,
+                backgroundColor:
+                    const Color(0xFFEF4444).withAlpha(30),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFFEF4444)),
+              ),
             ),
-          ),
-          Container(
-            width: 178,
-            height: 178,
-            decoration: BoxDecoration(
-              gradient: const RadialGradient(colors: [
-                Color(0xFFEF4444),
-                Color(0xFFB91C1C),
-              ]),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEF4444).withAlpha(80),
-                  blurRadius: 28,
-                  spreadRadius: 4,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.emergency,
-                    color: Colors.white, size: 46),
-                const Text(
-                  'SOS',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 5,
+            Container(
+              width: 178,
+              height: 178,
+              decoration: BoxDecoration(
+                gradient: const RadialGradient(colors: [
+                  Color(0xFFEF4444),
+                  Color(0xFFB91C1C),
+                ]),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFEF4444).withAlpha(80),
+                    blurRadius: 28,
+                    spreadRadius: 4,
                   ),
-                ),
-                Text(
-                  isTr ? '3 sn basılı tut' : 'Hold 3 sec',
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(200),
-                    fontSize: 11,
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.emergency,
+                      color: Colors.white, size: 46),
+                  const Text(
+                    'SOS',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 5,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    isTr ? '3 sn basılı tut' : 'Hold 3 sec',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

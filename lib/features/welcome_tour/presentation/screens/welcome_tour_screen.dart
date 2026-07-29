@@ -261,8 +261,8 @@ class _SlidePage extends StatelessWidget {
     final bullets = isTr ? slide.bulletsTr : slide.bulletsEn;
     final premiumNote = isTr ? slide.premiumNoteTr : slide.premiumNoteEn;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -369,23 +369,28 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (i) {
-        final active = i == current;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: active ? 20 : 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: active
-                ? AppColors.brandTeal
-                : AppColors.brandTeal.withAlpha(50),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
+    return Semantics(
+      label: L.isTr
+          ? '${current + 1}. sayfa, toplam $count'
+          : 'Page ${current + 1} of $count',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(count, (i) {
+          final active = i == current;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: active ? 20 : 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: active
+                  ? AppColors.brandTeal
+                  : AppColors.brandTeal.withAlpha(50),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
+      ),
     );
   }
 }

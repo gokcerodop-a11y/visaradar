@@ -182,7 +182,9 @@ class _CountriesTab extends ConsumerWidget {
 
           if (code == _homeCountry) {
             // Home country — no limit
-            remainingLabel = isTr ? '🏠 Ana ülke — süre sınırı yok' : '🏠 Home country — no limit';
+            remainingLabel = isTr
+                ? '🏠 Ana ülke — süre sınırı yok'
+                : '🏠 Home country — no limit';
             remainingColor = AppColors.brandTeal;
           } else if (vc?.isSchengen == true) {
             remainingLabel = isTr
@@ -191,8 +193,8 @@ class _CountriesTab extends ConsumerWidget {
             remainingColor = schengenRemaining > 30
                 ? AppColors.success
                 : schengenRemaining > 10
-                    ? AppColors.warning
-                    : AppColors.danger;
+                ? AppColors.warning
+                : AppColors.danger;
           } else if (_visaFreeDays.containsKey(code)) {
             final max = _visaFreeDays[code]!;
             final rem = (max - totalDays).clamp(0, max);
@@ -202,10 +204,12 @@ class _CountriesTab extends ConsumerWidget {
             remainingColor = rem > 30
                 ? AppColors.success
                 : rem > 7
-                    ? AppColors.warning
-                    : AppColors.danger;
+                ? AppColors.warning
+                : AppColors.danger;
           } else if (vc?.requiresVisaForTurkish == true) {
-            remainingLabel = isTr ? 'Vize gerekli — süre vizende yazıyor' : 'Visa required — check your visa';
+            remainingLabel = isTr
+                ? 'Vize gerekli — süre vizende yazıyor'
+                : 'Visa required — check your visa';
             remainingColor = AppColors.textMuted;
           }
           // else: unknown country — no label shown
@@ -222,7 +226,9 @@ class _CountriesTab extends ConsumerWidget {
             subtitle: isTr
                 ? 'Toplam $totalDays gün · Son giriş: ${_dateFmt.format(latestEntry)}'
                 : 'Total $totalDays days · Last entry: ${_dateFmt.format(latestEntry)}',
-            badge: hasOngoing ? (isTr ? 'Şu an burada' : 'Currently here') : null,
+            badge: hasOngoing
+                ? (isTr ? 'Şu an burada' : 'Currently here')
+                : null,
             remainingLabel: remainingLabel,
             remainingColor: remainingColor,
             onDelete: () => _confirmDelete(context, ref, isTr, group),
@@ -280,7 +286,9 @@ class _CitiesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stays = ref.watch(staysProvider);
-    final cityStays = stays.where((s) => s.city != null && s.city!.isNotEmpty).toList();
+    final cityStays = stays
+        .where((s) => s.city != null && s.city!.isNotEmpty)
+        .toList();
 
     if (cityStays.isEmpty) {
       return _emptyState(
@@ -338,8 +346,11 @@ class _CitiesTab extends ConsumerWidget {
               style: const TextStyle(fontSize: 32),
             ),
             title: first.city!,
-            subtitle: '$countryName · $totalDays ${isTr ? 'gün' : 'days'} · ${_dateFmt.format(latestEntry)}',
-            badge: hasOngoing ? (isTr ? 'Şu an burada' : 'Currently here') : null,
+            subtitle:
+                '$countryName · $totalDays ${isTr ? 'gün' : 'days'} · ${_dateFmt.format(latestEntry)}',
+            badge: hasOngoing
+                ? (isTr ? 'Şu an burada' : 'Currently here')
+                : null,
             onDelete: () => _confirmDelete(context, ref, isTr, group),
           );
         },
@@ -431,7 +442,9 @@ class _StayCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.brandTeal.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
@@ -446,28 +459,50 @@ class _StayCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary)),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 if (remainingLabel != null) ...[
                   const SizedBox(height: 6),
-                  Text(
-                    remainingLabel!,
-                    style: AppTextStyles.caption.copyWith(
-                      color: remainingColor ?? AppColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      // Renk körü kullanıcılar için renk dışında görsel ipucu
+                      if (remainingColor == AppColors.warning ||
+                          remainingColor == AppColors.danger) ...[
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 14,
+                          color: remainingColor ?? AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(
+                          remainingLabel!,
+                          style: AppTextStyles.caption.copyWith(
+                            color: remainingColor ?? AppColors.textMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline,
-                size: 20, color: AppColors.textMuted),
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 20,
+              color: AppColors.textMuted,
+            ),
             onPressed: onDelete,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(10),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ],
       ),
@@ -491,7 +526,9 @@ Widget _emptyState({required IconData icon, required String message}) {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textMuted,
+            ),
           ),
         ],
       ),

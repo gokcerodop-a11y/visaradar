@@ -89,9 +89,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // tour — the gate itself continues to the tour on acceptance.
     final consentGiven = await isConsentGiven();
     if (!mounted) return;
-    context.go(
-      consentGiven ? AppRoutes.welcomeTour : AppRoutes.consentGate,
-    );
+    context.go(consentGiven ? AppRoutes.welcomeTour : AppRoutes.consentGate);
   }
 
   @override
@@ -102,8 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // Short bilingual helper. After step 0 the locale is guaranteed non-null;
   // on step 0 the screen is bilingual by design so this helper is unused.
-  String _t(String en, String tr) =>
-      _preferredLocale == 'tr' ? tr : en;
+  String _t(String en, String tr) => _preferredLocale == 'tr' ? tr : en;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +117,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               _StepHeader(
                 current: _currentStep,
                 total: _totalSteps,
+                isTr: _preferredLocale == 'tr',
                 onBack: _currentStep > 0 ? _back : null,
               ),
               Expanded(
@@ -214,8 +212,7 @@ class _BottomBar extends StatelessWidget {
           if (hint != null) ...[
             Text(
               hint!,
-              style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textMuted),
+              style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 10),
@@ -228,10 +225,8 @@ class _BottomBar extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandTeal,
                 foregroundColor: AppColors.brandNavy,
-                disabledBackgroundColor:
-                    AppColors.brandTeal.withAlpha(70),
-                disabledForegroundColor:
-                    AppColors.brandNavy.withAlpha(180),
+                disabledBackgroundColor: AppColors.brandTeal.withAlpha(70),
+                disabledForegroundColor: AppColors.brandNavy.withAlpha(180),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -269,11 +264,13 @@ class _StepHeader extends StatelessWidget {
   const _StepHeader({
     required this.current,
     required this.total,
+    required this.isTr,
     required this.onBack,
   });
 
   final int current;
   final int total;
+  final bool isTr;
   final VoidCallback? onBack;
 
   @override
@@ -295,21 +292,27 @@ class _StepHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: Row(
-              children: List.generate(total, (i) {
-                final active = i <= current;
-                return Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 280),
-                    height: 3,
-                    margin: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
-                    decoration: BoxDecoration(
-                      color: active ? AppColors.brandTeal : AppColors.divider,
-                      borderRadius: BorderRadius.circular(2),
+            child: Semantics(
+              label: isTr
+                  ? 'Adım ${current + 1}, toplam $total'
+                  : 'Step ${current + 1} of $total',
+              child: Row(
+                children: List.generate(total, (i) {
+                  final active = i <= current;
+                  return Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 280),
+                      height: 3,
+                      margin: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
+                      decoration: BoxDecoration(
+                        color:
+                            active ? AppColors.brandTeal : AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ),
         ],
@@ -323,10 +326,7 @@ class _StepHeader extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _WelcomeLanguagePage extends StatelessWidget {
-  const _WelcomeLanguagePage({
-    required this.selected,
-    required this.onSelect,
-  });
+  const _WelcomeLanguagePage({required this.selected, required this.onSelect});
 
   final String? selected;
   final ValueChanged<String> onSelect;
@@ -351,8 +351,11 @@ class _WelcomeLanguagePage extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: const Icon(Icons.radar,
-                  color: AppColors.brandTeal, size: 44),
+              child: const Icon(
+                Icons.radar,
+                color: AppColors.brandTeal,
+                size: 44,
+              ),
             ),
             const SizedBox(height: 28),
             Text(
@@ -372,15 +375,17 @@ class _WelcomeLanguagePage extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               'Choose your language',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 2),
             Text(
               'Dilinizi seçin',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textMuted),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textMuted,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -423,59 +428,69 @@ class _LanguageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.brandTeal.withAlpha(20)
-              : AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.brandTeal : AppColors.divider,
-            width: isSelected ? 1.5 : 1,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$title. $subtitle',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.brandTeal.withAlpha(20)
+                : AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? AppColors.brandTeal : AppColors.divider,
+              width: isSelected ? 1.5 : 1,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.brandNavy,
-                shape: BoxShape.circle,
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.brandNavy,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(flag, style: const TextStyle(fontSize: 24)),
               ),
-              child: Text(flag, style: const TextStyle(fontSize: 24)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.bodyLarge
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            AnimatedOpacity(
-              opacity: isSelected ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: const Icon(Icons.check_circle_rounded,
-                  color: AppColors.brandTeal, size: 22),
-            ),
-          ],
+              AnimatedOpacity(
+                opacity: isSelected ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.brandTeal,
+                  size: 22,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -511,9 +526,11 @@ class _NationalityPageState extends State<_NationalityPage> {
     if (_query.isEmpty) return kCountries;
     final q = _query.toLowerCase();
     return kCountries
-        .where((c) =>
-            c.name.toLowerCase().contains(q) ||
-            c.code.toLowerCase().contains(q))
+        .where(
+          (c) =>
+              c.name.toLowerCase().contains(q) ||
+              c.code.toLowerCase().contains(q),
+        )
         .toList();
   }
 
@@ -550,8 +567,9 @@ class _NationalityPageState extends State<_NationalityPage> {
                   _isTr
                       ? 'Pasaportunuzu veren ülkeyi seçin.'
                       : 'Select the country that issued your passport.',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -562,10 +580,17 @@ class _NationalityPageState extends State<_NationalityPage> {
                     hintText: _isTr ? 'Ülke ara…' : 'Search country…',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: _query.isNotEmpty
-                        ? GestureDetector(
-                            onTap: _clearSearch,
-                            child: const Icon(Icons.close,
-                                size: 18, color: AppColors.textMuted),
+                        ? Semantics(
+                            button: true,
+                            label: _isTr ? 'Aramayı temizle' : 'Clear search',
+                            child: GestureDetector(
+                              onTap: _clearSearch,
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
                           )
                         : null,
                   ),
@@ -579,8 +604,9 @@ class _NationalityPageState extends State<_NationalityPage> {
               child: Center(
                 child: Text(
                   _isTr ? 'Ülke bulunamadı' : 'No countries found',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textMuted),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ),
             )
@@ -590,7 +616,9 @@ class _NationalityPageState extends State<_NationalityPage> {
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 4),
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 itemCount: filtered.length,
                 itemBuilder: (ctx, i) {
                   final country = filtered[i];
@@ -598,8 +626,7 @@ class _NationalityPageState extends State<_NationalityPage> {
                   return _CountryRow(
                     country: country,
                     isSelected: isSelected,
-                    onTap: () =>
-                        widget.onSelect(country.code, country.name),
+                    onTap: () => widget.onSelect(country.code, country.name),
                   );
                 },
               ),
@@ -652,14 +679,18 @@ class _CountryRow extends StatelessWidget {
                   country.name,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textPrimary,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                 ),
               ),
               if (isSelected)
-                const Icon(Icons.check_circle_rounded,
-                    color: AppColors.brandTeal, size: 18)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.brandTeal,
+                  size: 18,
+                )
               else
                 const SizedBox(width: 18),
             ],

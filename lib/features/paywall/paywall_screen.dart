@@ -46,6 +46,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: isTr ? 'Kapat' : 'Close',
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
@@ -165,64 +166,74 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             ? (isTr ? 'Tek seferlik ödeme' : 'One-time payment')
             : (isTr ? 'Aylık yenilenir' : 'Renews monthly');
 
-    return GestureDetector(
-      onTap: () => setState(() => _selected = p.id),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppColors.brandTeal : AppColors.divider,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: selected ? AppColors.brandTeal : AppColors.textMuted,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$title, $subtitle, ${p.price}',
+      child: GestureDetector(
+        onTap: () => setState(() => _selected = p.id),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? AppColors.brandTeal : AppColors.divider,
+              width: selected ? 2 : 1,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(title, style: AppTextStyles.titleLarge),
-                      if (isAnnual) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.brandTeal,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isTr ? 'EN POPÜLER' : 'MOST POPULAR',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.brandNavy,
-                              fontWeight: FontWeight.w700,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: selected ? AppColors.brandTeal : AppColors.textMuted,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(title, style: AppTextStyles.titleLarge),
+                        ),
+                        if (isAnnual) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandTeal,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isTr ? 'EN POPÜLER' : 'MOST POPULAR',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.brandNavy,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.textSecondary)),
-                ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(subtitle,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
               ),
-            ),
-            Text(p.price, style: AppTextStyles.titleLarge),
-          ],
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(p.price, style: AppTextStyles.titleLarge),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -249,8 +249,10 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        // 44pt minimum dokunma yüksekliği (14 + metin + 14).
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: isPrimary ? AppColors.brandTeal : Colors.transparent,
           borderRadius: BorderRadius.circular(10),

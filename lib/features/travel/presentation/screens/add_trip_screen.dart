@@ -361,6 +361,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
             maxLength: 200,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
+              labelText: L.t('Note (optional)', 'Not (isteğe bağlı)'),
               hintText: L.t('Add a note about this trip…',
                   'Bu seyahat hakkında not ekleyin…'),
               counterText: '',
@@ -666,6 +667,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                     onChanged: (v) => setState(() => _query = v),
                     style: AppTextStyles.bodyMedium,
                     decoration: InputDecoration(
+                      labelText: L.t('Search country', 'Ülke ara'),
                       hintText: L.t('Search country…', 'Ülke ara…'),
                       prefixIcon: const Icon(Icons.search, size: 20),
                       suffixIcon: _query.isNotEmpty

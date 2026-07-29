@@ -76,6 +76,19 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `country_detail_screen.dart:366` string concatenation → interpolation (lint temizlendi)
 - DÜŞÜK: `docs/APP_STORE_METADATA.md` 3 yerde "12+" → "9+" (ASC gerçek değeriyle uyumlu)
 
+**Erişilebilirlik Düzeltmeleri (2026-07-29 — Test #6, 26 bulgu, 16 dosya):**
+- KRİTİK: SOS `_HoldSosButton` → `Semantics(button:true, label:, onLongPress:)` sarmalayıcı (VoiceOver acil SOS aktive edilebilir)
+- YÜKSEK: `AppColors.textMuted` `#4A607A` → `#7D9BB8` (surfaceCard 2.23:1 → **4.57:1** WCAG AA; 111 kullanım)
+- YÜKSEK: Welcome Tour `_SlidePage` → `SingleChildScrollView` (büyük yazı taşmasını önler)
+- YÜKSEK: ConsentGate `RichText` → `textScaler: MediaQuery.textScalerOf(context)` (hukuki metin ölçekleniyor)
+- YÜKSEK: `radar_screen.dart` — 3 başlık+EES+LocationAction+Schengen link: `BoxConstraints(min 44×44)` + `Semantics(button:)` + bildirim tooltip
+- YÜKSEK: SOS FAB + paywall kapat + onboarding dil kartları — `tooltip`/`Semantics(button:, selected:)` eklendi
+- ORTA: Paywall plan kartları `Semantics(selected:, label:)` + `Flexible` fiyat/başlık sarmalayıcı
+- ORTA: `country_detail_screen.dart` AppBar + `_statRow` + `_callRow` `Flexible` + ellipsis
+- ORTA: Stays silme 20pt → min 44pt; kalan gün eşik uyarı ikonu eklendi
+- ORTA: SecurityScanner nokta dokunma 10pt → 44pt; CrossingCard butonlar 38pt → 44pt
+- DÜŞÜK: Countries chip ikonları (check/assignment), 6 TextField `labelText`, sayfa göstergeleri `Semantics(label:)`
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)

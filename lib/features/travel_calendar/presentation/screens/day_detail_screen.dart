@@ -94,6 +94,7 @@ class _DayDetailScreenState extends ConsumerState<DayDetailScreen> {
           style: AppTextStyles.bodyLarge,
           cursorColor: AppColors.brandTeal,
           decoration: InputDecoration(
+            labelText: L.t('City name', 'Şehir adı'),
             hintText: L.t('e.g. Rome', 'örn. Roma'),
             hintStyle: AppTextStyles.bodyMedium
                 .copyWith(color: AppColors.textMuted),
@@ -400,6 +401,7 @@ class _DayDetailScreenState extends ConsumerState<DayDetailScreen> {
             style: AppTextStyles.bodyLarge,
             cursorColor: AppColors.brandTeal,
             decoration: InputDecoration(
+              labelText: L.t('Note', 'Not'),
               hintText: L.t(
                 'How was your day? Write a memory...',
                 'Günün nasıl geçti? Bir anı yaz...',

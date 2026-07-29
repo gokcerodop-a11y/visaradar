@@ -266,7 +266,7 @@ class _RadarHeader extends StatelessWidget {
             tooltip: L.isTr ? 'Kolaylıklar' : 'Quick Access',
             onPressed: () => _showFeatures(context),
             padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
             icon: const Icon(
@@ -277,7 +277,7 @@ class _RadarHeader extends StatelessWidget {
             tooltip: L.isTr ? 'Kalışlar' : 'Country Stays',
             onPressed: () => context.push(AppRoutes.stays),
             padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
             icon: const Icon(
@@ -285,9 +285,10 @@ class _RadarHeader extends StatelessWidget {
               color: AppColors.textSecondary,
               size: 22,
             ),
+            tooltip: L.isTr ? 'Bildirim Ayarları' : 'Notification Settings',
             onPressed: () => context.push(AppRoutes.notificationSettings),
             padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ],
       ),
@@ -717,7 +718,7 @@ class _LocationPrePermissionCard extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onAllow,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: AppColors.brandTeal,
                       borderRadius: BorderRadius.circular(12),
@@ -739,7 +740,7 @@ class _LocationPrePermissionCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
-                    vertical: 12,
+                    vertical: 14,
                   ),
                   child: Text(
                     isTr ? 'Sonra' : 'Later',
@@ -827,7 +828,7 @@ class _EesEtiasBannerState extends State<_EesEtiasBanner> {
               color: AppColors.textSecondary,
             ),
             padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             tooltip: L.isTr ? 'Kapat' : 'Dismiss',
           ),
         ],
@@ -927,22 +928,34 @@ class _LocationAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTeal = color == AppColors.brandTeal;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isTeal ? AppColors.brandTeal.withAlpha(25) : AppColors.divider,
-          borderRadius: BorderRadius.circular(8),
-          border: isTeal
-              ? Border.all(color: AppColors.brandTeal.withAlpha(80))
-              : null,
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: isTeal
+                    ? AppColors.brandTeal.withAlpha(25)
+                    : AppColors.divider,
+                borderRadius: BorderRadius.circular(8),
+                border: isTeal
+                    ? Border.all(color: AppColors.brandTeal.withAlpha(80))
+                    : null,
+              ),
+              child: Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -1096,16 +1109,26 @@ class _SchengenCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () => context.push(AppRoutes.trips),
-            child: Text(
-              isTr
-                  ? 'Ülke kalış süreleri için tıklayın'
-                  : 'Tap to see country stay durations',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.brandTeal,
-                decoration: TextDecoration.underline,
-                decorationColor: AppColors.brandTeal,
+          Semantics(
+            link: true,
+            label: isTr
+                ? 'Ülke kalış sürelerini görüntüle'
+                : 'View country stay durations',
+            child: GestureDetector(
+              onTap: () => context.push(AppRoutes.trips),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  isTr
+                      ? 'Ülke kalış süreleri için tıklayın'
+                      : 'Tap to see country stay durations',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.brandTeal,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.brandTeal,
+                  ),
+                ),
               ),
             ),
           ),

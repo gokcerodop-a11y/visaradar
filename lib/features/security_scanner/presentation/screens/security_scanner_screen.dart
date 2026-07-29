@@ -823,16 +823,20 @@ class _PageDots extends StatelessWidget {
         final active = i == current;
         return GestureDetector(
           onTap: () => onDotTap(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
-            width: active ? 28 : 10,
-            height: 10,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              color: active
-                  ? pages[i].color
-                  : AppColors.textMuted.withValues(alpha: 0.4),
+          behavior: HitTestBehavior.opaque,
+          // 44pt minimum dokunma alanı: 10px nokta + 17px dikey padding x2.
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 17),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: active ? 28 : 10,
+              height: 10,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                color: active
+                    ? pages[i].color
+                    : AppColors.textMuted.withValues(alpha: 0.4),
+              ),
             ),
           ),
         );

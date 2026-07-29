@@ -227,6 +227,7 @@ class _ConsentGateScreenState extends State<ConsentGateScreen> {
         activeColor: AppColors.brandTeal,
         checkColor: AppColors.brandNavy,
         title: RichText(
+          textScaler: MediaQuery.textScalerOf(context),
           text: TextSpan(
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textPrimary),
             children: [

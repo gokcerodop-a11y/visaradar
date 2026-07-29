@@ -28,8 +28,9 @@ class CountriesScreen extends ConsumerWidget {
                 isTr
                     ? 'Sınır geçişinde ihtiyacın olan her şey — bir dokunuş uzağında.'
                     : 'Everything you need at a border crossing — one tap away.',
-                style: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             );
           }
@@ -60,13 +61,18 @@ class CountriesScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(c.name(isTr), style: AppTextStyles.titleLarge,
-                          overflow: TextOverflow.ellipsis, maxLines: 1),
+                      Text(
+                        c.name(isTr),
+                        style: AppTextStyles.titleLarge,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         '${c.currencyCode} · ${c.currency}',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.textSecondary),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -85,15 +91,19 @@ class CountriesScreen extends ConsumerWidget {
   Widget _schengenChip(VisaCountry c, bool isTr) {
     final Color color;
     final String label;
+    final IconData icon;
     if (c.isSchengen) {
       color = AppColors.info;
       label = 'Schengen';
+      icon = Icons.check_circle_outline;
     } else if (c.requiresVisaForTurkish) {
       color = AppColors.warning;
       label = isTr ? 'Vizeyle' : 'Visa req.';
+      icon = Icons.assignment_outlined;
     } else {
       color = AppColors.success;
       label = isTr ? 'Vizesiz' : 'Visa-free';
+      icon = Icons.check_circle_outline;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -101,12 +111,19 @@ class CountriesScreen extends ConsumerWidget {
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
