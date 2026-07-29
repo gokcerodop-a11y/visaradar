@@ -2,13 +2,13 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-30):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 5 YENİ TEST TURU (30 Tem) 47 TOPLAM BULGU DÜZELTİLDİ** (Worker f5148cf0).
+**App Store durumu (2026-07-30):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **TÜM 11 TEST + 6 TEST TURU (30 Tem) 68+ TOPLAM BULGU DÜZELTİLDİ** (Worker 180fbc81, commit bd0e5ea).
 
 **Güvenlik Durumu (2026-07-30 — TÜM BULGULAR DÜZELTİLDİ):**
-- Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c **+ Root CA G3 SHA-256 parmak izi**), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme, **vision sanitize + uzunluk sınırı**
-- Flutter: Keychain txId, premium gate'ler, **App Switcher opaque overlay** (setState, Stack/ColoredBox), kvkkConsent **AppConstants.kvkkConsentGranted** (gerçek onay durumundan), Random.secure(), jailbreak hard-block, gerçek expiresDate
-- Android: **android:allowBackup="false"** + fullBackupContent="false" eklendi
-- Worker deploy: `f5148cf0` (2026-07-30; vision sanitize + device-UUID free-trial + Root CA G3 + Apple geocoding ifşaatı)
+- Worker: KVKK consent (`!== true` strict), 6 güvenlik header (legal HTML dahil), sanitize, Apple JWS (**tam x5c zincir doğrulaması** leaf→intermediate→root + Root CA G3 SHA-256 + **bundleId kontrolü**), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme, vision sanitize + uzunluk sınırı, **IP başına günlük 5 yeni device cap** (trial bypass engeli), model bazlı fiyatlama, para birimi dönüşümü
+- Flutter: Keychain txId, **deviceId Keychain'de** (reinstall bypass kapalı), premium gate'ler, App Switcher opaque overlay, kvkkConsent AppConstants.kvkkConsentGranted, Random.secure(), jailbreak hard-block, gerçek expiresDate, **lifetime kodu kaldırıldı**
+- Android: android:allowBackup="false" + fullBackupContent="false"
+- Worker deploy: `180fbc81` (2026-07-30; 21 bulgu; tam zincir doğrulama + IP cap + model fiyat + para birimi)
 
 **Fonksiyonel Düzeltmeler (2026-07-29):**
 - KRİTİK: `/paywall` → `/subscription` (Tax-Free + Güvenlik Tarayıcı premium butonu)
