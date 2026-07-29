@@ -8,7 +8,7 @@ import '../core/localization/locale.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 
-const _consentVersion = 4;
+const _consentVersion = 5;
 const _consentKey = 'visaradar.consent.version';
 const _consentDateKey = 'visaradar.consent.date';
 
