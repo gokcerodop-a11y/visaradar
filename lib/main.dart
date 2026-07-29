@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -25,6 +26,20 @@ Future<void> _bootstrap() async {
   // Each native init is independently guarded. A failure in one step must
   // not prevent runApp() from being reached — the user can still use the app
   // even if notifications or orientation locking briefly fail to initialise.
+
+  // Jailbreak / root detection — must run before any premium feature is loaded.
+  // On a compromised device, receipt validation and Keychain isolation can be
+  // bypassed. We surface a hard warning and halt the normal app launch.
+  bool isJailbroken = false;
+  try {
+    isJailbroken = await FlutterJailbreakDetection.jailbroken;
+  } catch (e) {
+    debugPrint('[Startup] Jailbreak check failed: $e');
+  }
+  if (isJailbroken) {
+    runApp(const _JailbreakWarningApp());
+    return;
+  }
 
   try {
     tz.initializeTimeZones();
@@ -95,6 +110,66 @@ Future<void> _bootstrap() async {
       child: const VisaRadarApp(),
     ),
   );
+}
+
+/// Shown when jailbreak / root is detected.
+/// The app does not proceed past this screen — premium receipt and Keychain
+/// isolation cannot be guaranteed on a compromised device.
+class _JailbreakWarningApp extends StatelessWidget {
+  const _JailbreakWarningApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0B1120),
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(
+                    Icons.gpp_bad_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 72,
+                  ),
+                  SizedBox(height: 24),
+                  Text(
+                    'Security Risk\nGüvenlik Riski',
+                    style: TextStyle(
+                      color: Color(0xFFEDF2FF),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'This device appears to be jailbroken.\n'
+                    'VisaRadar cannot protect your subscription '
+                    'and payment data on a compromised device.\n\n'
+                    'Bu cihaz jailbreak\'li görünüyor.\n'
+                    'Güvenli olmayan cihazda abonelik ve ödeme '
+                    'bilgileriniz korunamaz.',
+                    style: TextStyle(
+                      color: Color(0xFF8FA3BF),
+                      fontSize: 14,
+                      height: 1.6,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Minimal fallback shown only when SharedPreferences is unavailable —

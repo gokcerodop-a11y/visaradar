@@ -4,10 +4,11 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 
 **App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik yaması + telefonda test build.
 
-**Güvenlik Durumu (2026-07-29 — Güvenlik Denetimi sonrası tam yama uygulandı):**
-- Worker: KVKK consent enforcement, 6 güvenlik header, sanitizeString/sanitizeMessages, Apple JWS doğrulama, TTS rate limit, body boyut sınırı, imageMediaType allowlist, role validation, KV cache temizleme (revoke/refund)
-- Flutter: Premium txId iOS Keychain'de (flutter_secure_storage), Tax-Free + Güvenlik Tarayıcı premium gate, AppLifecycleState ekran gizleme, Random.secure()
+**Güvenlik Durumu (2026-07-29 — Güvenlik Denetimi + tam yama + yeniden denetim TAMAM):**
+- Worker: KVKK consent enforcement, 6 güvenlik header, sanitizeString/sanitizeMessages, Apple JWS doğrulama (ES256 x5c), TTS rate limit, body boyut sınırı (2 MB), imageMediaType allowlist, role validation, KV cache temizleme (revoke/refund)
+- Flutter: Premium txId iOS Keychain'de (flutter_secure_storage), Tax-Free + Güvenlik Tarayıcı premium gate, AppLifecycleState ekran gizleme, Random.secure(), jailbreak tespiti (startup hard-block), Apple JWS'den gerçek expiresDate okuma
 - Worker deploy edildi: `08fe2b7b-9493-4d6a-9fe8-0be4fb740542`
+- Tüm 30 güvenlik kontrolü ONAYLANDI (yeniden denetim 2026-07-29)
 
 ## Mevcut Özellikler (tüm liste)
 
