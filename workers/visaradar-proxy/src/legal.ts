@@ -47,7 +47,8 @@ export function privacyPage(): Response {
 <p><em>The app processes your location on-device to detect your country/city. Location data is not sold. Anonymous coordinates are shared with Open-Meteo (open-source, Austria-based) for weather data.</em></p>
 
 <h3>1.2 Seyahat Profili ve Geziler (Travel Profile &amp; Trips)</h3>
-<p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri <strong>yalnızca cihazınızda</strong> saklanır. Herhangi bir sunucuya gönderilmez.</p>
+<p>Girdiğiniz geziler, tarihler ve seyahatçi profil bilgileri cihazınızda saklanır. AI asistanı kullandığınızda pasaport türü ve Schengen bakiyesi gibi profil özeti, yanıtın kişiselleştirilmesi amacıyla AI servisine dahil edilir (bkz. §1.3).</p>
+<p><em>Your trips, dates and traveller profile are stored on your device. When you use the AI assistant, a profile summary (passport type, Schengen balance) is included in the request to personalise your answer (see §1.3).</em></p>
 
 <h3>1.3 AI Asistan ve Belge Tarayıcı</h3>
 <p>AI asistana soru sorduğunuzda veya bir belge/fotoğraf yüklediğinizde ilgili metin/görüntü, güvenli proxy sunucumuz aracılığıyla <strong>Anthropic Claude API</strong>'ye iletilir. Bu veriler yalnızca yanıt üretmek amacıyla kullanılır; reklam, profil oluşturma veya satış için kullanılmaz.</p>
@@ -141,7 +142,7 @@ export function termsPage(): Response {
   <li><strong>Yıllık Premium</strong> — Otomatik yenilenen abonelik, 1 yıl, 34,99 USD.</li>
   <li><strong>Ömür Boyu Premium</strong> — Tek seferlik satın alma, 59,99 USD (tükenmeyen).</li>
 </ul>
-<p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Bir abonelik satın aldığınızda ücretsiz denemenin kullanılmamış kısmı iptal edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
+<p>Ödeme, satın alma onayında Apple Hesabınıza tahsil edilir. Mevcut dönem sona ermeden en az 24 saat önce iptal edilmediği takdirde otomatik yenilenen abonelikler otomatik olarak yenilenir; hesabınız mevcut dönem sona ermeden 24 saat içinde yenileme için tahsil edilir. Abonelikleri Apple Hesabı ayarlarınızdan (Ayarlar → Adınız → Abonelikler) yönetebilir veya iptal edebilirsiniz.</p>
 
 <h2>Uygulamanın Kullanımı</h2>
 <p>Sağlanan bilgiler yalnızca genel rehberlik içindir ve hukuki tavsiye niteliği taşımaz. Vize, giriş ve kalış koşullarını her zaman resmi hükümet kaynaklarıyla teyit edin. Seyahat kararlarınızdan siz sorumlusunuz.</p>

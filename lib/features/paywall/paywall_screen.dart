@@ -176,7 +176,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             : (isTr ? 'Aylık' : 'Monthly');
 
     final subtitle = isAnnual
-        ? (isTr ? 'Ücretsiz deneme · en avantajlı' : 'Free trial included · best value')
+        ? (isTr ? 'En avantajlı · yıllık' : 'Best value · annual')
         : isLifetime
             ? (isTr ? 'Tek seferlik ödeme' : 'One-time payment')
             : (isTr ? 'Aylık yenilenir' : 'Renews monthly');
