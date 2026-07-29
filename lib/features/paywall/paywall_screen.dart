@@ -36,6 +36,21 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       });
     }
 
+    // Show purchase error snackbar if set by subscription service.
+    final purchaseErr = subs.purchaseError;
+    if (purchaseErr != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFFEF4444),
+          content: Text(isTr
+              ? 'Satın alma başarısız oldu. Lütfen tekrar deneyin.'
+              : 'Purchase failed. Please try again.'),
+        ));
+        subs.clearError();
+      });
+    }
+
     final products = subs.products.toList();
     final hasProducts = products.isNotEmpty;
 
@@ -161,7 +176,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             : (isTr ? 'Aylık' : 'Monthly');
 
     final subtitle = isAnnual
-        ? (isTr ? '3 gün ücretsiz dene · en avantajlı' : '3-day free trial · best value')
+        ? (isTr ? 'Ücretsiz deneme · en avantajlı' : 'Free trial included · best value')
         : isLifetime
             ? (isTr ? 'Tek seferlik ödeme' : 'One-time payment')
             : (isTr ? 'Aylık yenilenir' : 'Renews monthly');
@@ -297,7 +312,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               TextButton(
-                onPressed: busy ? null : () => subs.restore(),
+                onPressed: busy ? null : () => _handleRestore(subs, isTr),
                 child: Text(isTr ? 'Satın Alımları Geri Yükle' : 'Restore'),
               ),
               Text('·',
@@ -328,6 +343,19 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleRestore(SubscriptionService subs, bool isTr) async {
+    final found = await subs.restore();
+    if (!mounted) return;
+    if (!found) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: const Color(0xFF1C2A3F),
+        content: Text(isTr
+            ? 'Geri yüklenecek satın alım bulunamadı.'
+            : 'No purchases found to restore.'),
+      ));
+    }
   }
 
   Future<void> _openUrl(String url) async {

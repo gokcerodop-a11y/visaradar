@@ -11,6 +11,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../services/ai/ai_message.dart';
 import '../../../../services/ai/anthropic_proxy.dart';
 import '../../../../services/premium_providers.dart';
+import '../../../../services/subscription_service.dart';
 import '../../data/weather_service.dart';
 import '../../domain/saved_places.dart';
 import '../../../paywall/paywall_screen.dart';
@@ -154,7 +155,10 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
         _aiInfo = result;
         _aiLoading = false;
       });
-    } on ProxySubscriptionRequiredException {
+    } on ProxySubscriptionRequiredException catch (e) {
+      if (e.reason == 'subscription-revoked') {
+        SubscriptionService.instance.revokeEntitlement().ignore();
+      }
       if (!mounted) return;
       setState(() {
         _aiLoading = false;

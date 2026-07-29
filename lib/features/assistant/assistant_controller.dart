@@ -6,6 +6,7 @@ import '../../core/localization/locale.dart';
 import '../../services/ai/ai_message.dart';
 import '../../services/ai/anthropic_proxy.dart';
 import '../../services/premium_providers.dart';
+import '../../services/subscription_service.dart';
 import '../countries/domain/country_data.dart';
 import '../location/presentation/providers/location_provider.dart';
 import '../profile/domain/models/user_profile.dart';
@@ -185,7 +186,10 @@ class AssistantController extends StateNotifier<AssistantState> {
         loading: false,
       );
       if (!isPremium) await incrementFreeQuestions();
-    } on ProxySubscriptionRequiredException {
+    } on ProxySubscriptionRequiredException catch (e) {
+      if (e.reason == 'subscription-revoked') {
+        SubscriptionService.instance.revokeEntitlement().ignore();
+      }
       state = state.copyWith(loading: false, error: 'no-subscription');
     } on ProxyRateLimitException {
       state = state.copyWith(loading: false, error: 'rate-limit');

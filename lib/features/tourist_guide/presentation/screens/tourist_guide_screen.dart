@@ -11,6 +11,7 @@ import '../../../../services/ai/ai_message.dart' show AIImageAttachment;
 import '../../../../services/ai/anthropic_proxy.dart';
 import '../../../../services/natural_tts.dart';
 import '../../../../services/premium_providers.dart';
+import '../../../../services/subscription_service.dart';
 import '../../../paywall/paywall_screen.dart';
 
 /// AI Tur Rehberi — kullanıcı bir anıt/müze/eser fotoğrafı çeker,
@@ -118,7 +119,10 @@ class _TouristGuideScreenState extends ConsumerState<TouristGuideScreen> {
         _guideText = result;
         _isLoading = false;
       });
-    } on ProxySubscriptionRequiredException {
+    } on ProxySubscriptionRequiredException catch (e) {
+      if (e.reason == 'subscription-revoked') {
+        SubscriptionService.instance.revokeEntitlement().ignore();
+      }
       if (!mounted) return;
       setState(() {
         _isLoading = false;

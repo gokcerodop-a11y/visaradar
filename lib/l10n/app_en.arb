@@ -72,12 +72,6 @@
   "settingsTerms": "Terms of Service",
   "settingsAbout": "About VisaRadar",
 
-  "subscriptionTitle": "VisaRadar Premium",
-  "subscriptionTrialInfo": "7-day free trial",
-  "subscriptionPriceEur": "€4.99 / month",
-  "subscriptionPriceTry": "₺200 / month",
-  "subscriptionStartTrial": "Start Free Trial",
-
   "errorGeneric": "Something went wrong. Please try again.",
   "errorLocationUnavailable": "Location unavailable",
   "errorNetworkUnavailable": "No internet connection"

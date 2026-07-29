@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu — **TÜM TESTLER TAMAMLANDI** (Test 1–7). Son commit: `4505026`.
+**App Store durumu (2026-07-29):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 güvenlik + fonksiyonel + business-case + performans + store uyumluluk + erişilebilirlik + cihaz/sürüm uyumluluğu + **ödeme/abonelik** — **TÜM TESTLER TAMAMLANDI** (Test 1–8).
 
 **Güvenlik Durumu (2026-07-29 — 30/30 ONAYLANDI):**
 - Worker: KVKK consent, 6 güvenlik header, sanitize, Apple JWS doğrulama (ES256 x5c), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme
@@ -111,6 +111,19 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - DÜŞÜK: `natural_tts.dart` yorum "20 entries" → "5 entries" (gerçek değerle uyumlu)
 - DÜŞÜK: 6 push ekran daha alt padding + home indicator inset: `sos_setup`, `document_scanner`, `add_trip`, `trips`, `location_detail`, `border_mode_widgets`
 
+**Ödeme/Abonelik Düzeltmeleri (2026-07-29 — Test #8, 15 bulgu):**
+- **ASC API:** Apple Server Notifications V2 webhook `https://visaradar-proxy.gokcerodop.workers.dev/v1/apple-notify` üretim + sandbox kayıtlı (2026-07-29)
+- KRİTİK: `_activate()` — monthly/annual restore için `_expiresAt.isAfter(now)` kontrolü eklendi (süresi dolmuş abonelik premium vermiyor)
+- YÜKSEK: Satın alma hatası kullanıcıya gösteriliyor — `_purchaseError` getter + `clearError()` + paywall SnackBar (`PurchaseStatus.error`)
+- YÜKSEK: Lifetime iade + 5.2 Worker 401 revocation → `revokeEntitlement()` — assistant/tourist_guide/location_detail `on ProxySubscriptionRequiredException catch (e)` + `e.reason == 'subscription-revoked'` → Keychain/SharedPrefs temizleniyor
+- ORTA: `buy()` — `_purchaseInFlight` double-tap guard (reentrancy) + false return'da reset
+- ORTA: `resumed` lifecycle → `SubscriptionService.instance.refreshExpiry()` (`app.dart`)
+- ORTA: `_scheduleExpiryTimer()` — abonelik bitiminde kesin zamanlayıcı (tek-atışlık) otomatik premium iptali
+- ORTA: `restore()` → `Future<bool>` döndürür (found/empty); paywall `_handleRestore()` ile "geri yüklenecek satın alım bulunamadı" SnackBar
+- ORTA: Paywall "3 gün ücretsiz dene · en avantajlı" → "Ücretsiz deneme · en avantajlı" (hardcoded gün sayısı kaldırıldı)
+- DÜŞÜK: `restore()` — `_purchaseInFlight = true` busy guard eklendi
+- DÜŞÜK: Ölü l10n stringleri silindi: `subscriptionTitle`, `subscriptionTrialInfo`, `subscriptionPriceEur`, `subscriptionPriceTry`, `subscriptionStartTrial` (app_en.arb + app_tr.arb + app_localizations*.dart)
+
 **Backlog (kapsam dışı, sonraki sürüm):**
 - Ömür boyu $59.99 → $89.99 (App Store Connect'te yapılır)
 - Vize süre takibi özelliği (yeni büyük özellik)
@@ -157,7 +170,7 @@ Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli)
 - Bundle id: `com.visaradar.visaradar` · App id: `6761065257` · Team: `V8CC8CQG3W`
 - Worker: `visaradar-proxy.gokcerodop.workers.dev`
 - Worker chat modeli: `claude-sonnet-5` (deploy: `3497463f`, 2026-07-29 — Opus 4.8'den düşürüldü)
-- ASC key: `~/Downloads/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
+- ASC key: `~/.private_keys/AuthKey_SDUZJJP88A.p8` (KID `SDUZJJP88A`, ISS `a8b3e068-98a4-4929-af96-52e370a38db7`)
 - ASC otomasyonu: `tool/asc_visaradar.mjs` (status/verify/shots/builds)
 - IAP: `com.visaradar.premium.{monthly $4.99, annual $34.99 +3g deneme, lifetime $59.99}`
 - Yasal (canlı, worker): `…workers.dev/privacy` ve `…workers.dev/terms` · Kaynak: `workers/visaradar-proxy/src/legal.ts`

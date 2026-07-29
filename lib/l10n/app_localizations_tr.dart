@@ -184,21 +184,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsAbout => 'VisaRadar Hakkında';
 
   @override
-  String get subscriptionTitle => 'VisaRadar Premium';
-
-  @override
-  String get subscriptionTrialInfo => '7 günlük ücretsiz deneme';
-
-  @override
-  String get subscriptionPriceEur => '€4,99 / ay';
-
-  @override
-  String get subscriptionPriceTry => '₺200 / ay';
-
-  @override
-  String get subscriptionStartTrial => 'Ücretsiz Denemeyi Başlat';
-
-  @override
   String get errorGeneric => 'Bir şeyler ters gitti. Lütfen tekrar deneyin.';
 
   @override

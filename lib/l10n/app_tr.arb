@@ -72,12 +72,6 @@
   "settingsTerms": "Kullanım Koşulları",
   "settingsAbout": "VisaRadar Hakkında",
 
-  "subscriptionTitle": "VisaRadar Premium",
-  "subscriptionTrialInfo": "7 günlük ücretsiz deneme",
-  "subscriptionPriceEur": "€4,99 / ay",
-  "subscriptionPriceTry": "₺200 / ay",
-  "subscriptionStartTrial": "Ücretsiz Denemeyi Başlat",
-
   "errorGeneric": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
   "errorLocationUnavailable": "Konum kullanılamıyor",
   "errorNetworkUnavailable": "İnternet bağlantısı yok"

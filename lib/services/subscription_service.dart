@@ -52,6 +52,9 @@ class SubscriptionService extends ChangeNotifier {
   DateTime? _expiresAt;
   List<ProductDetails> _products = const [];
   bool _purchaseInFlight = false;
+  String? _purchaseError;
+  bool _lastRestoreFoundPurchases = false;
+  Timer? _expiryTimer;
 
   // ── Public getters ────────────────────────────────────────────────
 
@@ -61,6 +64,13 @@ class SubscriptionService extends ChangeNotifier {
   bool get purchaseInFlight => _purchaseInFlight;
   String? get currentOriginalTransactionId => _originalTransactionId;
   DateTime? get expiresAt => _expiresAt;
+
+  /// Non-null while a purchase error is pending display; call [clearError] once shown.
+  String? get purchaseError => _purchaseError;
+
+  void clearError() {
+    _purchaseError = null;
+  }
 
   /// Live product details from the App Store, ordered monthly → annual →
   /// lifetime. Empty until the store responds (or on Simulator / no account).
@@ -92,6 +102,7 @@ class SubscriptionService extends ChangeNotifier {
     _initialized = true;
 
     await _loadCachedState();
+    _scheduleExpiryTimer();
 
     _available = await _iap.isAvailable();
     if (!_available) {
@@ -131,14 +142,19 @@ class SubscriptionService extends ChangeNotifier {
 
   /// Start a purchase. The result arrives asynchronously via [purchaseStream].
   Future<bool> buy(ProductDetails product) async {
-    if (!_available) return false;
+    if (!_available || _purchaseInFlight) return false;
     _purchaseInFlight = true;
     notifyListeners();
     final param = PurchaseParam(productDetails: product);
     try {
       // All three products are bought via buyNonConsumable in in_app_purchase
       // (auto-renewable subscriptions included).
-      return await _iap.buyNonConsumable(purchaseParam: param);
+      final ok = await _iap.buyNonConsumable(purchaseParam: param);
+      if (!ok) {
+        _purchaseInFlight = false;
+        notifyListeners();
+      }
+      return ok;
     } catch (e) {
       debugPrint('[SubscriptionService] buy failed: $e');
       _purchaseInFlight = false;
@@ -147,9 +163,42 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
-  Future<void> restore() async {
-    if (!_available) return;
-    await _iap.restorePurchases();
+  /// Restore prior purchases. Returns true if at least one purchase was found.
+  Future<bool> restore() async {
+    if (!_available || _purchaseInFlight) return false;
+    _purchaseInFlight = true;
+    _lastRestoreFoundPurchases = false;
+    notifyListeners();
+    try {
+      await _iap.restorePurchases();
+      // Allow stream to deliver restored events before checking the flag.
+      await Future.delayed(const Duration(milliseconds: 800));
+      _purchaseInFlight = false;
+      final found = _lastRestoreFoundPurchases;
+      notifyListeners();
+      return found;
+    } catch (e) {
+      debugPrint('[SubscriptionService] restore failed: $e');
+      _purchaseInFlight = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Re-evaluate expiry against the current clock; call on app resume.
+  void refreshExpiry() {
+    if (_plan == PremiumPlan.lifetime) return;
+    if (_expiresAt != null) {
+      final wasActive = _isPremium;
+      _isPremium = _expiresAt!.isAfter(DateTime.now());
+      if (wasActive != _isPremium) notifyListeners();
+    }
+    _scheduleExpiryTimer();
+  }
+
+  /// Clear local premium entitlement when the Worker signals a revocation/refund.
+  Future<void> revokeEntitlement() async {
+    await debugReset();
   }
 
   // ── Internal purchase handling ────────────────────────────────────
@@ -161,13 +210,20 @@ class SubscriptionService extends ChangeNotifier {
           _purchaseInFlight = true;
           break;
         case PurchaseStatus.purchased:
+          await _activate(p);
+          _purchaseInFlight = false;
+          break;
         case PurchaseStatus.restored:
+          _lastRestoreFoundPurchases = true;
           await _activate(p);
           _purchaseInFlight = false;
           break;
         case PurchaseStatus.canceled:
+          _purchaseInFlight = false;
+          break;
         case PurchaseStatus.error:
-          debugPrint('[SubscriptionService] ${p.status.name}: ${p.error}');
+          _purchaseError = p.error?.message ?? 'purchase-failed';
+          debugPrint('[SubscriptionService] purchase error: ${p.error}');
           _purchaseInFlight = false;
           break;
       }
@@ -228,25 +284,42 @@ class SubscriptionService extends ChangeNotifier {
     }
 
     _originalTransactionId = txId;
-    _isPremium = true;
+    final now = DateTime.now();
 
     switch (purchase.productID) {
       case productLifetime:
         _plan = PremiumPlan.lifetime;
-        _expiresAt = null; // forever
+        _expiresAt = null;
+        _isPremium = true;
         break;
       case productAnnual:
         _plan = PremiumPlan.annual;
-        _expiresAt = jwsExpiresAt ?? DateTime.now().add(const Duration(days: 366));
+        _expiresAt = jwsExpiresAt ?? now.add(const Duration(days: 366));
+        // Guard against restoring an already-expired subscription.
+        _isPremium = _expiresAt!.isAfter(now);
         break;
       case productMonthly:
       default:
         _plan = PremiumPlan.monthly;
-        _expiresAt = jwsExpiresAt ?? DateTime.now().add(const Duration(days: 31));
+        _expiresAt = jwsExpiresAt ?? now.add(const Duration(days: 31));
+        _isPremium = _expiresAt!.isAfter(now);
         break;
     }
+    _scheduleExpiryTimer();
 
     await _saveCachedState();
+  }
+
+  /// Schedules a one-shot timer to revoke premium precisely when [_expiresAt] passes.
+  void _scheduleExpiryTimer() {
+    _expiryTimer?.cancel();
+    if (_plan == PremiumPlan.lifetime || _expiresAt == null) return;
+    final delay = _expiresAt!.difference(DateTime.now());
+    if (delay.isNegative) return;
+    _expiryTimer = Timer(delay, () {
+      _isPremium = false;
+      notifyListeners();
+    });
   }
 
   Future<void> _loadCachedState() async {
@@ -312,6 +385,7 @@ class SubscriptionService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _expiryTimer?.cancel();
     _sub?.cancel();
     super.dispose();
   }

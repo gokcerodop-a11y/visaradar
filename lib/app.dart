@@ -7,6 +7,7 @@ import 'core/localization/locale.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/notifications/providers/notification_coordinator_provider.dart';
+import 'services/subscription_service.dart';
 
 class VisaRadarApp extends ConsumerStatefulWidget {
   const VisaRadarApp({super.key});
@@ -38,6 +39,7 @@ class _VisaRadarAppState extends ConsumerState<VisaRadarApp>
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
     } else if (state == AppLifecycleState.resumed) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SubscriptionService.instance.refreshExpiry();
     }
   }
 

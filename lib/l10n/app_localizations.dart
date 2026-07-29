@@ -434,36 +434,6 @@ abstract class AppLocalizations {
   /// **'About VisaRadar'**
   String get settingsAbout;
 
-  /// No description provided for @subscriptionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'VisaRadar Premium'**
-  String get subscriptionTitle;
-
-  /// No description provided for @subscriptionTrialInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'7-day free trial'**
-  String get subscriptionTrialInfo;
-
-  /// No description provided for @subscriptionPriceEur.
-  ///
-  /// In en, this message translates to:
-  /// **'€4.99 / month'**
-  String get subscriptionPriceEur;
-
-  /// No description provided for @subscriptionPriceTry.
-  ///
-  /// In en, this message translates to:
-  /// **'₺200 / month'**
-  String get subscriptionPriceTry;
-
-  /// No description provided for @subscriptionStartTrial.
-  ///
-  /// In en, this message translates to:
-  /// **'Start Free Trial'**
-  String get subscriptionStartTrial;
-
   /// No description provided for @errorGeneric.
   ///
   /// In en, this message translates to:
