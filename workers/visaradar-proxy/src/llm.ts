@@ -57,7 +57,7 @@ async function callAnthropic(
     usage?: Record<string, number>;
   };
   // Track cost for the daily finance report (non-critical).
-  if (data.usage) await recordClaudeUsage(env, data.usage).catch(() => {});
+  if (data.usage) await recordClaudeUsage(env, data.usage, model).catch(() => {});
   const text = (data.content ?? [])
     .filter((b) => b.type === "text" && typeof b.text === "string")
     .map((b) => b.text)

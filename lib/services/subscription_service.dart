@@ -20,7 +20,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum PremiumPlan { none, monthly, annual, lifetime }
+enum PremiumPlan { none, monthly, annual }
 
 class SubscriptionService extends ChangeNotifier {
   SubscriptionService._();
@@ -28,8 +28,6 @@ class SubscriptionService extends ChangeNotifier {
 
   static const productMonthly = 'com.visaradar.premium.monthly';
   static const productAnnual = 'com.visaradar.premium.annual';
-  static const productLifetime = 'com.visaradar.premium.lifetime';
-
   static Set<String> get productIds => {productMonthly, productAnnual};
 
   static const _kCachedTxId = 'visaradar.premium.txId';
@@ -93,7 +91,6 @@ class SubscriptionService extends ChangeNotifier {
 
   ProductDetails? get monthly => productById(productMonthly);
   ProductDetails? get annual => productById(productAnnual);
-  ProductDetails? get lifetime => productById(productLifetime);
 
   // ── Init ──────────────────────────────────────────────────────────
 
@@ -114,8 +111,11 @@ class SubscriptionService extends ChangeNotifier {
     _sub = _iap.purchaseStream.listen(
       _onPurchaseUpdate,
       onDone: () {},
-      onError: (Object e) =>
-          debugPrint('[SubscriptionService] purchase stream error: $e'),
+      onError: (Object e) {
+        debugPrint('[SubscriptionService] purchase stream error: $e');
+        _purchaseInFlight = false;
+        notifyListeners();
+      },
     );
 
     await queryProducts();
@@ -174,7 +174,10 @@ class SubscriptionService extends ChangeNotifier {
     try {
       await _iap.restorePurchases();
       // Allow stream to deliver restored events before checking the flag.
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Wait for the stream to deliver restored purchase events.
+      // 1500ms covers most network conditions; premium activates via stream even if
+      // this times out (only the "not found" SnackBar may be incorrect on slow networks).
+      await Future.delayed(const Duration(milliseconds: 1500));
       _restoreInFlight = false;
       final found = _lastRestoreFoundPurchases;
       notifyListeners();
@@ -189,7 +192,6 @@ class SubscriptionService extends ChangeNotifier {
 
   /// Re-evaluate expiry against the current clock; call on app resume.
   void refreshExpiry() {
-    if (_plan == PremiumPlan.lifetime) return;
     if (_expiresAt != null) {
       final wasActive = _isPremium;
       _isPremium = _expiresAt!.isAfter(DateTime.now());
@@ -315,11 +317,6 @@ class SubscriptionService extends ChangeNotifier {
     final now = DateTime.now();
 
     switch (purchase.productID) {
-      case productLifetime:
-        _plan = PremiumPlan.lifetime;
-        _expiresAt = null;
-        _isPremium = true;
-        break;
       case productAnnual:
         _plan = PremiumPlan.annual;
         _expiresAt = jwsExpiresAt ?? now.add(const Duration(days: 366));
@@ -341,7 +338,7 @@ class SubscriptionService extends ChangeNotifier {
   /// Schedules a one-shot timer to revoke premium precisely when [_expiresAt] passes.
   void _scheduleExpiryTimer() {
     _expiryTimer?.cancel();
-    if (_plan == PremiumPlan.lifetime || _expiresAt == null) return;
+    if (_expiresAt == null) return;
     final delay = _expiresAt!.difference(DateTime.now());
     if (delay.isNegative) return;
     _expiryTimer = Timer(delay, () {
@@ -373,10 +370,7 @@ class SubscriptionService extends ChangeNotifier {
       (e) => e.name == planName,
       orElse: () => PremiumPlan.none,
     );
-    if (_plan == PremiumPlan.lifetime) {
-      _isPremium = _originalTransactionId != null;
-      _expiresAt = null;
-    } else if (exp != null) {
+    if (exp != null) {
       _expiresAt = DateTime.fromMillisecondsSinceEpoch(exp);
       _isPremium = _expiresAt!.isAfter(DateTime.now());
     }

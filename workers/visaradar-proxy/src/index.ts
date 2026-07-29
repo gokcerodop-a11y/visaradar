@@ -31,7 +31,7 @@ export default {
 
     try {
       if (method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: CORS });
+        return new Response(null, { status: 204, headers: { ...CORS, ...SECURITY_HEADERS } });
       }
       if (method === "GET" && path === "/healthz") {
         return jsonResponse({ status: "ok" });
@@ -98,22 +98,45 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
   // ── Free-trial path (no Apple subscription yet) ───────────────────────────
   if (token === FREE_TRIAL_SENTINEL) {
-    // Use a stable device-scoped ID when available; fall back to IP.
-    // IP-based limiting can falsely exhaust the trial for many users sharing
-    // the same carrier NAT or hotel/airport Wi-Fi.
     const deviceId = request.headers.get("x-device-id")?.trim() ?? "";
     const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-    const freeKey = deviceId.length >= 16
-      ? `freetrial:chat:dev:${deviceId}`
-      : `freetrial:chat:ip:${ip}`;
-    const usedStr = await env.USAGE.get(freeKey) ?? "0";
+
+    // Determine rate-limit key. Device UUID is preferred to avoid shared-IP
+    // exhaustion. To prevent infinite UUID generation from one IP, new devices
+    // are counted per-IP per-day; once the cap is reached the IP key is used.
+    let freeKey: string;
+    let usedStr: string;
+    if (deviceId.length >= 16) {
+      const devKey = `freetrial:chat:dev:${deviceId}`;
+      const devUsed = await env.USAGE.get(devKey);
+      if (devUsed === null) {
+        // First request from this device — check IP daily new-device cap.
+        const ipCapKey = `freetrial:ipcap:${trDay()}:${ip}`;
+        const ipCap = parseInt((await env.USAGE.get(ipCapKey)) ?? "0", 10);
+        if (ipCap >= 5) {
+          freeKey = `freetrial:chat:ip:${ip}`;
+          usedStr = (await env.USAGE.get(freeKey)) ?? "0";
+        } else {
+          await env.USAGE.put(ipCapKey, String(ipCap + 1), { expirationTtl: 48 * 3600 });
+          freeKey = devKey;
+          usedStr = "0";
+        }
+      } else {
+        freeKey = devKey;
+        usedStr = devUsed;
+      }
+    } else {
+      freeKey = `freetrial:chat:ip:${ip}`;
+      usedStr = (await env.USAGE.get(freeKey)) ?? "0";
+    }
+
     const used = parseInt(usedStr, 10);
     if (used >= FREE_TRIAL_LIMIT) {
       return jsonResponse({ error: "unauthorized", reason: "free-trial-exhausted" }, 402);
     }
 
     const body = await parseJsonBody<ChatBody>(request);
-    if (!body?.context?.kvkkConsent) {
+    if (body?.context?.kvkkConsent !== true) {
       return jsonResponse({ error: "kvkk-consent-required" }, 403);
     }
     if (!body?.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
@@ -152,7 +175,7 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
 
   // KVKK consent zorunlu (CLAUDE.md §4)
   const body = await parseJsonBody<ChatBody>(request);
-  if (!body?.context?.kvkkConsent) {
+  if (body?.context?.kvkkConsent !== true) {
     return jsonResponse({ error: "kvkk-consent-required" }, 403);
   }
 
@@ -207,7 +230,7 @@ async function handleVision(request: Request, env: Env): Promise<Response> {
   }
 
   const body = await parseJsonBody<VisionBody>(request);
-  if (!body?.context?.kvkkConsent) {
+  if (body?.context?.kvkkConsent !== true) {
     return jsonResponse({ error: "kvkk-consent-required" }, 403);
   }
   if (!body?.imageBase64 || !body.imageMediaType) {

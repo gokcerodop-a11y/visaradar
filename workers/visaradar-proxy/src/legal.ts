@@ -2,8 +2,16 @@
 // proxy so the App Store metadata can point at functional, always-live links
 // (App Review Guideline 3.1.2 requires these for auto-renewable subscriptions).
 
-const SUPPORT_EMAIL = "gokcerodop@gmail.com";
-const LAST_UPDATED = "29 Temmuz 2026 / 29 July 2026";
+import { SECURITY_HEADERS } from "./utils.js";
+
+const LAST_UPDATED = "30 Temmuz 2026 / 30 July 2026";
+
+// HTML pages allow inline styles; override CSP from the default API policy.
+const HTML_SECURITY_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "content-security-policy":
+    "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+};
 
 function page(title: string, bodyHtml: string): Response {
   const html = `<!doctype html>
@@ -26,11 +34,15 @@ function page(title: string, bodyHtml: string): Response {
 </head>
 <body>${bodyHtml}
 <hr>
-<p class="muted">VisaRadar Travel · İletişim / Contact: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> · Son güncelleme / Last updated: ${LAST_UPDATED}</p>
+<p class="muted">VisaRadar Travel · <a href="/support">Destek / Support</a> · Son güncelleme / Last updated: ${LAST_UPDATED}</p>
 </body></html>`;
   return new Response(html, {
     status: 200,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=3600" },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+      ...HTML_SECURITY_HEADERS,
+    },
   });
 }
 
@@ -69,7 +81,7 @@ export function privacyPage(): Response {
 <h2>2a. Veri Sorumlusu / Data Controller</h2>
 <p><strong>Gökçe Rodop</strong> — VisaRadar Travel uygulamasının geliştiricisi ve 6698 Sayılı KVKK kapsamındaki veri sorumlusudur.<br>
 <em>Gökçe Rodop is the developer of VisaRadar Travel and the data controller under KVKK.</em></p>
-<p>İletişim / Contact: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
+<p>İletişim / Contact: <a href="/support">destek sayfası / support page</a></p>
 
 <h2>2b. Veri Saklama Süresi / Data Retention</h2>
 <p>Cihazınızda sakladığınız veriler (seyahatler, profil, konum kayıtları) uygulamayı kaldırana kadar saklanır. Yapay zekâ sorularınız Anthropic'in sunucularında en fazla 30 gün süreyle tutulabilir; bu süre Anthropic'in gizlilik politikasına göre belirlenir.</p>
@@ -164,6 +176,10 @@ export function termsPage(): Response {
 <h2>Değişiklikler / Changes</h2>
 <p>Bu şartlar zaman zaman güncellenebilir. Önemli değişikliklerde uygulama içi bildirim ile bilgilendirme yapılacaktır.</p>
 <p><em>These terms may be updated from time to time. You will be notified of significant changes via an in-app notification.</em></p>
+
+<h2>İade / Refunds</h2>
+<p>İade talepleri Apple üzerinden yapılır: <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a><br>
+<em>Refund requests are handled by Apple: <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a></em></p>
 
 <h2>İletişim / Contact</h2>
 <p>Bu şartlarla ilgili sorularınızı <a href="/support">destek sayfamız</a> üzerinden iletebilirsiniz.</p>

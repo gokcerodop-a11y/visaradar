@@ -21,7 +21,7 @@ export async function handleTts(request: Request, env: Env): Promise<Response> {
   }
 
   const body = await parseJsonBody<{ text?: string; context?: { kvkkConsent?: boolean } }>(request);
-  if (!body?.context?.kvkkConsent) {
+  if (body?.context?.kvkkConsent !== true) {
     return jsonResponse({ error: "kvkk-consent-required" }, 403);
   }
 

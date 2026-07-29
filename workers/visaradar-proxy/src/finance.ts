@@ -4,11 +4,13 @@
 import type { Env } from "./env.js";
 import { sendTelegram } from "./notify.js";
 
-// Claude Opus 4.8 pricing (USD / 1M tokens).
-const PRICE_IN = 15;
-const PRICE_OUT = 75;
-const PRICE_CACHE_READ = 1.5;
-const PRICE_CACHE_WRITE = 18.75;
+// Per-model Claude pricing (USD / 1M tokens). Add new models here as needed.
+const MODEL_PRICES: Record<string, { inp: number; out: number; cr: number; cw: number }> = {
+  "claude-sonnet-5":   { inp: 3,  out: 15, cr: 0.3,  cw: 3.75  },
+  "claude-opus-4-8":   { inp: 15, out: 75, cr: 1.5,  cw: 18.75 },
+  "claude-haiku-4-5":  { inp: 0.8, out: 4, cr: 0.08, cw: 1.0   },
+};
+const DEFAULT_PRICES = MODEL_PRICES["claude-sonnet-5"]!;
 
 /** Turkey day (UTC+3) key: YYYY-MM-DD. */
 export function trDay(offsetDays = 0): string {
@@ -31,14 +33,13 @@ interface ClaudeUsage {
   cache_creation_input_tokens?: number;
 }
 
-export async function recordClaudeUsage(env: Env, u: ClaudeUsage): Promise<void> {
+export async function recordClaudeUsage(env: Env, u: ClaudeUsage, model?: string): Promise<void> {
+  const p = MODEL_PRICES[model ?? ""] ?? DEFAULT_PRICES;
   const inp = u.input_tokens || 0;
   const out = u.output_tokens || 0;
   const cr = u.cache_read_input_tokens || 0;
   const cw = u.cache_creation_input_tokens || 0;
-  const usd =
-    (inp * PRICE_IN + out * PRICE_OUT + cr * PRICE_CACHE_READ + cw * PRICE_CACHE_WRITE) /
-    1_000_000;
+  const usd = (inp * p.inp + out * p.out + cr * p.cr + cw * p.cw) / 1_000_000;
   const day = trDay();
   await _add(env, `fin:cost:${day}`, usd);
   await _add(env, `fin:ans:${day}`, 1);
@@ -54,7 +55,13 @@ export async function recordRevenue(
   if (notificationType === "DID_RENEW") await _add(env, `fin:renew:${day}`, 1);
   const price = tx.price || 0;
   if (price > 0 && tx.offerType !== 1) {
-    await _add(env, `fin:rev:${day}`, price / 1000);
+    // tx.price is in milliunits of tx.currency. Convert non-TRY to TRY using
+    // the configured exchange rate so the daily report is always in TRY.
+    const fx = Number(env.USD_TRY) || 43;
+    const priceMajor = price / 1000;
+    const currency = (tx.currency ?? "USD").toUpperCase();
+    const priceTry = currency === "TRY" ? priceMajor : priceMajor * fx;
+    await _add(env, `fin:rev:${day}`, priceTry);
   }
 }
 

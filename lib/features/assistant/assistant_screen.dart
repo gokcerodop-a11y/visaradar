@@ -230,8 +230,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           Expanded(
             child: Text(
               isTr
-                  ? 'Ücretsiz deneme: $shown/$kFreeQuestionLimit soru kullanıldı'
-                  : 'Free trial: $shown/$kFreeQuestionLimit questions used',
+                  ? 'Ücretsiz: $shown/$kFreeQuestionLimit soru kullanıldı'
+                  : '$shown/$kFreeQuestionLimit free questions used',
               style:
                   AppTextStyles.caption.copyWith(color: AppColors.brandTeal),
             ),
@@ -266,9 +266,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
               Expanded(
                 child: Text(
                   isTr
-                      ? 'Ücretsiz deneme sona erdi. Günde 40 soruluk AI asistan için '
+                      ? '3 ücretsiz sorunuz bitti. Günde 40 soruluk AI asistan için '
                           'Premium\'a geçin!'
-                      : 'Free trial ended. Upgrade to Premium for 40 AI questions/day!',
+                      : '3 free questions used. Upgrade to Premium for 40 AI questions/day!',
                   style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.textPrimary),
                 ),

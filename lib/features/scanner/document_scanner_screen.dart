@@ -175,8 +175,8 @@ class _DocumentScannerScreenState
           isTr
               ? 'Belgeler güvenli sunucumuz aracılığıyla AI servisine iletilir '
                   've saklanmaz; sonuçları kendin doğrula.'
-              : 'Documents are processed on the fly and not stored; verify '
-                  'results yourself.',
+              : 'Documents are sent to the AI service via our secure server '
+                  'and are not stored; verify results yourself.',
           style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
         ),
       ],

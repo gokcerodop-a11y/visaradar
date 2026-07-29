@@ -38,7 +38,10 @@ class SchengenCalculator {
     List<TravelEntry> entries, {
     DateTime? referenceDate,
   }) {
-    final today = (referenceDate ?? DateTime.now()).toUtc();
+    final rawToday = (referenceDate ?? DateTime.now()).toUtc();
+    // Normalize to UTC midnight to avoid fractional-day rounding errors when
+    // entry dates are stored as local midnight converted to UTC.
+    final today = DateTime.utc(rawToday.year, rawToday.month, rawToday.day);
     final windowEnd = today;
     final windowStart = today.subtract(
       const Duration(days: AppConstants.schengenWindowDays - 1),
@@ -111,6 +114,8 @@ class SchengenCalculator {
     final dates = schengenEntries.map((e) => e.entryDate).toList()..sort();
     final oldest = dates.first;
     // That day exits the window 180 days after it entered.
-    return oldest.add(const Duration(days: AppConstants.schengenWindowDays));
+    final reset = oldest.add(const Duration(days: AppConstants.schengenWindowDays));
+    // Never return a date in the past — that would show a misleading "already passed" date.
+    return reset.isAfter(today) ? reset : today.add(const Duration(days: 1));
   }
 }

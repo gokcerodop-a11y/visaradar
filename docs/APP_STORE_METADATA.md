@@ -18,7 +18,7 @@ Preparation document for App Store (iOS) and Google Play (Android) submissions.
 | **Build Number** | 7 |
 | **Category** | Travel |
 | **Age Rating** | **9+** (matureOrSuggestiveThemes: INFREQUENT_OR_MILD — ASC'de ayarlandı) |
-| **Platforms** | iOS 16.0+ |
+| **Platforms** | iOS 15.0+ |
 
 ---
 
@@ -76,7 +76,7 @@ IMPORTANT
 VisaRadar Travel is not an official visa advisory service. AI responses may be out of date due to changing regulations. Always verify visa and entry rules with official government sources before travelling. Visa data applies to Turkish standard passport holders.
 
 PRICING
-VisaRadar Premium: Monthly $4.99 · Annual $34.99. Manage or cancel anytime in Settings → Your Name → Subscriptions.
+VisaRadar Premium is available as monthly or annual auto-renewable subscription — see in-app pricing. Manage or cancel anytime in Settings → Your Name → Subscriptions.
 ```
 
 ### Keywords *(100 chars max)*

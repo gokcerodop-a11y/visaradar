@@ -134,7 +134,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             'Belge Tarayıcı (pasaport, vize ve izin belgeleri)',
             'Derin Bilgi — SHA-256 konum kanıtı zinciri',
             'Türkiye kara sınırı modu',
-            'Seyahat tarzına özel akıllı ipuçları',
           ]
         : const [
             'AI Assistant (40 questions/day)',
@@ -144,7 +143,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             'Document Scanner (passport, visa & permits)',
             'Deep Record — SHA-256 location proof chain',
             'Turkey land border mode',
-            'Smart tips tailored to your travel style',
           ];
     return Column(
       children: [

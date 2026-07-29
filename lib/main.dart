@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
@@ -111,13 +112,25 @@ Future<void> _bootstrap() async {
   AppConstants.kvkkConsentGranted = await isConsentGiven();
 
   // Ensure a stable device ID exists for Worker free-trial rate limiting.
-  // Using a device-scoped ID avoids shared-IP (hotel/airport Wi-Fi) exhausting
-  // the trial quota for unrelated users on the same network.
-  String deviceId = prefs.getString(AppConstants.keyDeviceId) ?? '';
+  // Stored in Keychain (survives app reinstall) so a reinstall doesn't reset
+  // the free-trial quota, closing the reinstall-to-bypass loophole.
+  const secureStorage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+  String deviceId = await secureStorage.read(key: AppConstants.keyDeviceId) ?? '';
+  // Migrate from SharedPrefs if previously stored there.
+  if (deviceId.isEmpty) {
+    final legacy = prefs.getString(AppConstants.keyDeviceId) ?? '';
+    if (legacy.length >= 16) {
+      deviceId = legacy;
+      await secureStorage.write(key: AppConstants.keyDeviceId, value: deviceId);
+      await prefs.remove(AppConstants.keyDeviceId);
+    }
+  }
   if (deviceId.length < 16) {
     final rng = Random.secure();
     deviceId = List.generate(32, (_) => rng.nextInt(16).toRadixString(16)).join();
-    await prefs.setString(AppConstants.keyDeviceId, deviceId);
+    await secureStorage.write(key: AppConstants.keyDeviceId, value: deviceId);
   }
   AppConstants.deviceId = deviceId;
 
