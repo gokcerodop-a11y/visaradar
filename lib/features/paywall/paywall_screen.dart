@@ -97,9 +97,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         const SizedBox(height: 8),
         Text(
           isTr
-              ? 'Yapay zekâ seyahat asistanı, belge tarayıcı ve sınır modunun '
-                  'kilidini aç.'
-              : 'Unlock the AI travel assistant, document scanner and border mode.',
+              ? 'AI asistan (günde 40 soru), belge tarayıcı ve Türkiye kara '
+                  'sınırı modunun kilidini aç.'
+              : 'Unlock the AI assistant (40 questions/day), document scanner '
+                  'and Turkey land border mode.',
           style: AppTextStyles.bodyMedium
               .copyWith(color: AppColors.textSecondary),
         ),
@@ -110,15 +111,21 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   Widget _benefits(bool isTr) {
     final items = isTr
         ? const [
-            'Yapay zekâ asistanına sınırsız soru',
-            'Pasaport, vize ve izin belgesi tarayıcı',
-            'Sınıra yaklaşınca otomatik sınır modu',
+            'AI Asistan (günde 40 soru)',
+            'Güvenlik Tarayıcı',
+            'Tax-Free Rehberi',
+            'AI Tur Rehberi',
+            'Belge Tarayıcı (pasaport, vize ve izin belgeleri)',
+            'Türkiye kara sınırı modu',
             'Seyahat tarzına özel akıllı ipuçları',
           ]
         : const [
-            'Unlimited questions to the AI assistant',
-            'Passport, visa & permit document scanner',
-            'Automatic border mode when you approach',
+            'AI Assistant (40 questions/day)',
+            'Security Scanner',
+            'Tax-Free Guide',
+            'AI Tour Guide',
+            'Document Scanner (passport, visa & permits)',
+            'Turkey land border mode',
             'Smart tips tailored to your travel style',
           ];
     return Column(

@@ -30,17 +30,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Step indices
   static const int _languageStep = 0;
   static const int _nationalityStep = 1;
-  static const int _totalSteps = 4;
+  static const int _totalSteps = 2;
 
   // Collected profile data
   String? _nationality;
   String? _nationalityLabel;
-  PassportType _passportType = PassportType.ordinary;
-  // Residence status is no longer asked during onboarding — it defaults to
-  // none and can be changed later in Settings → Travel Profile.
-  static const ResidenceStatus _residenceStatus = ResidenceStatus.none;
-  TravelMode _travelMode = TravelMode.plane;
   String? _preferredLocale;
+
+  // Passport type, residence status and travel mode are no longer asked
+  // during onboarding — they default to sensible values and can be changed
+  // later in Settings → Travel Profile.
+  static const PassportType _passportType = PassportType.ordinary;
+  static const ResidenceStatus _residenceStatus = ResidenceStatus.none;
+  static const TravelMode _travelMode = TravelMode.plane;
 
   bool get _canContinue {
     if (_saving) return false;
@@ -138,141 +140,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         _nationality = code;
                         _nationalityLabel = label;
                       }),
-                    ),
-                    _SelectionPage<PassportType>(
-                      locale: _preferredLocale,
-                      titleEn: 'Passport Type',
-                      titleTr: 'Pasaport Türü',
-                      subtitleEn:
-                          'Select the type of passport you travel with.',
-                      subtitleTr:
-                          'Seyahat ettiğiniz pasaport türünü seçin.',
-                      options: const [
-                        _SelectOption(
-                          value: PassportType.ordinary,
-                          icon: Icons.book_outlined,
-                          titleEn: 'Ordinary passport',
-                          titleTr: 'Umuma mahsus pasaport',
-                          subtitleEn: 'Standard passport issued to citizens',
-                          subtitleTr:
-                              'Vatandaşlara verilen standart pasaport',
-                        ),
-                        _SelectOption(
-                          value: PassportType.euEeaSwiss,
-                          icon: Icons.flag_outlined,
-                          titleEn: 'EU / EEA / Swiss passport',
-                          titleTr: 'AB / AEA / İsviçre pasaportu',
-                          subtitleEn:
-                              'Free movement within the Schengen area',
-                          subtitleTr:
-                              'Schengen bölgesinde serbest dolaşım',
-                        ),
-                        _SelectOption(
-                          value: PassportType.diplomatic,
-                          icon: Icons.shield_outlined,
-                          titleEn: 'Diplomatic passport',
-                          titleTr: 'Diplomatik pasaport',
-                          subtitleEn: 'Issued to diplomatic personnel',
-                          subtitleTr: 'Diplomatik personele verilir',
-                        ),
-                        _SelectOption(
-                          value: PassportType.serviceOfficial,
-                          icon: Icons.badge_outlined,
-                          titleEn: 'Service / official passport',
-                          titleTr: 'Hizmet / hususi pasaport',
-                          subtitleEn:
-                              'Issued for official government travel',
-                          subtitleTr: 'Resmi devlet seyahati için',
-                        ),
-                        _SelectOption(
-                          value: PassportType.special,
-                          icon: Icons.star_border_outlined,
-                          titleEn: 'Special passport',
-                          titleTr: 'Özel pasaport',
-                          subtitleEn:
-                              'Other special-category passport',
-                          subtitleTr: 'Diğer özel kategori pasaport',
-                        ),
-                      ],
-                      selected: _passportType,
-                      onChanged: (v) => setState(() => _passportType = v),
-                    ),
-                    _SelectionPage<TravelMode>(
-                      locale: _preferredLocale,
-                      titleEn: 'How do you travel?',
-                      titleTr: 'Nasıl seyahat ediyorsunuz?',
-                      subtitleEn: 'Choose your primary mode of travel.',
-                      subtitleTr: 'Birincil seyahat şeklinizi seçin.',
-                      options: const [
-                        _SelectOption(
-                          value: TravelMode.plane,
-                          icon: Icons.flight_outlined,
-                          titleEn: 'Plane',
-                          titleTr: 'Uçak',
-                          subtitleEn: 'Air travel',
-                          subtitleTr: 'Havayolu',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.car,
-                          icon: Icons.directions_car_outlined,
-                          titleEn: 'Car',
-                          titleTr: 'Araba',
-                          subtitleEn: 'Driving across borders',
-                          subtitleTr: 'Sınırları araçla geçmek',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.train,
-                          icon: Icons.train_outlined,
-                          titleEn: 'Train',
-                          titleTr: 'Tren',
-                          subtitleEn: 'Rail travel',
-                          subtitleTr: 'Demiryolu',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.bus,
-                          icon: Icons.directions_bus_outlined,
-                          titleEn: 'Bus',
-                          titleTr: 'Otobüs',
-                          subtitleEn: 'Coach or intercity bus',
-                          subtitleTr: 'Şehirler arası otobüs',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.ferry,
-                          icon: Icons.directions_boat_outlined,
-                          titleEn: 'Ferry',
-                          titleTr: 'Feribot',
-                          subtitleEn: 'Sea crossing',
-                          subtitleTr: 'Deniz geçişi',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.camperCaravan,
-                          icon: Icons.rv_hookup_outlined,
-                          titleEn: 'Camper / caravan',
-                          titleTr: 'Karavan',
-                          subtitleEn: 'Motorhome or caravan travel',
-                          subtitleTr: 'Karavan ile seyahat',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.motorcycle,
-                          icon: Icons.two_wheeler_outlined,
-                          titleEn: 'Motorcycle',
-                          titleTr: 'Motosiklet',
-                          subtitleEn: 'Motorbike travel',
-                          subtitleTr: 'Motosiklet ile seyahat',
-                        ),
-                        _SelectOption(
-                          value: TravelMode.onFoot,
-                          icon: Icons.directions_walk_outlined,
-                          titleEn: 'On foot',
-                          titleTr: 'Yürüyerek',
-                          subtitleEn:
-                              'Hiking or walking across borders',
-                          subtitleTr:
-                              'Yürüyerek sınır geçişi',
-                        ),
-                      ],
-                      selected: _travelMode,
-                      onChanged: (v) => setState(() => _travelMode = v),
                     ),
                   ],
                 ),
@@ -795,168 +662,6 @@ class _CountryRow extends StatelessWidget {
                     color: AppColors.brandTeal, size: 18)
               else
                 const SizedBox(width: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Pages 2-3: Generic selection
-// ---------------------------------------------------------------------------
-
-class _SelectOption<T> {
-  const _SelectOption({
-    required this.value,
-    required this.icon,
-    required this.titleEn,
-    required this.titleTr,
-    required this.subtitleEn,
-    required this.subtitleTr,
-  });
-
-  final T value;
-  final IconData icon;
-  final String titleEn;
-  final String titleTr;
-  final String subtitleEn;
-  final String subtitleTr;
-}
-
-class _SelectionPage<T> extends StatelessWidget {
-  const _SelectionPage({
-    required this.locale,
-    required this.titleEn,
-    required this.titleTr,
-    required this.subtitleEn,
-    required this.subtitleTr,
-    required this.options,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final String? locale;
-  final String titleEn;
-  final String titleTr;
-  final String subtitleEn;
-  final String subtitleTr;
-  final List<_SelectOption<T>> options;
-  final T selected;
-  final ValueChanged<T> onChanged;
-
-  bool get _isTr => locale == 'tr';
-
-  @override
-  Widget build(BuildContext context) {
-    return _FadeIn(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isTr ? titleTr : titleEn,
-              style: AppTextStyles.displayMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _isTr ? subtitleTr : subtitleEn,
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 28),
-            ...options.map((opt) => _SelectCard<T>(
-                  option: opt,
-                  isTr: _isTr,
-                  isSelected: opt.value == selected,
-                  onTap: () => onChanged(opt.value),
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SelectCard<T> extends StatelessWidget {
-  const _SelectCard({
-    required this.option,
-    required this.isTr,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final _SelectOption<T> option;
-  final bool isTr;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.brandTeal.withAlpha(18)
-                : AppColors.surfaceCard,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? AppColors.brandTeal : AppColors.divider,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.brandTeal.withAlpha(30)
-                      : AppColors.brandNavy,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  option.icon,
-                  color: isSelected
-                      ? AppColors.brandTeal
-                      : AppColors.textSecondary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isTr ? option.titleTr : option.titleEn,
-                      style: AppTextStyles.bodyLarge
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      isTr ? option.subtitleTr : option.subtitleEn,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              AnimatedOpacity(
-                opacity: isSelected ? 1 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: AppColors.brandTeal, size: 20),
-              ),
             ],
           ),
         ),

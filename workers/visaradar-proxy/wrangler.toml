@@ -8,7 +8,7 @@ APPLE_BUNDLE_ID = "com.visaradar.visaradar"
 APPLE_ENV = "production"
 # AI Assistant uses Claude Opus 4.8 per the product spec (priced accordingly).
 CLAUDE_MODEL = "claude-opus-4-8"
-CHAT_MODEL = "claude-opus-4-8"
+CHAT_MODEL = "claude-sonnet-5"
 DAILY_LIMIT_CHAT = "40"
 DAILY_LIMIT_VISION = "10"
 DAILY_LIMIT_QUESTIONS = "10"

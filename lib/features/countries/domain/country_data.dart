@@ -1,5 +1,23 @@
 import 'visa_country.dart';
 
+/// All visa guidance in this file is written for holders of the Turkish
+/// standard (bordo) passport. Show this disclaimer wherever visa data appears.
+const String visaDataDisclaimer =
+    'Vize bilgileri Türk standart pasaportu için geçerlidir. / '
+    'Visa data applies to Turkish standard passport holders.';
+
+/// EES/ETIAS note appended to Schengen-zone visa guidance (TR).
+const String _eesEtiasTr =
+    '\n\n🔷 EES/ETIAS: 2024\'ten itibaren Schengen bölgesine girişte EES kayıt '
+    'sistemi (biyometrik) ve ETIAS vizesi gereklidir. Önceden www.etias.com '
+    'adresinden başvurun.';
+
+/// EES/ETIAS note appended to Schengen-zone visa guidance (EN).
+const String _eesEtiasEn =
+    '\n\n🔷 EES/ETIAS: Since 2024, entry to the Schengen zone requires EES '
+    'biometric registration and ETIAS authorization. Apply in advance at '
+    'www.etias.com.';
+
 final List<VisaCountry> kVisaCountries = [
   // ── Home country ────────────────────────────────────────────────────────────
   VisaCountry(
@@ -81,11 +99,13 @@ final List<VisaCountry> kVisaCountries = [
     visaEn:
         'Schengen visa required for Turkish citizens. A simplified "express" '
         'island visa is available on arrival for 10 designated Aegean islands '
-        '(e.g. Lesbos, Chios, Kos, Rhodes) for stays up to 7 days.',
+        '(e.g. Lesbos, Chios, Kos, Rhodes) for stays up to 7 days.'
+        '$_eesEtiasEn',
     visaTr:
         'Türk vatandaşları için Schengen vizesi gerekir. 10 Ege adası için '
         '(Midilli, Sakız, İstanköy, Rodos vb.) kapıda alınabilen 7 güne kadar '
-        'basitleştirilmiş "ekspres" ada vizesi mevcuttur.',
+        'basitleştirilmiş "ekspres" ada vizesi mevcuttur.'
+        '$_eesEtiasTr',
     driveEn:
         'Drive on the right. Green Card insurance strongly recommended. Tolls '
         'on major motorways, paid at booths.',
@@ -121,8 +141,8 @@ final List<VisaCountry> kVisaCountries = [
     nameEn: 'Bulgaria',
     nameTr: 'Bulgaristan',
     flag: '🇧🇬',
-    currency: 'лв',
-    currencyCode: 'BGN',
+    currency: '€',
+    currencyCode: 'EUR',
     speedUrban: 50,
     speedRural: 90,
     speedHighway: 140,
@@ -181,9 +201,11 @@ final List<VisaCountry> kVisaCountries = [
     capitalTr: 'Roma',
     officialLanguage: 'Italian',
     visaEn:
-        'Schengen visa required for Turkish citizens. Counts toward 90/180.',
+        'Schengen visa required for Turkish citizens. Counts toward 90/180.'
+        '$_eesEtiasEn',
     visaTr:
-        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.',
+        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.'
+        '$_eesEtiasTr',
     driveEn:
         'Drive on the right. Many city centres are restricted ZTL zones — '
         'entering without a permit triggers automatic fines. Tolls on autostrade.',
@@ -226,9 +248,11 @@ final List<VisaCountry> kVisaCountries = [
     capitalTr: 'Paris',
     officialLanguage: 'French',
     visaEn:
-        'Schengen visa required for Turkish citizens. Counts toward 90/180.',
+        'Schengen visa required for Turkish citizens. Counts toward 90/180.'
+        '$_eesEtiasEn',
     visaTr:
-        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.',
+        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.'
+        '$_eesEtiasTr',
     driveEn:
         'Drive on the right. Carrying a hi-vis vest and warning triangle is '
         'mandatory. Tolls (péage) on most motorways.',
@@ -271,9 +295,11 @@ final List<VisaCountry> kVisaCountries = [
     capitalTr: 'Berlin',
     officialLanguage: 'German',
     visaEn:
-        'Schengen visa required for Turkish citizens. Counts toward 90/180.',
+        'Schengen visa required for Turkish citizens. Counts toward 90/180.'
+        '$_eesEtiasEn',
     visaTr:
-        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.',
+        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.'
+        '$_eesEtiasTr',
     driveEn:
         'Drive on the right. Many Autobahn sections have no speed limit '
         '(130 km/h advisory). Low-emission "Umweltzone" stickers required in cities.',
@@ -315,9 +341,11 @@ final List<VisaCountry> kVisaCountries = [
     capitalTr: 'Madrid',
     officialLanguage: 'Spanish',
     visaEn:
-        'Schengen visa required for Turkish citizens. Counts toward 90/180.',
+        'Schengen visa required for Turkish citizens. Counts toward 90/180.'
+        '$_eesEtiasEn',
     visaTr:
-        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.',
+        'Türk vatandaşları için Schengen vizesi gerekir. 90/180 hesabına sayılır.'
+        '$_eesEtiasTr',
     driveEn:
         'Drive on the right. A reflective vest and two warning triangles are '
         'required. Some motorways (AP) are tolled.',
@@ -557,6 +585,37 @@ final List<VisaCountry> kVisaCountries = [
       capital: 'Dublin', capitalTr: 'Dublin', lang: 'Irish/English', left: true),
   _euNonSchengen('CY', 'Cyprus', 'Kıbrıs (GKRY)', '🇨🇾', '€', 'EUR', 50, 80, 100, 0.05,
       capital: 'Nicosia', capitalTr: 'Lefkoşa', lang: 'Greek/Turkish', left: true),
+
+  // ── KKTC (Northern Cyprus) — home-country affinity for Turkish citizens ──
+  VisaCountry(
+    code: 'CT',
+    nameEn: 'Northern Cyprus (TRNC)',
+    nameTr: 'Kuzey Kıbrıs Türk Cumhuriyeti',
+    flag: '🇨🇾',
+    currency: '₺',
+    currencyCode: 'TRY',
+    speedUrban: 50,
+    speedRural: 65,
+    speedHighway: 100,
+    alcoholBac: 0.05,
+    emergencyGeneral: '112',
+    emergencyPolice: '155',
+    emergencyAmbulance: '112',
+    isSchengen: false,
+    requiresVisaForTurkish: false,
+    capitalEn: 'Nicosia (Lefkoşa)',
+    capitalTr: 'Lefkoşa',
+    officialLanguage: 'Turkish',
+    visaEn: 'Turkish citizens: no visa required, unlimited stay.',
+    visaTr: 'Türk vatandaşları vizesiz, süresiz kalabilir.',
+    driveEn:
+        'Drive on the LEFT. Turkish driving licences are accepted. When '
+        'entering by car, local vehicle insurance is purchased at the '
+        'crossing points.',
+    driveTr:
+        'SOLDAN trafik. Türk ehliyeti geçerlidir. Araçla girişte sınır '
+        'kapılarında yerel araç sigortası yaptırılır.',
+  ),
 
   // ── Non-Schengen Europe — visa-free for Turkish citizens (90 days) ──────
   _visaFree('RS', 'Serbia', 'Sırbistan', '🇷🇸', 'дин', 'RSD', 50, 80, 130, 0.03,
@@ -1458,13 +1517,17 @@ VisaCountry _schengen(
     visaEn: note2025
         ? 'Full Schengen member since 2025. A Schengen visa is required for '
             'Turkish citizens; days here count toward your 90/180.'
+            '$_eesEtiasEn'
         : 'Schengen member. A Schengen visa is required for Turkish citizens; '
-            'days here count toward your 90/180.',
+            'days here count toward your 90/180.'
+            '$_eesEtiasEn',
     visaTr: note2025
         ? '2025\'ten beri tam Schengen üyesi. Türk vatandaşları için Schengen '
             'vizesi gerekir; buradaki günler 90/180\'e sayılır.'
+            '$_eesEtiasTr'
         : 'Schengen üyesi. Türk vatandaşları için Schengen vizesi gerekir; '
-            'buradaki günler 90/180\'e sayılır.',
+            'buradaki günler 90/180\'e sayılır.'
+            '$_eesEtiasTr',
     driveEn: (left ? 'Drive on the LEFT. ' : 'Drive on the right. ') +
         (vignette
             ? 'A motorway vignette (toll sticker) is required.'

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/localization/locale.dart';
 import '../../services/ai/ai_message.dart';
@@ -10,6 +11,12 @@ import '../location/presentation/providers/location_provider.dart';
 import '../profile/domain/models/user_profile.dart';
 import '../profile/presentation/providers/profile_provider.dart';
 import '../travel/presentation/providers/trips_provider.dart';
+
+/// Non-premium users may ask this many free AI questions before the paywall.
+const int kFreeQuestionLimit = 3;
+
+/// SharedPreferences key that tracks how many free questions have been used.
+const String _kFreeQuestionsKey = 'free_ai_questions_used';
 
 String passportLabel(PassportType t, bool tr) {
   switch (t) {
@@ -77,21 +84,25 @@ class AssistantState {
     this.messages = const [],
     this.loading = false,
     this.error,
+    this.freeQuestionsUsed = 0,
   });
 
   final List<AIMessage> messages;
   final bool loading;
   final String? error; // localized key handled in UI
+  final int freeQuestionsUsed;
 
   AssistantState copyWith({
     List<AIMessage>? messages,
     bool? loading,
     Object? error = _unset,
+    int? freeQuestionsUsed,
   }) {
     return AssistantState(
       messages: messages ?? this.messages,
       loading: loading ?? this.loading,
       error: error == _unset ? this.error : error as String?,
+      freeQuestionsUsed: freeQuestionsUsed ?? this.freeQuestionsUsed,
     );
   }
 
@@ -99,17 +110,55 @@ class AssistantState {
 }
 
 class AssistantController extends StateNotifier<AssistantState> {
-  AssistantController(this._ref) : super(const AssistantState());
+  AssistantController(this._ref) : super(const AssistantState()) {
+    _loadFreeQuestions();
+  }
 
   final Ref _ref;
+
+  Future<void> _loadFreeQuestions() async {
+    final used = await getFreeQuestionsUsed();
+    if (mounted) state = state.copyWith(freeQuestionsUsed: used);
+  }
+
+  /// Reads how many free questions the user has consumed (default 0).
+  Future<int> getFreeQuestionsUsed() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kFreeQuestionsKey) ?? 0;
+  }
+
+  /// Increments and persists the free question counter, mirroring it in state.
+  Future<void> incrementFreeQuestions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final next = (prefs.getInt(_kFreeQuestionsKey) ?? 0) + 1;
+    await prefs.setInt(_kFreeQuestionsKey, next);
+    if (mounted) state = state.copyWith(freeQuestionsUsed: next);
+  }
+
+  /// True when the user is not premium and has used all free questions.
+  bool isFreeTrialExhausted() {
+    final isPremium = _ref.read(isPremiumProvider);
+    return !isPremium && state.freeQuestionsUsed >= kFreeQuestionLimit;
+  }
 
   Future<void> send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.loading) return;
 
+    final isPremium = _ref.read(isPremiumProvider);
     final bearer = _ref.read(premiumBearerProvider);
     final isTr = _ref.read(isTurkishProvider);
-    if (bearer == null || bearer.isEmpty) {
+
+    if (!isPremium) {
+      final freeUsed = await getFreeQuestionsUsed();
+      if (freeUsed >= kFreeQuestionLimit) {
+        state = state.copyWith(
+          error: 'free_limit_reached',
+          freeQuestionsUsed: freeUsed,
+        );
+        return;
+      }
+    } else if (bearer == null || bearer.isEmpty) {
       state = state.copyWith(error: 'no-subscription');
       return;
     }
@@ -118,7 +167,8 @@ class AssistantController extends StateNotifier<AssistantState> {
     state = state.copyWith(messages: history, loading: true, error: null);
 
     final proxy = AnthropicProxy(
-      originalTransactionId: bearer,
+      originalTransactionId:
+          (bearer == null || bearer.isEmpty) ? 'free-trial' : bearer,
       language: isTr ? 'tr' : 'en',
     );
     try {
@@ -134,6 +184,7 @@ class AssistantController extends StateNotifier<AssistantState> {
         messages: [...history, AIMessage.assistant(reply)],
         loading: false,
       );
+      if (!isPremium) await incrementFreeQuestions();
     } on ProxySubscriptionRequiredException {
       state = state.copyWith(loading: false, error: 'no-subscription');
     } on ProxyRateLimitException {
@@ -146,7 +197,8 @@ class AssistantController extends StateNotifier<AssistantState> {
     }
   }
 
-  void clear() => state = const AssistantState();
+  void clear() =>
+      state = AssistantState(freeQuestionsUsed: state.freeQuestionsUsed);
   void clearError() => state = state.copyWith(error: null);
 }
 

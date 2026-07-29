@@ -224,6 +224,7 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
   // --- Audio (page 2) ---
   final _stt = stt.SpeechToText();
   bool _sttReady = false;
+  bool _sttInitialized = false;
   bool _audioScanning = false;
   double _audioLevel = -60.0;
 
@@ -247,7 +248,9 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
     _pulseAnim = Tween<double>(begin: 0.92, end: 1.08).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
-    _initStt();
+    // NOTE: STT/microphone initialization is deferred until the user
+    // navigates to page 3 (audio/gas detection) — see _onPageChanged.
+    // This avoids requesting mic + speech permissions on screen open.
   }
 
   Future<void> _initStt() async {
@@ -397,6 +400,12 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
     } else {
       _stopAudio();
     }
+    // Lazily initialize STT (mic + speech permissions) only when the user
+    // actually reaches the audio/gas detection page (index 2).
+    if (index == 2 && !_sttInitialized) {
+      _sttInitialized = true;
+      _initStt();
+    }
     setState(() {
       _page = index;
       _alertFired = false;
@@ -466,6 +475,17 @@ class _SecurityScannerScreenState extends ConsumerState<SecurityScannerScreen>
                       ? 'Güvenlik Tarayıcı\'ya erişmek için Premium abonelik gerekir.'
                       : 'A Premium subscription is required to use the Security Scanner.',
                   style: AppTextStyles.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  isTr
+                      ? 'Manyetometre tabanlı tarama — fiziksel cihaz tespiti için profesyonel ekipman öneririz'
+                      : 'Magnetometer-based scanning — professional equipment recommended for physical device detection',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textMuted,
+                    height: 1.4,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),

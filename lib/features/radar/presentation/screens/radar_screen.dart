@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/localization/locale.dart';
 import '../../../../core/router/app_router.dart';
@@ -70,6 +72,66 @@ Future<void> _recordAutomaticCapture(DetectedCountry country) async {
   }
 }
 
+/// Shows a one-time contextual notification-permission dialog right after the
+/// user saves their first travel entry. Guarded by the
+/// 'notification_permission_asked' SharedPreferences flag.
+Future<void> _maybeAskNotificationPermission(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool('notification_permission_asked') == true) return;
+
+  final status = await Permission.notification.status;
+  if (status.isGranted) return;
+
+  await prefs.setBool('notification_permission_asked', true);
+  if (!context.mounted) return;
+
+  final wantsAlerts = await showDialog<bool>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      backgroundColor: AppColors.surfaceCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        L.isTr ? 'Schengen Uyarıları' : 'Schengen Alerts',
+        style: AppTextStyles.headlineMedium,
+      ),
+      content: Text(
+        L.isTr
+            ? 'Schengen limitinize yaklaşınca 30, 15, 7 ve 3 gün öncesinde '
+                'uyarı almak ister misiniz?'
+            : 'Would you like to receive alerts 30, 15, 7, and 3 days before '
+                'your Schengen limit?',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogCtx).pop(false),
+          child: Text(
+            L.isTr ? 'Hayır, teşekkürler' : 'No thanks',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogCtx).pop(true),
+          child: Text(
+            L.isTr ? 'Evet, uyar beni' : 'Yes, alert me',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.brandTeal,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  if (wantsAlerts == true) {
+    await Permission.notification.request();
+  }
+}
+
 class RadarScreen extends ConsumerWidget {
   const RadarScreen({super.key});
 
@@ -104,7 +166,15 @@ class RadarScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           FloatingActionButton.extended(
             heroTag: 'add_trip_fab',
-            onPressed: () => context.push(AppRoutes.addTrip),
+            onPressed: () async {
+              final tripsBefore = ref.read(tripsProvider).length;
+              await context.push(AppRoutes.addTrip);
+              if (!context.mounted) return;
+              // A travel was actually saved → contextual notification ask.
+              if (ref.read(tripsProvider).length > tripsBefore) {
+                await _maybeAskNotificationPermission(context);
+              }
+            },
             backgroundColor: AppColors.brandTeal,
             foregroundColor: AppColors.brandNavy,
             icon: const Icon(Icons.add),
@@ -121,15 +191,20 @@ class RadarScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  // Schengen 90/180 is the most critical information → always
+                  // the FIRST card.
+                  if (showSchengen) ...[
+                    const _SchengenCard(),
+                    const SizedBox(height: 12),
+                  ],
+                  // One-time EES/ETIAS info banner (second position). The
+                  // banner renders SizedBox.shrink() once dismissed.
+                  const _EesEtiasBanner(),
                   const _LocationCard(),
                   const SizedBox(height: 12),
                   const BorderModeCard(),
                   if (hasSuggestion) ...[
                     const CrossingSuggestionCard(),
-                    const SizedBox(height: 12),
-                  ],
-                  if (showSchengen) ...[
-                    const _SchengenCard(),
                     const SizedBox(height: 12),
                   ],
                   // Strict UX rule: if a pending suggestion exists, do NOT
@@ -245,15 +320,15 @@ class _FeaturesSheet extends StatelessWidget {
         emoji: '🌍',
         en: 'Auto Country Detection',
         tr: 'Otomatik Ülke Algılama',
-        descEn: 'GPS detects which country you\'re in — the moment you cross a border.',
-        descTr: 'GPS ile hangi ülkede olduğunuzu anlık olarak tespit eder — sınır geçer geçmez.',
+        descEn: 'GPS detects which country you\'re in — auto-detection when app is open.',
+        descTr: 'GPS ile hangi ülkede olduğunuzu tespit eder — uygulama açıkken otomatik algılama.',
       ),
       _FeatureItem(
         emoji: '🛡️',
         en: 'Auto Schengen Tracker',
         tr: 'Otomatik Schengen Takip',
-        descEn: 'Real-time 90/180-day rolling window tracker. Never overstay again.',
-        descTr: 'Gerçek zamanlı 90/180 günlük pencere hesabı. Bir daha asla limit aşımı yaşamayın.',
+        descEn: '90/180-day rolling window tracker — auto-detection when app is open. Never overstay again.',
+        descTr: '90/180 günlük pencere hesabı — uygulama açıkken otomatik algılama. Bir daha asla limit aşımı yaşamayın.',
       ),
       _FeatureItem(
         emoji: '⏰',
@@ -280,8 +355,8 @@ class _FeaturesSheet extends StatelessWidget {
         emoji: '📍',
         en: 'Stay History',
         tr: 'Kalış Geçmişi',
-        descEn: 'Automatic log of every country and city you visit. Your travel journal.',
-        descTr: 'Ziyaret ettiğiniz her ülke ve şehrin otomatik kaydı. Seyahat günlüğünüz.',
+        descEn: 'Log of every country and city you visit — auto-detection when app is open. Your travel journal.',
+        descTr: 'Ziyaret ettiğiniz her ülke ve şehrin kaydı — uygulama açıkken otomatik algılama. Seyahat günlüğünüz.',
       ),
       _FeatureItem(
         emoji: '🗓️',
@@ -301,8 +376,8 @@ class _FeaturesSheet extends StatelessWidget {
         emoji: '🌤️',
         en: 'Live Weather + Air Quality',
         tr: 'Canlı Hava + Hava Kalitesi',
-        descEn: 'Real-time weather, UV, humidity and PM2.5 at your exact location.',
-        descTr: 'Tam konumunuzda gerçek zamanlı hava, UV, nem ve PM2.5 kalite verisi.',
+        descEn: 'Current weather, UV, humidity and PM2.5 at your exact location.',
+        descTr: 'Tam konumunuzda anlık hava, UV, nem ve PM2.5 kalite verisi.',
       ),
       _FeatureItem(
         emoji: '🤖',
@@ -432,17 +507,61 @@ class _FeatureItem {
 // Location card — reacts to permission + detection state
 // ---------------------------------------------------------------------------
 
-class _LocationCard extends ConsumerWidget {
+class _LocationCard extends ConsumerStatefulWidget {
   const _LocationCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LocationCard> createState() => _LocationCardState();
+}
+
+class _LocationCardState extends ConsumerState<_LocationCard> {
+  /// True while location permission is still undetermined / first-time
+  /// denied — we then show a soft explanation card BEFORE the system dialog.
+  bool _showLocationPrePermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPrePermissionState();
+  }
+
+  Future<void> _checkPrePermissionState() async {
+    final status = await Permission.locationWhenInUse.status;
+    if (!mounted) return;
+    setState(() {
+      // `denied` (NOT permanently denied) = undetermined / first-time denied.
+      _showLocationPrePermission = status == PermissionStatus.denied;
+    });
+  }
+
+  Future<void> _requestLocationPermission() async {
+    // Actual system permission dialog.
+    await Permission.locationWhenInUse.request();
+    if (!mounted) return;
+    setState(() => _showLocationPrePermission = false);
+    // Sync the location provider with the new permission state and start
+    // detection if the user granted access.
+    ref.read(locationProvider.notifier).requestPermission();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final locState = ref.watch(locationProvider);
     final notifier = ref.read(locationProvider.notifier);
     final isTr = ref.watch(isTurkishProvider);
 
     // ── No permission ───────────────────────────────────────────────────────
     if (!locState.hasPermission) {
+      // Soft pre-permission explanation card (before the system dialog).
+      if (!locState.permissionDeniedForever && _showLocationPrePermission) {
+        return _LocationPrePermissionCard(
+          isTr: isTr,
+          onAllow: _requestLocationPermission,
+          onLater: () =>
+              setState(() => _showLocationPrePermission = false),
+        );
+      }
+
       final ctaLabel = locState.permissionDeniedForever
           ? (isTr ? 'Ayarları Aç' : 'Open Settings')
           : (isTr ? 'Aç' : 'Enable');
@@ -454,11 +573,11 @@ class _LocationCard extends ConsumerWidget {
         title: isTr ? 'Algılanmıyor' : 'Not detecting',
         subtitle: locState.permissionDeniedForever
             ? (isTr
-                ? "Otomatik algılama için Ayarlar'dan konuma izin verin"
-                : 'Allow location in Settings to auto-detect')
+                ? "Uygulama açıkken otomatik algılama için Ayarlar'dan konuma izin verin"
+                : 'Allow location in Settings for auto-detection when app is open')
             : (isTr
-                ? 'Ülkenizi otomatik algılamak için açın'
-                : 'Enable to auto-detect your country'),
+                ? 'Uygulama açıkken otomatik algılama için açın'
+                : 'Enable auto-detection when app is open'),
         action: _LocationAction(
           label: ctaLabel,
           color: AppColors.brandTeal,
@@ -532,6 +651,186 @@ class _LocationCard extends ConsumerWidget {
         label: isTr ? 'Algıla' : 'Detect',
         color: AppColors.brandTeal,
         onTap: notifier.refreshDetection,
+      ),
+    );
+  }
+}
+
+// ── Location pre-permission explanation card ────────────────────────────────
+
+class _LocationPrePermissionCard extends StatelessWidget {
+  const _LocationPrePermissionCard({
+    required this.isTr,
+    required this.onAllow,
+    required this.onLater,
+  });
+
+  final bool isTr;
+  final VoidCallback onAllow;
+  final VoidCallback onLater;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DashCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.brandTeal.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_on_outlined,
+                  color: AppColors.brandTeal,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  isTr ? 'Konum İzni Gerekiyor' : 'Location Permission Needed',
+                  style: AppTextStyles.titleLarge,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isTr
+                ? 'Schengen günlerinizi otomatik takip etmek ve ülke '
+                    'geçişlerini kaydetmek için konum erişimi gerekiyor.'
+                : 'Location access is needed to automatically track your '
+                    'Schengen days and record country crossings.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onAllow,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandTeal,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      isTr ? 'İzin Ver' : 'Allow',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.brandNavy,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              GestureDetector(
+                onTap: onLater,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    isTr ? 'Sonra' : 'Later',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textMuted,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── EES/ETIAS one-time info banner ──────────────────────────────────────────
+
+class _EesEtiasBanner extends StatefulWidget {
+  const _EesEtiasBanner();
+
+  @override
+  State<_EesEtiasBanner> createState() => _EesEtiasBannerState();
+}
+
+class _EesEtiasBannerState extends State<_EesEtiasBanner> {
+  static const _prefKey = 'ees_etias_banner_dismissed';
+
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDismissedState();
+  }
+
+  Future<void> _loadDismissedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool(_prefKey) ?? false;
+    if (!mounted) return;
+    setState(() => _visible = !dismissed);
+  }
+
+  Future<void> _dismiss() async {
+    setState(() => _visible = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_visible) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: AppColors.brandTeal.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.brandTeal),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              L.isTr
+                  ? "🔷 EES/ETIAS Yeni Kural: 2024'ten itibaren Schengen "
+                      'girişlerinde biyometrik EES kaydı ve ETIAS vizesi '
+                      'zorunlu. Seyahat öncesi hazırlık yapın.'
+                  : '🔷 EES/ETIAS New Rule: Since 2024, Schengen entry '
+                      'requires biometric EES registration and ETIAS '
+                      'authorization. Prepare before travel.',
+              style: AppTextStyles.bodySmall,
+            ),
+          ),
+          IconButton(
+            onPressed: _dismiss,
+            icon: const Icon(
+              Icons.close,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
+            tooltip: L.isTr ? 'Kapat' : 'Dismiss',
+          ),
+        ],
       ),
     );
   }
@@ -669,10 +968,13 @@ class _SchengenCard extends ConsumerWidget {
 
     final (riskColor, riskLabel) = _riskStyle(result.riskLevel, isTr);
 
-    String resetText = isTr ? 'Yaklaşan sıfırlama yok' : 'No upcoming reset';
+    // 90/180 is a ROLLING window — there is no fixed reset date. Days simply
+    // drop out of the window 180 days after each stay. Keep the date, but
+    // describe it honestly.
+    String resetText = isTr ? 'Kayan pencere' : 'Rolling window';
     if (result.nextResetDate != null) {
       final d = _dateFmt.format(result.nextResetDate!.toLocal());
-      resetText = isTr ? '$d tarihinde sıfırlanır' : 'Resets $d';
+      resetText = isTr ? 'Kayan pencere · $d' : 'Rolling window · $d';
     } else if (usedDays > 0) {
       resetText = isTr
           ? '$remainingDays gün kaldı'
@@ -775,7 +1077,9 @@ class _SchengenCard extends ConsumerWidget {
             children: [
               Flexible(
                 child: Text(
-                  isTr ? '90/180 günlük pencere' : '90/180-day window',
+                  isTr
+                      ? 'Son 180 günlük pencerede kullanılan Schengen günleri'
+                      : 'Schengen days used in the rolling 180-day window',
                   style: AppTextStyles.caption,
                   overflow: TextOverflow.ellipsis,
                 ),

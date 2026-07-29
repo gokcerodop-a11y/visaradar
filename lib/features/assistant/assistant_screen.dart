@@ -14,7 +14,6 @@ import '../../services/ai/ai_message.dart';
 import '../../services/ai/anthropic_proxy.dart';
 import '../../services/natural_tts.dart';
 import '../../services/premium_providers.dart';
-import '../paywall/paywall_screen.dart';
 import 'assistant_controller.dart';
 
 class AssistantScreen extends ConsumerStatefulWidget {
@@ -108,6 +107,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   }
 
   void _send() {
+    if (ref.read(assistantControllerProvider.notifier).isFreeTrialExhausted()) {
+      return;
+    }
     final text = _input.text;
     if (text.trim().isEmpty) return;
     _input.clear();
@@ -151,71 +153,16 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             ),
         ],
       ),
-      body: isPremium ? _chat(isTr) : _locked(isTr),
+      body: _chat(isTr, isPremium),
     );
   }
 
-  // ── Locked (free) state ────────────────────────────────────────────
+  // ── Chat ───────────────────────────────────────────────────────────
 
-  Widget _locked(bool isTr) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.brandTeal, AppColors.info],
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child:
-                  const Icon(Icons.bolt, color: Colors.white, size: 38),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              isTr ? 'Yapay Zekâ Seyahat Asistanı' : 'AI Travel Assistant',
-              style: AppTextStyles.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              isTr
-                  ? 'Vize, sınır geçişi ve Schengen hakkında dilediğini sor. '
-                      'Asistan, pasaportunu ve kalan Schengen günlerini bilir.'
-                  : 'Ask anything about visas, border crossings and Schengen. '
-                      'The assistant knows your passport and remaining Schengen days.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            _AiExamplesCard(isTr: isTr),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.lock_open),
-                label: Text(isTr ? 'Premium ile Kilidini Aç' : 'Unlock with Premium'),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Chat (premium) state ───────────────────────────────────────────
-
-  Widget _chat(bool isTr) {
+  Widget _chat(bool isTr, bool isPremium) {
     final state = ref.watch(assistantControllerProvider);
+    final exhausted = !isPremium &&
+        state.freeQuestionsUsed >= kFreeQuestionLimit;
 
     ref.listen(assistantControllerProvider, (prev, next) {
       if (next.messages.length != (prev?.messages.length ?? 0)) {
@@ -229,6 +176,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
     return Column(
       children: [
+        if (!isPremium) _freeTrialBanner(isTr, state.freeQuestionsUsed),
         Expanded(
           child: state.messages.isEmpty
               ? _emptyState(isTr)
@@ -246,8 +194,85 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                   },
                 ),
         ),
-        _inputBar(isTr, state.loading),
+        if (exhausted) _trialEndedCard(isTr),
+        _inputBar(isTr, state.loading, exhausted),
       ],
+    );
+  }
+
+  // ── Free trial banner ──────────────────────────────────────────────
+
+  Widget _freeTrialBanner(bool isTr, int used) {
+    final shown = used > kFreeQuestionLimit ? kFreeQuestionLimit : used;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppColors.brandTeal.withValues(alpha: 0.10),
+      child: Row(
+        children: [
+          const Icon(Icons.card_giftcard,
+              size: 14, color: AppColors.brandTeal),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isTr
+                  ? 'Ücretsiz deneme: $shown/$kFreeQuestionLimit soru kullanıldı'
+                  : 'Free trial: $shown/$kFreeQuestionLimit questions used',
+              style:
+                  AppTextStyles.caption.copyWith(color: AppColors.brandTeal),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Trial ended card ───────────────────────────────────────────────
+
+  Widget _trialEndedCard(bool isTr) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.brandTeal.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.brandTeal.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.workspace_premium,
+                  size: 18, color: AppColors.brandTeal),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isTr
+                      ? 'Ücretsiz deneme sona erdi. Sınırsız AI asistan için '
+                          'Premium\'a geçin!'
+                      : 'Free trial ended. Upgrade to Premium for unlimited '
+                          'AI assistant!',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.lock_open, size: 18),
+              label: Text(isTr ? 'Premium\'a Geç' : 'Upgrade'),
+              onPressed: () => context.push(AppRoutes.subscription),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -391,7 +416,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     );
   }
 
-  Widget _inputBar(bool isTr, bool loading) {
+  Widget _inputBar(bool isTr, bool loading, bool exhausted) {
+    final blocked = loading || exhausted;
     return SafeArea(
       top: false,
       child: Container(
@@ -405,7 +431,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             if (_speechAvailable)
               FloatingActionButton.small(
                 heroTag: 'mic',
-                onPressed: loading ? null : _toggleListening,
+                onPressed: blocked ? null : _toggleListening,
                 backgroundColor: _isListening
                     ? AppColors.danger
                     : AppColors.surfaceCard,
@@ -420,6 +446,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             Expanded(
               child: TextField(
                 controller: _input,
+                enabled: !exhausted,
                 minLines: 1,
                 maxLines: 4,
                 maxLength: 4000,
@@ -427,9 +454,13 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: InputDecoration(
-                  hintText: _isListening
-                      ? (isTr ? 'Dinleniyor…' : 'Listening…')
-                      : (isTr ? 'Mesaj yaz…' : 'Type a message…'),
+                  hintText: exhausted
+                      ? (isTr
+                          ? 'Ücretsiz deneme sona erdi'
+                          : 'Free trial ended')
+                      : _isListening
+                          ? (isTr ? 'Dinleniyor…' : 'Listening…')
+                          : (isTr ? 'Mesaj yaz…' : 'Type a message…'),
                   counterText: '',
                   filled: true,
                   fillColor: AppColors.surfaceCard,
@@ -445,8 +476,10 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             const SizedBox(width: 8),
             FloatingActionButton.small(
               heroTag: 'send',
-              onPressed: loading ? null : _send,
-              backgroundColor: AppColors.brandTeal,
+              onPressed: blocked ? null : _send,
+              backgroundColor: blocked
+                  ? AppColors.brandTeal.withValues(alpha: 0.35)
+                  : AppColors.brandTeal,
               foregroundColor: AppColors.brandNavy,
               elevation: 0,
               child: const Icon(Icons.arrow_upward),
@@ -462,6 +495,9 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
       'no-subscription' => isTr
           ? 'Premium aboneliği gerekiyor.'
           : 'A Premium subscription is required.',
+      'free_limit_reached' => isTr
+          ? 'Ücretsiz deneme sona erdi. Sınırsız AI asistan için Premium\'a geçin!'
+          : 'Free trial ended. Upgrade to Premium for unlimited AI assistant!',
       'rate-limit' => isTr
           ? 'Günlük soru limitine ulaştın. Yarın tekrar dene.'
           : 'You\'ve reached today\'s question limit. Try again tomorrow.',
