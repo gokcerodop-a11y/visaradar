@@ -194,12 +194,33 @@ class SubscriptionService extends ChangeNotifier {
     }
   }
 
+  // Decodes a StoreKit 2 JWS token and extracts the real expiresDate (epoch ms).
+  // Returns null for lifetime products (no expiresDate field) or on decode failure.
+  DateTime? _extractExpiresDateFromJws(String jws) {
+    try {
+      final parts = jws.split('.');
+      if (parts.length != 3) return null;
+      String padded = parts[1];
+      padded += '=' * ((4 - padded.length % 4) % 4);
+      padded = padded.replaceAll('-', '+').replaceAll('_', '/');
+      final payload = jsonDecode(utf8.decode(base64.decode(padded))) as Map<String, dynamic>;
+      final expiresMs = payload['expiresDate'];
+      if (expiresMs == null) return null;
+      return DateTime.fromMillisecondsSinceEpoch((expiresMs as num).toInt());
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _activate(PurchaseDetails purchase) async {
     String txId = purchase.purchaseID ?? '';
-    if (txId.isEmpty && Platform.isIOS) {
+    DateTime? jwsExpiresAt;
+    if (Platform.isIOS) {
       // serverVerificationData on iOS is a StoreKit 2 JWS — decode it.
       final jws = purchase.verificationData.serverVerificationData;
-      txId = _extractTxIdFromJws(jws) ?? jws;
+      if (txId.isEmpty) txId = _extractTxIdFromJws(jws) ?? jws;
+      // Use Apple's real expiresDate instead of a static duration offset.
+      jwsExpiresAt = _extractExpiresDateFromJws(jws);
     }
     if (txId.isEmpty) {
       debugPrint('[SubscriptionService] purchase has no txId, skipping');
@@ -216,12 +237,12 @@ class SubscriptionService extends ChangeNotifier {
         break;
       case productAnnual:
         _plan = PremiumPlan.annual;
-        _expiresAt = DateTime.now().add(const Duration(days: 366));
+        _expiresAt = jwsExpiresAt ?? DateTime.now().add(const Duration(days: 366));
         break;
       case productMonthly:
       default:
         _plan = PremiumPlan.monthly;
-        _expiresAt = DateTime.now().add(const Duration(days: 31));
+        _expiresAt = jwsExpiresAt ?? DateTime.now().add(const Duration(days: 31));
         break;
     }
 
