@@ -2,7 +2,7 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-30):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+7 — **WAITING_FOR_REVIEW** (30 Tem 01:34 UTC gönderildi; submission `2b93674e`; 68+ bulgu düzeltildi, Worker 180fbc81, commit bd0e5ea).
+**App Store durumu (2026-07-31):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+**8** — **WAITING_FOR_REVIEW** (31 Tem gönderildi; submission `00b269f7`; build `985857a8`; Xcode 26.6 ile yeniden build — ITMS-90111 fix). Build +7: **INVALID_BINARY** (eski Xcode ile yapılmıştı).
 
 **Güvenlik Durumu (2026-07-30 — TÜM BULGULAR DÜZELTİLDİ):**
 - Worker: KVKK consent (`!== true` strict), 6 güvenlik header (legal HTML dahil), sanitize, Apple JWS (**tam x5c zincir doğrulaması** leaf→intermediate→root + Root CA G3 SHA-256 + **bundleId kontrolü**), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme, vision sanitize + uzunluk sınırı, **IP başına günlük 5 yeni device cap** (trial bypass engeli), model bazlı fiyatlama, para birimi dönüşümü
