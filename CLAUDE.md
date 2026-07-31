@@ -2,7 +2,8 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-31):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+**9** — submission `1e98b774` **WAITING_FOR_REVIEW** (31 Tem 21:09 UTC; build `153c35a2`; Xcode 26.6; ITMS-90683 fix). Build +8: ITMS-90683 (NSLocationAlwaysAndWhenInUseUsageDescription eksik, uyarı) + ITMS-90111 (Unsupported SDK, red). Build +7: **INVALID_BINARY** (eski Xcode).
+**App Store durumu (2026-07-31):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+**10** — submission `99b0e2c7` **WAITING_FOR_REVIEW** (31 Tem 22:53 UTC; build `5c8ef710`; Xcode 26.6 + Flutter stable 3.44.8; ITMS-90683+90111 fix denemesi). Build +9: ITMS-90111 red (Flutter master 3.47.0-pre; Flutter.framework sdk 26.2, tool v23.0). Build +8: ITMS-90683 uyarı + ITMS-90111 red. Build +7: INVALID_BINARY.
+**ITMS-90111 kök neden:** iOS 26.6 (27 Tem) sonrası Apple doğrulaması değişti; mevcut en son Xcode 26.6 (17F113) iOS 26.5 SDK içeriyor — iOS 26.6 SDK'lı Xcode henüz yayınlanmadı. Flutter.framework (sdk=26.2, tool=23) toolchain uyumsuzluğu tetikleyici olabilir. Build 10 Flutter stable 3.44.8 ile Apple'ın tepkisi bekleniyor.
 
 **Güvenlik Durumu (2026-07-30 — TÜM BULGULAR DÜZELTİLDİ):**
 - Worker: KVKK consent (`!== true` strict), 6 güvenlik header (legal HTML dahil), sanitize, Apple JWS (**tam x5c zincir doğrulaması** leaf→intermediate→root + Root CA G3 SHA-256 + **bundleId kontrolü**), TTS rate limit, 2 MB body, imageMediaType allowlist, role validation, KV cache temizleme, vision sanitize + uzunluk sınırı, **IP başına günlük 5 yeni device cap** (trial bypass engeli), model bazlı fiyatlama, para birimi dönüşümü
