@@ -61,6 +61,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>VisaRadar uses your current location to detect which country you are in so it can show the right Schengen and visa information for that country.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>VisaRadar uses your location to detect which country you are in and automatically record border crossings for accurate Schengen day tracking.</string>
 <key>NSCameraUsageDescription</key>
 	<string>VisaRadar uses the camera so you can scan your passport, visa or residence permit and automatically read key dates.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
