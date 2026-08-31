@@ -2,7 +2,17 @@
 
 Premium global vize / sınır / Schengen kalış takip uygulaması (AI destekli). Telegram botu çalışıyor.
 
-**App Store durumu (2026-07-31):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+**10** — submission `99b0e2c7` **WAITING_FOR_REVIEW** (31 Tem 22:53 UTC; build `5c8ef710`; Xcode 26.6 + Flutter stable 3.44.8; ITMS-90683+90111 fix denemesi). Build +9: ITMS-90111 red (Flutter master 3.47.0-pre; Flutter.framework sdk 26.2, tool v23.0). Build +8: ITMS-90683 uyarı + ITMS-90111 red. Build +7: INVALID_BINARY.
+**App Store durumu (2026-08-31):** v1.2.0+6 **APPROVED** (mağaza yayını bekleniyor). v1.3.0+**12** — submission `7cfbd2b9` **WAITING_FOR_REVIEW** (31 Ağu 21:30 UTC; build `c6023692`).
+
+**2026-08-28 RED — Guideline 4.3(a) Design: Spam (submission `32a62c6b`, build +11):** Apple, uygulamanın diğer geliştiricilerin uygulamalarıyla benzer concept/binary/metadata paylaştığını belirtti. **Kök neden analizi:** (1) app ikonu — teal-mavi gradyan + radar halkaları + konum pini — App Store'da düzinelerce Schengen/vize-takip şablon uygulamasının kullandığı klişe görsel; (2) açıklama/subtitle/keywords "Schengen 90/180 tracker / days calculator" gibi son derece jenerik, oymuş dil kullanıyordu.
+**Düzeltme (build +12):**
+- Yeni ikon: pasaport damgası halkası + pusula iğnesi + AI kıvılcım aksanı, indigo/amber palet (`tool/gen_icon.py` — TEAL/BLUE radar-pin tasarımı tamamen kaldırıldı)
+- ASC API ile description/promotionalText/keywords güncellendi — AI Asistan + Güvenlik Tarayıcı + SOS öne çıkarıldı, "day counter" çerçevesi ikinci plana alındı
+- Subtitle (appInfoLocalizations) güncellemesi 409 INVALID_STATE ile reddedildi (1.2.0 READY_FOR_SALE ile kilitli) — sonraki fırsatta (1.2.0 yayınlandıktan / appInfo düzenlenebilir olduğunda) tekrar denenecek
+- Eski `reviewSubmission` (32a62c6b) `canceled:true` PATCH ile iptal edilip yeni submission oluşturuldu (aynı appStoreVersion iki submission'da birden olamıyor — `STATE_ERROR.ITEM_PART_OF_ANOTHER_SUBMISSION`)
+- Build +12 archive: BuildMachineOSBuild 24F83 fix + framework Info.plist sürüm eşitleme (standart ITMS-90111/90062 rutini) uygulandı, xcrun altool ile yüklendi
+
+**Önceki build geçmişi:** +10 submission `99b0e2c7` WAITING_FOR_REVIEW (31 Tem, Xcode 26.6 + Flutter stable 3.44.8, ITMS-90683+90111 fix denemesi). +9: ITMS-90111 red (Flutter master 3.47.0-pre; Flutter.framework sdk 26.2, tool v23.0). +8: ITMS-90683 uyarı + ITMS-90111 red. +7: INVALID_BINARY.
 **ITMS-90111 kök neden:** iOS 26.6 (27 Tem) sonrası Apple doğrulaması değişti; mevcut en son Xcode 26.6 (17F113) iOS 26.5 SDK içeriyor — iOS 26.6 SDK'lı Xcode henüz yayınlanmadı. Flutter.framework (sdk=26.2, tool=23) toolchain uyumsuzluğu tetikleyici olabilir. Build 10 Flutter stable 3.44.8 ile Apple'ın tepkisi bekleniyor.
 
 **Güvenlik Durumu (2026-07-30 — TÜM BULGULAR DÜZELTİLDİ):**
