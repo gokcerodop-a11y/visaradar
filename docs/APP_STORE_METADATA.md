@@ -2,8 +2,10 @@
 
 Preparation document for App Store (iOS) and Google Play (Android) submissions.
 
-**Son güncelleme / Last updated: 29 Temmuz 2026 / 29 July 2026**
-**Mevcut sürüm / Current version: 1.3.0+7**
+**Son güncelleme / Last updated: 31 Ağustos 2026 / 31 August 2026 — Guideline 4.3(a) Spam reddi sonrası**
+**Mevcut sürüm / Current version: 1.3.0+12**
+
+**2026-08-28 Apple reddi (Guideline 4.3(a) — Design: Spam) ve düzeltme:** Apple, uygulamanın diğer geliştiricilerin uygulamalarıyla benzer görünen bir konsept/binary paylaştığını belirtti. Kök neden muhtemelen jenerik "teal-mavi radar halkaları + konum pini" ikonu (App Store'da düzinelerce Schengen/vize takip uygulamasının kullandığı klişe) + "Schengen 90/180 tracker" odaklı jenerik metin. Düzeltme: (1) özgün pasaport damgası + pusula iğnesi ikonu (indigo/amber palet), (2) açıklama/promo/keywords AI Asistan + Güvenlik Tarayıcı + SOS gibi benzersiz özellikleri öne çıkaracak şekilde yeniden yazıldı, (3) build 12 ile yeniden gönderildi (submission `7cfbd2b9-5161-4720-a319-c00e8a417b7f`, WAITING_FOR_REVIEW).
 
 ---
 
@@ -41,28 +43,31 @@ Preparation document for App Store (iOS) and Google Play (Android) submissions.
 ### App Name
 `VisaRadar Travel`
 
-### Subtitle *(30 chars max)*
-`Track Stays. Stay Legal.`
+### Subtitle *(30 chars max — appInfoLocalizations üzerinde, şu an kilitli: 1.2.0 READY_FOR_SALE ile çakışıyor, sonraki fırsatta güncellenecek)*
+`AI Travel Safety Companion` (hedef; mevcut canlı değer hâlâ eski: "Schengen · Visa · AI Tracker")
 
-### Promotional Text *(170 chars max)*
-`Know exactly how many Schengen days you've used. AI travel assistant, Security Scanner, Tax-Free Guide and more — all in one app.`
+### Promotional Text *(170 chars max — ASC'de güncellendi 2026-08-31)*
+`AI travel assistant, hidden-camera & bug scanner, SOS alarm, Tax-Free guide and Schengen day tracker — all in one app.`
 
-### Description *(4000 chars max)*
+### Description *(4000 chars max — ASC'de güncellendi 2026-08-31, AI/güvenlik özellikleri öne çıkarıldı)*
 
 ```
-VisaRadar Travel is your AI-powered travel companion for the Schengen zone and beyond.
-
-SCHENGEN 90/180 TRACKER
-See exactly how many days you've used in the rolling 90/180-day window. Get risk indicators (Safe / Warning / Critical) and alerts at 30, 15, 7, 3 and 1 days remaining. Auto country detection when the app is open.
+VisaRadar Travel pairs an AI travel assistant with practical safety tools for international trips — it's not just a day counter.
 
 AI TRAVEL ASSISTANT
 Ask anything — visas, customs, currency, tax-free shopping, local tips. Powered by Claude AI. 3 free questions included; 40 questions/day with Premium.
 
-23+ COUNTRY GUIDE
-Entry rules, speed limits, emergency numbers, currency, visa requirements and practical tips for every destination. Covers Schengen, Turkey, UK, UAE and more.
+SECURITY SCANNER
+Sweep hotel rooms and rentals for hidden cameras and listening devices using your phone's own sensors — a feature most travel apps don't offer.
 
 EMERGENCY SOS
 Loud alarm siren + SOS torch signal. Instantly message 2 emergency contacts with your GPS location.
+
+SCHENGEN 90/180 TRACKER
+See exactly how many days you've used in the rolling 90/180-day window. Risk indicators (Safe / Warning / Critical) and alerts at 30, 15, 7, 3 and 1 days remaining.
+
+23+ COUNTRY GUIDE
+Entry rules, speed limits, emergency numbers, currency, visa requirements and practical tips for every destination. Covers Schengen, Turkey, UK, UAE and more.
 
 PREMIUM FEATURES
 • Tax-Free Guide — step-by-step VAT refund instructions
@@ -79,8 +84,8 @@ PRICING
 VisaRadar Premium is available as monthly or annual auto-renewable subscription — see in-app pricing. Manage or cancel anytime in Settings → Your Name → Subscriptions.
 ```
 
-### Keywords *(100 chars max)*
-`schengen,visa tracker,travel days,border crossing,eu travel,90 day rule,tax free,travel assistant`
+### Keywords *(100 chars max — ASC'de güncellendi 2026-08-31)*
+`ai travel assistant,security scanner,hidden camera detector,sos alarm,tax free,schengen,border`
 
 ---
 
