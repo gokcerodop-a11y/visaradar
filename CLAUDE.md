@@ -307,6 +307,89 @@ DÜŞÜK:
 - Sayfa 3: Gaz/Alarm — mikrofon ses seviyesi (dBFS); alarm seslerini dinler; kimyasal tespit etmez
 - STT/mikrofon izni yalnızca sayfa 3'e gelindiğinde istenir
 
+## Google Play Durumu (2026-09-04) — HAZIRLIK TAMAMLANDI, TEK MANUEL ADIM BEKLİYOR
+
+Kullanıcı isteği: "Google Play sürümünü bitir, gönder ama satışa çıkarma — onu sonra
+yapacağız." RevenueCat/abonelik ürünü işlemleri de BİLEREK ERTELENDİ (diğer
+uygulamalarla birlikte sonra yapılacak) — bu turda Play abonelik ürünü OLUŞTURULMADI.
+hiz_radar'daki Play playbook'u örnek alındı ([[project-hizradar]]).
+
+### Android build — düzeltildi, emülatörde doğrulandı
+- `android/app/build.gradle.kts`: `signingConfigs` + `key.properties` eklendi
+  (keystore yoktu, sıfırdan oluşturuldu). `compileSdk`/`targetSdk` 36, core library
+  desugaring eklendi.
+- `android/build.gradle.kts`: hiz_radar'daki `flutter_jailbreak_detection`
+  compileSdk-33 uyumsuzluğu fix'i (subprojects `afterEvaluate` compileSdk 36 zorlaması)
+  buraya da uygulandı.
+- **`pedometer: ^3.0.0` → `^4.2.0`**: 3.0.0'ın Android modülünde `namespace`
+  belirtilmemiş — AGP 8.11.1 bunu "Namespace not specified" ile sert hata veriyordu.
+  4.2.0'da aynı `Pedometer.stepCountStream` API'si var, kod değişikliği gerekmedi.
+- Firebase KULLANILMIYOR (VisaRadar'da hiç firebase paketi yok) — hiz_radar'daki
+  google-services.json/firebase_options.dart adımı bu projede GEREKMİYOR.
+- Keystore: **`~/.private_keys/visaradar.jks`**, alias `visaradar`, store=key şifresi
+  aynı (`visaradar2026secure`) — PKCS12 tuzağına düşülmedi.
+- `flutter build appbundle --release` başarıyla **1.3.0+12** AAB üretti
+  (`build/app/outputs/bundle/release/app-release.aab`, 61.1 MB).
+- **Gerçek doğrulama**: `Medium_Phone_API_36.1` Android emülatöründe arm64 APK
+  kurulup açıldı — logcat'te "Fully drawn", crash yok. Onboarding → dil seçimi →
+  vatandaşlık → KVKK Gizlilik ve Onay ekranı → Welcome Tour → Radar/Ülkeler/Asistan
+  sekmeleri gerçekten gezildi, ekran görüntüleri gerçek cihazdan alındı (mockup değil).
+
+### Play Console — BLOKE: uygulama henüz oluşturulmamış
+`applications.create` API'de yok (bilinen kısıt). Play Developer API'ye
+(`play-publisher@avukat-ai-91a3c.iam.gserviceaccount.com`, portföy ortak servis
+hesabı) `com.visaradar.visaradar` için istek atıldığında **`404 Package not found`**
+döndü — bu, kimliğin GEÇERLİ olduğunu (401/403 değil) ama uygulamanın Play
+Console'da henüz oluşturulmadığını gösteriyor.
+
+**Kullanıcıdan beklenen TEK manuel adım:** play.google.com/console → Uygulama oluştur
+→ Ad "VisaRadar" (veya "VisaRadar - AI Seyahat Rehberi"), paket adı
+`com.visaradar.visaradar`, Ücretsiz, geliştirici hesabı zaten `8634680168988446846`
+(gokcerodop@gmail.com, ödeme profili kurulu). Bu adım tamamlanınca aşağıdaki
+otomasyon tek komutla ilerletilebilir.
+
+### Hazırlanan ve bekleyen varlıklar (`tool/play/`)
+- `api.mjs` — Play Developer API ortak yardımcı (hiz_radar ile birebir aynı desen)
+- `listing-tr.json` — mağaza kaydı metni (başlık/kısa/tam açıklama), iOS ASO'sundan
+  (AI Asistan + Güvenlik Tarayıcı + SOS + Schengen) uyarlandı
+- `assets/icon-512.png` — iOS ikonundan (pasaport damgası + pusula, indigo/amber)
+  1024→512 downscale
+- `assets/feature-graphic-1024x500.png` — `tool/gen_feature_graphic.py` ile üretildi
+  (hiz_radar'ın `gen_feature_graphic.py` deseni, VisaRadar palet)
+- `screenshots/01_radar.png`…`04_schengen_tour.png` — **gerçek emülatör ekran
+  görüntüleri** (Radar/Schengen kartı, Ülkeler listesi, AI Asistan, Welcome Tour
+  slaydı), Play'in 2:1 azami en-boy sınırına göre 1080×2400 → 1080×2160 kırpıldı
+- `data_safety_template.csv` — Google'ın genel PSL_* şema şablonu (hiz_radar'dan
+  taşındı, uygulamaya özgü değil; Play Console'da app oluşunca kendi şablonu
+  indirilip üzerine yazılması ÖNERİLİR ama aynı kalması muhtemel)
+- `fill_data_safety.py` → `data_safety_dolu.csv` — VisaRadar'ın gerçek veri
+  kullanımıyla dolduruldu: **toplanıyor, PAYLAŞILMIYOR** — tam konum (zorunlu,
+  Schengen/sınır algılama), kullanıcı içeriği (AI asistan soruları/TTS metni),
+  fotoğraf (Belge Tarayıcı), ses (STT + Güvenlik Tarayıcı mikrofon seviyesi), cihaz
+  kimliği, crash log, performans teşhisi. Hesap oluşturma yöntemi `PSL_ACM_NONE`
+  (hiz_radar'daki `PSL_SUPPORT_DATA_DELETION_BY_USER` kilit tuzağına göre o soru
+  boş bırakıldı).
+- `03_data_safety.mjs` — CSV'yi `applications.dataSafety` API'sine gönderir
+- `01_listing.mjs` — mağaza kaydı + görseller + AAB'yi tek edit'te yükler,
+  **iç test kanalına `status: draft`** olarak commit eder; `production`/`beta`/
+  `alpha`'ya HİÇ dokunmaz (koddan çıkarıldı bile değil, script bu track'leri
+  hiç çağırmıyor)
+
+### Uygulama oluşturulduktan sonra çalıştırılacak sıra
+1. `cd ~/Projects/apps/visaradar && node tool/play/01_listing.mjs` — mağaza kaydı +
+   görseller + AAB → iç test taslağı
+2. `node tool/play/03_data_safety.mjs` — Veri Güvenliği formu
+3. İçerik derecelendirme (IARC) anketi — browser (CDP) otomasyonu, hiz_radar'daki
+   iki tuzağa dikkat: (a) tüm sorular cevaplansa bile önce **"Kaydet"**e basıp onay
+   görmeden "İleri" aktifleşmiyor, (b) sorular DOM'da `visibility:hidden` ile
+   kademeli açılıyor.
+4. Uygulama içeriği eksik listesi + kategori (öneri: **Seyahat**) + fiyat
+   "Ücretsiz" doğrulaması
+5. **Doğrulama:** `tracks/internal` → versionCode 12, `status: draft`.
+   `tracks/production`, `beta`, `alpha` **boş** olduğu API ile teyit edilmeli.
+6. Play abonelik ürünü (RevenueCat/monetizasyon) — kullanıcı isteğiyle bu turun
+   KAPSAMI DIŞINDA, diğer uygulamalarla birlikte sonra yapılacak.
+
 ## Teknoloji & Mimari
 - **İstemci:** Flutter (iOS birincil). Ana app `lib/`. i18n yok — `L.isTr` / `isTurkishProvider` ile TR/EN.
 - **Backend:** Cloudflare Worker `workers/visaradar-proxy` (TS). Endpoint'ler: `/v1/chat`, `/v1/vision`, `/v1/tts`.
