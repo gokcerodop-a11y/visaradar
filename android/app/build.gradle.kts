@@ -39,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.visaradar.visaradar"
+        applicationId = "com.visaradar"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode

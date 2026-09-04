@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import { SignJWT, importPKCS8 } from "/Users/bahiko/Projects/apps/avukat_ai/workers/avukat-proxy/node_modules/jose/dist/node/esm/index.js";
 
-export const PKG = "com.visaradar.visaradar";
+export const PKG = "com.visaradar";
 const ANAHTAR = process.env.HOME + "/.private_keys/play-publisher-avukat-ai-91a3c.json";
 const BASE = "https://androidpublisher.googleapis.com/androidpublisher/v3";
 

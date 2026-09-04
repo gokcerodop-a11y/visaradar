@@ -335,18 +335,57 @@ hiz_radar'daki Play playbook'u örnek alındı ([[project-hizradar]]).
   vatandaşlık → KVKK Gizlilik ve Onay ekranı → Welcome Tour → Radar/Ülkeler/Asistan
   sekmeleri gerçekten gezildi, ekran görüntüleri gerçek cihazdan alındı (mockup değil).
 
-### Play Console — BLOKE: uygulama henüz oluşturulmamış
-`applications.create` API'de yok (bilinen kısıt). Play Developer API'ye
-(`play-publisher@avukat-ai-91a3c.iam.gserviceaccount.com`, portföy ortak servis
-hesabı) `com.visaradar.visaradar` için istek atıldığında **`404 Package not found`**
-döndü — bu, kimliğin GEÇERLİ olduğunu (401/403 değil) ama uygulamanın Play
-Console'da henüz oluşturulmadığını gösteriyor.
+### Play Console — uygulama oluşturuldu, PAKET ADI FARKLI ÇIKTI (2026-09-04, düzeltildi)
+Kullanıcı Play Console'da uygulamayı manuel oluşturdu ama paket adını
+**`com.visaradar`** olarak girdi (iOS/Android kodundaki `com.visaradar.visaradar`
+DEĞİL). API ile doğrulandı: `edits.insert` `com.visaradar` için **200** dönüyor
+(uygulama var), `com.visaradar.visaradar` için **404** (hiç var olmadı). Play
+Console'da paket adı ilk oluşturmada kalıcı olarak kilitleniyor — konsoldan
+değiştirilemez, uygulama silinip yeniden de oluşturulamaz (bu hesapta delete-app
+seçeneği yok).
 
-**Kullanıcıdan beklenen TEK manuel adım:** play.google.com/console → Uygulama oluştur
-→ Ad "VisaRadar" (veya "VisaRadar - AI Seyahat Rehberi"), paket adı
-`com.visaradar.visaradar`, Ücretsiz, geliştirici hesabı zaten `8634680168988446846`
-(gokcerodop@gmail.com, ödeme profili kurulu). Bu adım tamamlanınca aşağıdaki
-otomasyon tek komutla ilerletilebilir.
+**Fix (kod tarafı, Play Console'a hiç dokunulmadan):** Android `applicationId`
+`com.visaradar.visaradar` → **`com.visaradar`** olarak değiştirildi
+(`android/app/build.gradle.kts`). `namespace` ve Kotlin kaynak paketi
+(`com.visaradar.visaradar`, `MainActivity.kt`'nin gerçek konumu) DEĞİŞTİRİLMEDİ —
+sadece `AndroidManifest.xml`'de `<activity android:name>` `.MainActivity` (relatif,
+applicationId'e göre çözülür) → `com.visaradar.visaradar.MainActivity` (tam
+nitelikli) yapıldı. Bu, avukat_ai'de daha önce yaşanan
+`ClassNotFoundException: MainActivity` tuzağının aynısı — bkz [[android-setup]].
+`tool/play/api.mjs`'deki `PKG` sabiti de `com.visaradar` olarak güncellendi.
+**Sonuç:** Android paket adı artık iOS bundle ID'sinden (`com.visaradar.visaradar`)
+kasıtlı olarak farklı — bu teknik olarak sorun değil (iki mağaza paket adlarının
+eşleşmesi şart değil), yalnızca gelecekte referans olsun diye not edildi.
+
+### Google Play — TAMAMLANDI (2026-09-04), yayınlanmadı
+Düzeltme sonrası AAB (applicationId `com.visaradar`) yeniden derlendi, emülatörde
+gerçekten kurulup açıldı (`Fully drawn com.visaradar/.visaradar.MainActivity`,
+ClassNotFoundException riski doğrulanarak elendi), onboarding→dil seçimi ekranı
+gerçek cihazdan görüntülendi.
+
+- `node tool/play/01_listing.mjs`: mağaza kaydı (başlık, TR açıklama, ikon, feature
+  graphic, 4 ekran görüntüsü) + AAB (**versionCode 12**) tek edit'te yüklenip commit
+  edildi → `tracks/internal` **draft**.
+- `node tool/play/03_data_safety.mjs`: Veri Güvenliği CSV'si gönderildi.
+- İçerik derecelendirme (IARC) anketi `tool/play/browser.mjs` (hiz_radar'ın zaten
+  login olmuş Chrome oturumu port 9333 üzerinden yeniden kullanıldı — yeni profil
+  için tekrar Google girişi gerekmedi) ile dolduruldu: kategori "Diğer Tüm Uygulama
+  Türleri", 9 soru (tümü Hayır, yalnız "dijital ürün satın alma" Evet) → sonuç
+  Brezilya 14+, diğer bölgeler Everyone/3+/Tüm yaşlar.
+- Uygulama İçeriği 11/11 TAMAMLANDI (browser otomasyonuyla): gizlilik politikası
+  (`visaradar-proxy.gokcerodop.workers.dev/privacy`, GET 200 doğrulandı), reklam
+  yok, oturum açma bilgisi gerekmiyor (hiz_radar ile aynı gerekçe: hesap/login yok,
+  abonelik Play'in kendi faturalandırmasıyla), hedef kitle 18+ (diğer alt-adımları
+  atlatıyor), reklam kimliği yok (`aapt2 dump permissions` ile doğrulandı), resmi
+  kurum değil, finans/sağlık özelliği yok.
+- Kategori "Seçili değil" durumundaydı (hiz_radar/avukat_ai'deki gibi) →
+  **"Seyahat ve Yerel"** olarak ayarlandı. Fiyat zaten doğru "Ücretsiz" geliyordu.
+- **Sonuç API ile doğrulandı:** `tracks/internal` → versionCode 12, status
+  **draft**. `tracks/production/beta/alpha` **tamamen boş** — hiçbirine
+  dokunulmadı.
+- RevenueCat / Play abonelik ürünü (`02_subscriptions.mjs` benzeri) **hiç
+  oluşturulmadı** — kullanıcı isteğiyle diğer uygulamalarla birlikte sonraya
+  bırakıldı.
 
 ### Hazırlanan ve bekleyen varlıklar (`tool/play/`)
 - `api.mjs` — Play Developer API ortak yardımcı (hiz_radar ile birebir aynı desen)
