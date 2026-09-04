@@ -39,6 +39,7 @@ packages/*/.dart_tool/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
 
 # Symbolication related
